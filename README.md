@@ -4,4 +4,4 @@
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE) for more details.
