@@ -15,12 +15,12 @@ else
 ######################################### NO RECORDING
 
 # %{$(iterm2_prompt_mark)%} needed in ~/.p10k.zsh
-[[ ! -f ~/.iterm2_shell_integration.sh ]] && curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
-[[ ! -f ~/.iterm2_shell_integration.sh ]] || source ~/.iterm2_shell_integration.sh
+[[ ! -f ~/.iterm2_shell_integration.zsh ]] && curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
+[[ ! -f ~/.iterm2_shell_integration.zsh ]] || source ~/.iterm2_shell_integration.zsh
 
 # TODO instnt prompt
 
-unsetopt nomatch # Don't require escaping globbing characters in zsh.
+unsetopt nomatch # Don't require escaping globbing characters in zsh
 unset LSCOLORS
 export CLICOLOR=1
 export CLICOLOR_FORCE=1
@@ -50,6 +50,8 @@ anatolykopyl/sshukh                                     # Offers to remove known
 skywind3000/z.lua                                       # Use z instead of cd
 romkatv/powerlevel10k
 BUNDLES
+antigen apply
+fi
 
 export SSH_KEY_PATH="${HOME}/.ssh/id_rsa20"
 export EDITOR=idea
@@ -59,21 +61,41 @@ PATH="$HOME/.local/bin:$PATH"
 PATH="$HOME/bin:$PATH"
 PATH="$HOME/.arkade/bin:$PATH"
 
-export JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk-11.0.2.jdk/Contents/Home
+export JAVA_HOME="/Library/Java/JavaVirtualMachines/jdk-11.0.2.jdk/Contents/Home"
 
 # Aliases
 
 ## macOS aliases
 if [[ $OSTYPE == darwin* ]]; then
 
+
+    # Bluetooth restart
+    function btrestart() {
+      sudo kextunload -b com.apple.iokit.BroadcomBluetoothHostControllerUSBTransport
+      sudo kextload -b com.apple.iokit.BroadcomBluetoothHostControllerUSBTransport
+    }
+
+    function ql() {
+      (( $# > 0 )) && qlmanage -p $* &>/dev/null &
+    }
+
+    # Remove .DS_Store files recursively in a directory, default .
+    function rmdsstore() {
+      find "${@:-.}" -type f -name .DS_Store -delete
+    }
+
+
+
     # kill ZScaler (and don't load it at startup; manually start by opening ZScaler app)
     alias start-zscaler="open -a /Applications/ZScaler/ZScaler.app --hide; sudo find /Library/LaunchDaemons -name '*zscaler*' -exec launchctl load {} \;"
     alias kill-zscaler="find /Library/LaunchAgents -name '*zscaler*' -exec launchctl unload {} \;;sudo find /Library/LaunchDaemons -name '*zscaler*' -exec launchctl unload {} \;"
 
     # open following file extensions with IDEA IntelliJ
-    alias -s {kt,bat,txt}=idea
+    alias -s {kt,bat,txt,.md,.json,.yaml,.yml}=idea
 
-    alias flush="dscacheutil -flushcache"
+    alias ip="dig +short myip.opendns.com @resolver1.opendns.com"
+    alias localip="ipconfig getifaddr en0"
+    alias flushdns="dscacheutil -flushcache"
     alias browse="open -a /Applications/Google\ Chrome.app"
 
     # open ~/.zshrc in using the default editor specified in $EDITOR
@@ -108,7 +130,7 @@ if [[ $OSTYPE == darwin* ]]; then
     # A cat(1) clone with syntax highlighting and Git integration.
     alias cat="bat --theme=\$(defaults read -globalDomain AppleInterfaceStyle &> /dev/null && echo default || echo GitHub)"
 
-    alias ft="grep -rnw . -e"
+    alias ft="grep -rn -H -C 5 --exclude-dir={.git,.svn,CVS} -e"
     killport() {
      local port="$1"
      lsof -P -i:"${port}" | grep -i "listen" | sed -n 2p | awk '{print $2}' | xargs kill -9
