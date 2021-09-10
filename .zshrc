@@ -18,7 +18,12 @@ else
 [[ ! -f ~/.iterm2_shell_integration.zsh ]] && curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
 [[ ! -f ~/.iterm2_shell_integration.zsh ]] || source ~/.iterm2_shell_integration.zsh
 
-# TODO instnt prompt
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
 
 unsetopt nomatch # Don't require escaping globbing characters in zsh
 unset LSCOLORS
@@ -45,11 +50,11 @@ Cloudstek/zsh-plugin-appup                              # up, down, start, resta
 desyncr/auto-ls                                         # Automatically call �ls� on cwd
 unixorn/autoupdate-antigen.zshplugin                    # Auto-updates for Antigen and bundles
 TamCore/autoupdate-oh-my-zsh-plugins                    # Auto-updates for Oh-my-ZSH plugins
-ael-code/zsh-colored-man-pages                          # Colored man pages
+colored-man                                             # Colored man pages
 anatolykopyl/sshukh                                     # Offers to remove known_host entry if connection failed
 skywind3000/z.lua                                       # Use z instead of cd
-romkatv/powerlevel10k
 BUNDLES
+antigen theme romkatv/powerlevel10k
 antigen apply
 fi
 
@@ -83,7 +88,6 @@ if [[ $OSTYPE == darwin* ]]; then
     function rmdsstore() {
       find "${@:-.}" -type f -name .DS_Store -delete
     }
-
 
 
     # kill ZScaler (and don't load it at startup; manually start by opening ZScaler app)
@@ -167,3 +171,6 @@ if [[ $OSTYPE == darwin* ]]; then
 
     alias fix-spotlight='find . -type d \( -name "node_modules" -o -name ".git" \) -exec touch "{}/.metadata_never_index" \;'
 fi
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
