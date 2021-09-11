@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# Check for bash; the usage of read is different in zsh
+interpreter="$(ps h -p $$ -o args='' | cut -f1 -d' ')"
+if [ ! "${interpreter}" = "bash" ]; then
+  echo >&2 "This script must be called with bash."
+  exit 1
+fi
+
+echo "Preparing..."
+defaults read > /tmp/prefs.before
+echo "Preparation finished."
+echo "You can customize your configuration now."
+read -n 1 -s -r -p "As soon as you have finished, hit Enter to get the changed defaults. "
+defaults read > /tmp/prefs.after
+diff /tmp/prefs.before /tmp/prefs.after
+rm /tmp/prefs.before /tmp/prefs.after
+# TODO only show later
+# TODO filter usageActivity

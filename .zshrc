@@ -1,3 +1,4 @@
+[[ -f ~/.hushlogin ]] || touch .hushlogin &>/dev/null
 if [ ! -z "${recording}" ]; then
 ######################################### RECORDING
     PS1='%F{gray}%n%f$ '
@@ -15,8 +16,8 @@ else
 ######################################### NO RECORDING
 
 # %{$(iterm2_prompt_mark)%} needed in ~/.p10k.zsh
-[[ ! -f ~/.iterm2_shell_integration.zsh ]] && curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
-[[ ! -f ~/.iterm2_shell_integration.zsh ]] || source ~/.iterm2_shell_integration.zsh
+[[ -f ~/.iterm2_shell_integration.zsh ]] || curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
+[[ -f ~/.iterm2_shell_integration.zsh ]] && source ~/.iterm2_shell_integration.zsh
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
@@ -69,6 +70,12 @@ PATH="$HOME/.arkade/bin:$PATH"
 export JAVA_HOME="/Library/Java/JavaVirtualMachines/jdk-11.0.2.jdk/Contents/Home"
 
 # Aliases
+
+# Prints the latest release version of a GitHub project.
+# Example: gh-latest bkahlert/kommons
+function gh-latest() {
+    curl -s https://api.github.com/repos/"${1?Repository missing}"/releases/latest | jq -r .tag_name
+}
 
 ## macOS aliases
 if [[ $OSTYPE == darwin* ]]; then
