@@ -70,6 +70,8 @@ PATH="$HOME/.arkade/bin:$PATH"
 export JAVA_HOME="/Library/Java/JavaVirtualMachines/jdk-11.0.2.jdk/Contents/Home"
 
 # Aliases
+alias lsl="ls -1lAFhct"                                                           # Prints directory contents human-readable and detailed
+alias lsr="ls -1lAFhcrt"                                                          # Prints directory contents recursively human-readable and detailed
 
 # Prints the latest release version of a GitHub project.
 # Example: gh-latest bkahlert/kommons
