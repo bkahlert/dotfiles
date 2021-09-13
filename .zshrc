@@ -40,15 +40,15 @@ antigen bundles <<BUNDLES
 zsh-users/zsh-autosuggestions                           # Proposes in dark grey an auto-completes command
 zsh-users/zsh-syntax-highlighting                       # Syntax highlighting
 zsh-users/zsh-completions                               # Tab to choose from completion options
-git                                                     # Auto-completion?
-brew                                                    # Auto-completion?
+git                                                     # Aliases, i.e. g=git ga=add gp=push gl=pull glol=log
+dotenv                                                  # Sources .env files automatically
 viasite-ansible/zsh-ansible-server                      # Auto-completion for ansible
 greymd/docker-zsh-completion                            # Auto-completion for Docker / Docker Compose
 gradle/gradle-completion                                # Auto-completion for Gradle
 Downager/zsh-helmfile                                   # Auto-completion for Helm
 djui/alias-tips                                         # Show alias if not used
 Cloudstek/zsh-plugin-appup                              # up, down, start, restart, stop commands in docker-compose / vagrant dirs
-desyncr/auto-ls                                         # Automatically call �ls� on cwd
+desyncr/auto-ls                                         # Automatically call ls on cwd
 unixorn/autoupdate-antigen.zshplugin                    # Auto-updates for Antigen and bundles
 TamCore/autoupdate-oh-my-zsh-plugins                    # Auto-updates for Oh-my-ZSH plugins
 colored-man                                             # Colored man pages
@@ -73,6 +73,29 @@ export JAVA_HOME="/Library/Java/JavaVirtualMachines/jdk-11.0.2.jdk/Contents/Home
 alias lsl="ls -1lAFhct"                                                           # Prints directory contents human-readable and detailed
 alias lsr="ls -1lAFhcrt"                                                          # Prints directory contents recursively human-readable and detailed
 
+function explain(){
+  if [[ $# == 0 ]]; then
+        cat <<EOH
+  Opens http://explainshell.com to explain given command.
+  usage: explain <cmd> <args>
+  example: explain ps faux
+EOH
+    return 0
+  fi
+
+  local raw=$@
+  local cmd=${raw/ /+}
+  local url="http://explainshell.com/explain?cmd=$cmd"
+
+  if which xdg-open &> /dev/null; then
+    xdg-open $url
+  elif which open &> /dev/null; then
+    open $url
+  else
+    echo "xdg-open nor open found. Can not open browser!"
+  fi
+}
+
 # Prints the latest release version of a GitHub project.
 # Example: gh-latest bkahlert/kommons
 function gh-latest() {
@@ -81,6 +104,13 @@ function gh-latest() {
 
 ## macOS aliases
 if [[ $OSTYPE == darwin* ]]; then
+
+    function update() {
+        brew update
+        brew upgrade
+        brew upgrade --cask
+        brew cleanup
+    }
 
 
     # Bluetooth restart
