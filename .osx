@@ -85,8 +85,83 @@ defaults write com.apple.dock showDesktopGestureEnabled -bool true
 defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 
 # Set a blazingly fast keyboard repeat rate, and make it happen more quickly.
-defaults write NSGlobalDomain InitialKeyRepeat -int 5
-defaults write NSGlobalDomain KeyRepeat -int 1
+defaults write NSGlobalDomain InitialKeyRepeat -int 25
+defaults write NSGlobalDomain KeyRepeat -int 2
+
+defaults write NSGlobalDomain NSUserDictionaryReplacementItems -string '
+(
+        {
+        on = 1;
+        replace = "-->";
+        with = "\\U279c";
+    },
+        {
+        on = 1;
+        replace = "\\U2014>>";
+        with = "\\U2039\\U2192\\U2198\\Ufe0e\\U2193\\U2199\\Ufe0e\\U2190\\U2196\\Ufe0e\\U2191\\U2197\\Ufe0e\\U203a \\U00ab\\U27a1\\U2b0a\\U2198\\U2b07\\U2b0b\\U2199\\U2b05\\U2b09\\U2196\\U2b06\\U2b08\\U2197\\U00bb";
+    },
+        {
+        on = 1;
+        replace = "\\U2014>";
+        with = "\\U279c";
+    },
+        {
+        on = 1;
+        replace = "-->>";
+        with = "\\U2039\\U2192\\U2198\\Ufe0e\\U2193\\U2199\\Ufe0e\\U2190\\U2196\\Ufe0e\\U2191\\U2197\\Ufe0e\\U203a \\U00ab\\U27a1\\U2b0a\\U2198\\U2b07\\U2b0b\\U2199\\U2b05\\U2b09\\U2196\\U2b06\\U2b08\\U2197\\U00bb";
+    },
+        {
+        on = 1;
+        replace = "-\\\\\\U00b0";
+        with = "\\U2198";
+    },
+        {
+        on = 1;
+        replace = "-/^";
+        with = "\\U2197";
+    },
+        {
+        on = 1;
+        replace = "\\U00b0/-";
+        with = "\\U2199";
+    },
+        {
+        on = 1;
+        replace = "^\\\\-";
+        with = "\\U2196";
+    },
+        {
+        on = 1;
+        replace = "\\U00b0\\U00b0";
+        with = "\\U2b07";
+    },
+        {
+        on = 1;
+        replace = "^^";
+        with = "\\U2b06";
+    },
+        {
+        on = 1;
+        replace = "<--";
+        with = "\\U2b05";
+    },
+        {
+        on = 1;
+        replace = vlg;
+        with = "Viele liebe Gr\\U00fc\\U00dfe!";
+    },
+        {
+        on = 1;
+        replace = omw;
+        with = "On my way!";
+    },
+        {
+        on = 1;
+        replace = jrv;
+        with = "J\\U2019arrive\\U00a0!";
+    }
+)
+'
 
 # Set language and text formats
 # Note: if you’re in the US, replace `EUR` with `USD`, `Centimeters` with
@@ -155,7 +230,7 @@ defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
 defaults write NSGlobalDomain com.apple.springing.enabled -bool true
 
 # Remove the spring loading delay for directories
-defaults write NSGlobalDomain com.apple.springing.delay -float 0.1
+defaults write NSGlobalDomain com.apple.springing.delay -float 0.5
 
 # Disable Creation of Metadata Files on USB Volumes
 defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true

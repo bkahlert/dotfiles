@@ -15,7 +15,8 @@ if [ ! -z "${recording}" ]; then
 else
 ######################################### NO RECORDING
 
-# %{$(iterm2_prompt_mark)%} needed in ~/.p10k.zsh
+# `p10k configure` to create new layout but don't forget to add
+# `%{$(iterm2_prompt_mark)%}` again to ~/.p10k.zsh
 [[ -f ~/.iterm2_shell_integration.zsh ]] || curl -L https://iterm2.com/shell_integration/install_shell_integration_and_utilities.sh | bash
 [[ -f ~/.iterm2_shell_integration.zsh ]] && source ~/.iterm2_shell_integration.zsh
 
@@ -26,11 +27,28 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-unsetopt nomatch # Don't require escaping globbing characters in zsh
+export LANG=en_US.UTF-8 LC_CTYPE=en_US.UTF-8
+
+unsetopt nomatch | true     # Don't require escaping globbing characters in zsh
+setopt sh_word_split | true # word splitting as in sh / bash
 unset LSCOLORS
 export CLICOLOR=1
 export CLICOLOR_FORCE=1
 export HOMEBREW_AUTO_UPDATE_SECS=604800 # Homebrew updates once a week
+
+# Local terminfo patch that adds italics to xterm-256color
+if [ ! -n "$(find ~/.terminfo -type f -name xterm-256color 2>/dev/null)" ]; then
+ tmp_terminfo="$(mktemp)" && cat <<TERMINFO > "$tmp_terminfo" && tic -o ~/.terminfo "$tmp_terminfo"
+xterm-256color|xterm with 256 colors and italic,
+  sitm=\E[3m, ritm=\E[23m,
+  use=xterm-256color,
+TERMINFO
+  if [ $? ]; then
+    echo "terminfo fixed: $(tput sitm)italics$(tput ritm) & $(tput smso)standout$(tput rmso)"
+  else
+   "Failed to patch terminfo" >&2
+  fi
+fi
 
 ZLE_RPROMPT_INDENT=0
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE=fg=#666666
@@ -62,154 +80,16 @@ fi
 export SSH_KEY_PATH="${HOME}/.ssh/id_rsa20"
 export EDITOR=idea
 
-PATH="/usr/local/sbin:$PATH"
-PATH="$HOME/.local/bin:$PATH"
-PATH="$HOME/bin:$PATH"
-PATH="$HOME/.arkade/bin:$PATH"
+PATH="/usr/local/sbin:${PATH}"
+[ -d "$HOME/bin" ]         && PATH="$HOME/bin:$PATH"                            # set PATH so it includes user's private bin if it exists
+[ -d "$HOME/.local/bin" ]  && PATH="$HOME/.local/bin:$PATH"                     # set PATH so it includes user's private bin if it exists
+[ -d "$HOME/.arkade/bin" ] && PATH="$HOME/.arkade/bin:$PATH"                    # set PATH so it includes user's arkade bin if it exists
+[ -d "$HOME/.krew/bin" ]   && PATH="$HOME/.krew/bin:$PATH"                      # set PATH so it includes user's krew bin if it exists
 
 export JAVA_HOME="/Library/Java/JavaVirtualMachines/jdk-11.0.2.jdk/Contents/Home"
 
-# Aliases
-alias lsl="ls -1lAFhct"                                                           # Prints directory contents human-readable and detailed
-alias lsr="ls -1lAFhcrt"                                                          # Prints directory contents recursively human-readable and detailed
-
-function explain(){
-  if [[ $# == 0 ]]; then
-        cat <<EOH
-  Opens http://explainshell.com to explain given command.
-  usage: explain <cmd> <args>
-  example: explain ps faux
-EOH
-    return 0
-  fi
-
-  local raw=$@
-  local cmd=${raw/ /+}
-  local url="http://explainshell.com/explain?cmd=$cmd"
-
-  if which xdg-open &> /dev/null; then
-    xdg-open $url
-  elif which open &> /dev/null; then
-    open $url
-  else
-    echo "xdg-open nor open found. Can not open browser!"
-  fi
-}
-
-# Prints the latest release version of a GitHub project.
-# Example: gh-latest bkahlert/kommons
-function gh-latest() {
-    curl -s https://api.github.com/repos/"${1?Repository missing}"/releases/latest | jq -r .tag_name
-}
-
-## macOS aliases
-if [[ $OSTYPE == darwin* ]]; then
-
-    function update() {
-        brew update
-        brew upgrade
-        brew upgrade --cask
-        brew cleanup
-    }
-
-
-    # Bluetooth restart
-    function btrestart() {
-      sudo kextunload -b com.apple.iokit.BroadcomBluetoothHostControllerUSBTransport
-      sudo kextload -b com.apple.iokit.BroadcomBluetoothHostControllerUSBTransport
-    }
-
-    function ql() {
-      (( $# > 0 )) && qlmanage -p $* &>/dev/null &
-    }
-
-    # Remove .DS_Store files recursively in a directory, default .
-    function rmdsstore() {
-      find "${@:-.}" -type f -name .DS_Store -delete
-    }
-
-
-    # kill ZScaler (and don't load it at startup; manually start by opening ZScaler app)
-    alias start-zscaler="open -a /Applications/ZScaler/ZScaler.app --hide; sudo find /Library/LaunchDaemons -name '*zscaler*' -exec launchctl load {} \;"
-    alias kill-zscaler="find /Library/LaunchAgents -name '*zscaler*' -exec launchctl unload {} \;;sudo find /Library/LaunchDaemons -name '*zscaler*' -exec launchctl unload {} \;"
-
-    # open following file extensions with IDEA IntelliJ
-    alias -s {kt,bat,txt,.md,.json,.yaml,.yml}=idea
-
-    alias ip="dig +short myip.opendns.com @resolver1.opendns.com"
-    alias localip="ipconfig getifaddr en0"
-    alias flushdns="dscacheutil -flushcache"
-    alias browse="open -a /Applications/Google\ Chrome.app"
-
-    # open ~/.zshrc in using the default editor specified in $EDITOR
-    alias ec="$EDITOR $HOME/.zshrc"
-
-    # serve . (or public dir if exists) by http
-    alias serve="npx http-server -c -p 80"
-    alias live="npx live-server --port=80 --no-browser"
-
-    # session record <name>
-    # https://github.com/faressoft/terminalizer
-    # Usage:
-    # 1) record session: `record name`
-    # 2) play recorded session: `play name`
-    # 3) edit recorded session: `open name.yml`
-    # 4) render preview: `preview name`
-    # 5) render: `render name`
-    alias session="npx terminalizer"
-    alias record="[ ! -f \"${HOME}/.hushlogin\" ] && touch \"${HOME}/.hushlogin\"; osascript -e \"tell application \\\"iTerm\\\"\" -e \"set bounds of front window to {300, 30, 1290, 740}\" -e \"end tell\"; npx terminalizer record --skip-sharing"
-    alias play="npx terminalizer play"
-    alias preview="npx terminalizer render -s 10 -q 30"
-    alias render="npx terminalizer render -s 1 -q 30"
-
-    # https://github.com/nvbn/thefuck
-    # type fuck to auto-correct failed commands
-    eval $(thefuck --alias fuck)
-
-    # type "samples x" instead of "man x" for examples for a command
-    alias samples="tldr"
-    alias examples="tldr"
-
-    # A cat(1) clone with syntax highlighting and Git integration.
-    alias cat="bat --theme=\$(defaults read -globalDomain AppleInterfaceStyle &> /dev/null && echo default || echo GitHub)"
-
-    alias ft="grep -rn -H -C 5 --exclude-dir={.git,.svn,CVS} -e"
-    killport() {
-     local port="$1"
-     lsof -P -i:"${port}" | grep -i "listen" | sed -n 2p | awk '{print $2}' | xargs kill -9
-    }
-
-    # https://gitlab.dev.codefactory.sh/banking-platform/tooling-api-doc-builder#run-the-generator-locally
-    alias dkb-docs=~/Development/DKB/tooling-api-doc-builder/bin/tooling-api-doc-builder-generate-docs-locally
-
-    # generates code for OpenAPI spec $1 (default: first json/yaml/yml file found in specs dir) in generator $2 (default: kotlin)
-    openapi() {
-     local specFile="${1:-$(find specs -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.yml \) | head -n 1)}"
-     local generator="${2:-kotlin}"
-     local outDir="out/${generator}"
-     local absOutDir="${PWD}/${outDir}"
-     echo "Generating ${generator} code for ${specFile} at ${absOutDir}"
-     mkdir -p "${absOutDir}"
-     docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate \
-       -i "/local/${specFile}" \
-       -g "${generator}" \
-       -o "/local/${outDir}"
-    }
-    swagger() {
-     local specFile="${1:-$(find specs -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.yml \) | head -n 1)}"
-     local lang="${2:-kotlin}"
-     local outDir="out/${lang}"
-     local absOutDir="${PWD}/${outDir}"
-     echo "Generating ${lang} code for ${specFile} at ${absOutDir}"
-     mkdir -p "${absOutDir}"
-     docker run --rm -v "${PWD}:/local" swaggerapi/swagger-codegen-cli generate \
-       -i "/local/${specFile}" \
-       -l "${lang}" \
-       -o "/local/${outDir}"
-    }
-
-    alias fix-spotlight='find . -type d \( -name "node_modules" -o -name ".git" \) -exec touch "{}/.metadata_never_index" \;'
-fi
+source "$HOME/.aliases"
+alias sc='source "$HOME/.aliases"'
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
