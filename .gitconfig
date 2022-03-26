@@ -2,7 +2,7 @@
   name = Björn Kahlert
   email = mail@bkahlert.com
 [core]
-  editor = vi
+  editor = idea --wait
   excludesfile = ~/.gitignore_global
   autocrlf = input
 [color]
@@ -43,3 +43,5 @@ prompt = false
   move-staged = "!bash -c \"git stash-staged;git commit -m \"temp\"; git stash; git reset --hard HEAD^; git stash pop\""
 [pull]
   rebase = true
+[includeIf "gitdir/i:~/Development/DKB/"]
+    path = ~/Development/DKB/.gitconfig_include

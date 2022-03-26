@@ -35,6 +35,7 @@
     os_icon                 # os identifier
     dir                     # current directory
     vcs                     # git status
+    last_pass               # LastPass status
     # =========================[ Line #2 ]=========================
     newline                 # \n
     prompt_char             # prompt symbol
@@ -92,9 +93,8 @@
     vim_shell               # vim shell indicator (:sh)
     midnight_commander      # midnight commander shell (https://midnight-commander.org/)
     nix_shell               # nix shell (https://nixos.org/nixos/nix-pills/developing-with-nix-shell.html)
-    # vi_mode               # vi mode (you don't need this if you've enabled prompt_char)
     vpn_ip                  # virtual private network indicator
-    load                    # CPU load
+    # load                  # CPU load
     disk_usage              # disk usage
     # ram                   # free RAM
     # swap                  # used swap
@@ -105,7 +105,7 @@
     # =========================[ Line #2 ]=========================
     newline
     # ip                    # ip address and bandwidth usage for a specified network interface
-    public_ip             # public IP address
+    public_ip               # public IP address
     # proxy                 # system-wide http/https/ftp proxy
     # battery               # internal battery
     # wifi                  # wifi speed
@@ -1539,8 +1539,22 @@
   typeset -g POWERLEVEL9K_TIME_PREFIX='at '
 
   # iTerm integration
-  function iterm() {
+  function prompt_iterm() {
     p10k segment -t '%{$(iterm2_prompt_mark)%}'
+  }
+
+  # LastPass integration
+  typeset -g POWERLEVEL9K_LAST_PASS_FOREGROUND=yellow
+  typeset -g POWERLEVEL9K_LAST_PASS_CONTENT_EXPANSION='%B${P9K_CONTENT}'
+  typeset -g POWERLEVEL9K_LAST_PASS_LOGGED_IN_FOREGROUND='#c92929'
+  function prompt_last_pass() {
+    command -v lpass >/dev/null || return
+    if lpass status -q; then
+      local state=LOGGED_IN
+    else
+      local state=LOGGED_OUT
+    fi
+    p10k segment -s $state -i $'\uf945'
   }
 
   # Example of a user-defined prompt segment. Function prompt_example will be called on every

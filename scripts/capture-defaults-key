@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+source <(curl -LfsS https://github.com/bkahlert/logr/raw/master/logr.sh)
+
+banr diff preferences
+
 # Check for bash; the usage of read is different in zsh
 interpreter="$(ps h -p $$ -o args='' | cut -f1 -d' ')"
 if [ ! "${interpreter}" = "bash" ]; then
@@ -7,13 +12,23 @@ if [ ! "${interpreter}" = "bash" ]; then
   exit 1
 fi
 
-echo "Preparing..."
-defaults read > /tmp/prefs.before
-echo "Preparation finished."
-echo "You can customize your configuration now."
-read -n 1 -s -r -p "As soon as you have finished, hit Enter to get the changed defaults. "
+logr task "preparing" -- bash -c 'defaults read > /tmp/prefs.before'
+
+logr info "You can customize your configuration now."
+
+prompt4 Yn '%s\n' "As soon as you have finished, hit Enter to see the changed defaults." \
+                  "Ready?"
+
 defaults read > /tmp/prefs.after
-diff /tmp/prefs.before /tmp/prefs.after
+sed -i '' \
+  -e '/[Dd]uration\ \{0,1\}=/d' \
+  -e '/[0-9]\{4,\}[-\/][0-9]\{2\}[-\/][0-9]\{2\}[T ][0-9]\{2\}:[0-9]\{2\}/d' \
+  -e '/[0-9]\{2,\}[-\/][0-9]\{2\}[-\/][0-9]\{4\}[T ][0-9]\{2\}:[0-9]\{2\}/d' \
+  /tmp/prefs.before /tmp/prefs.after
+diff --unified=3 \
+  /tmp/prefs.before /tmp/prefs.after &
+command -v "ksdiff" >/dev/null && ksdiff \
+  --diff \
+  --wait \
+  /tmp/prefs.before /tmp/prefs.after
 rm /tmp/prefs.before /tmp/prefs.after
-# TODO only show later
-# TODO filter usageActivity

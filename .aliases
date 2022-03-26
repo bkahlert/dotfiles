@@ -1,8 +1,33 @@
+# shellcheck shell=bash
+# bashsupport disable=BP5001
+
+# TODO
+#set -x
+#[ "${INTELLIJ_ENVIRONMENT_READER-}" ] || source <(curl -LfsS https://git.io/init.rc) || true
+#set +x
+
+# Splits the specified variable to an array like it would be the case if a program was called,
+# that is, its value is word-split along the whitespaces while *honoring* quotes.
+# Arguments:
+#   1 - variable name
+__split_to_array() {
+  # Assigns the arguments array to the variable with the name of the first element.
+  program() { local var="$1" && shift && eval "$var"='("${@}")'; }
+  if [ -v "$1" ]; then
+    eval program "$1" "${(P)1}"
+  else
+    eval "declare -a -g $1=()"
+  fi
+  unset program
+}
+
 ## General
 
 # Prints the definition of the specified alias
 alias alias-print='declare -f'
 
+## Git
+alias git+x='git update-index --chmod=+x'
 
 ## Kubernetes
 alias kube_configs='echo "$(find ~/.kube -type f -regex '"'"'.*\.ya\{0,1\}ml'"'"' | tr '"'"'\n'"'"' ':')$HOME/.kube/config"'
@@ -16,7 +41,7 @@ alias ssh='sshukh'                                                              
 alias lsl="ls -1lAFhct"                                                         # Prints directory contents human-readable and detailed
 alias lsr="ls -1lAFhcrt"                                                        # Prints directory contents recursively human-readable and detailed
 
-function explain(){
+explain(){
   if [[ $# == 0 ]]; then
         cat <<EOH
   Opens http://explainshell.com to explain given command.
@@ -39,6 +64,14 @@ EOH
   fi
 }
 
+pbcopy-dir() {
+  tar -cz "$@" | base64 | pbcopy
+}
+
+pbpaste-dir() {
+  pbpaste | base64 -d | tar zxvf - 2>/dev/null
+}
+
 
 ## ANSI
 
@@ -51,9 +84,14 @@ alias ansi-test='curl -LfsS https://raw.githubusercontent.com/bkahlert/-/master/
 # Prints a ANSI demo screen in a container of the given command in the Docker image.
 # Arguments:
 #   1 - Docker image
-function docker-ansi-test() {
+docker-ansi-test() {
   local -r image=${1?Docker image missing}; shift
   docker run -i --rm --entrypoint sh "$image" -c "printf '%s' '$(curl -LfsS https://raw.githubusercontent.com/bkahlert/-/master/ansi-test.ansi)'"
+}
+
+# Prints all running Docker containers and their states
+docker-watch() {
+  watch -n 2 'docker ps --format "table {{.ID}}\t {{.Image}}\t {{.Status}}"'
 }
 
 # Starts the given command in the Docker image
@@ -62,7 +100,7 @@ function docker-ansi-test() {
 #   1 - Docker image
 #   2 - commands
 #   * - optional arguments
-function docker-enter() {
+docker-enter() {
   local -r image=${1?Docker image missing}; shift
   local -r command=${1?command missing}; shift
   docker run --rm --entrypoint "$command" "$image" "$@"
@@ -73,7 +111,7 @@ function docker-enter() {
 #   1 - Docker image
 #   * - optional shell script
 #       starts an interactive session if not given
-function docker-command() {
+docker-command() {
   local -r image=${1?Docker image missing}; shift
   if [[ "$#" == "0" ]]; then
     docker run -it --rm "$image"
@@ -87,7 +125,7 @@ function docker-command() {
 #   1 - Docker image
 # Output:
 #   STDOUT - space separated absolute shell paths
-function docker-list-shells() {
+docker-list-shells() {
   local -r image=${1?Docker image missing}; shift
   docker run --rm --entrypoint cat "$image" /etc/shells | sed -E '/^#/d' | tr '\n' ' '
 }
@@ -100,7 +138,7 @@ function docker-list-shells() {
 # Returns:
 #   1 - no preferred shell found
 #   * - exit code on `docker run` completion
-function docker-shell() {
+docker-shell() {
   local -r image=${1?Docker image missing}; shift
   local -r shells=$(docker-list-shells "$image")
   local -r preferred=('/bin/zsh$' '/zsh$' '/bin/bash$' 'bash$')
@@ -121,38 +159,88 @@ function docker-shell() {
   return 1
 }
 
-# Usage: ubuntu [CMD [ARG...]]
+# Usage: alpine [CMD [ARG...]]
 # Runs CMD with optional arguments inside a containerized Ubuntu or
 # starts an interactive bash shell if no command was passed.
-function ubuntu() {
+alpine() {
+  __split_to_array DOCKER_ARGS
+  local -a cmd=(docker run "${DOCKER_ARGS[@]}" --rm -e LANG=C.UTF-8 -e TERM="$TERM")
   if [ "$#" -eq 0 ]; then
-    docker run -it --rm ubuntu /bin/bash
+    "${cmd[@]}" -it docker:20.10.10-alpine3.14 /bin/sh
   else
-    docker run --rm ubuntu bash -c "$*"
+    "${cmd[@]}" docker:20.10.10-alpine3.14 sh -c "$*"
   fi
 }
 
+# Same as `alpine` with with current working directory mapped to container.
+alpine-here() {
+  DOCKER_ARGS="-v '$PWD:$PWD' -w '$PWD'" alpine "$@"
+}
+
+# Usage: ubuntu [CMD [ARG...]]
+# Runs CMD with optional arguments inside a containerized Ubuntu or
+# starts an interactive bash shell if no command was passed.
+ubuntu() {
+  __split_to_array DOCKER_ARGS
+  local -a cmd=(docker run "${DOCKER_ARGS[@]}" --rm -e LANG=C.UTF-8 -e TERM="$TERM")
+  if [ "$#" -eq 0 ]; then
+    "${cmd[@]}" -it ubuntu /bin/bash
+  else
+    "${cmd[@]}" ubuntu bash -c "$*"
+  fi
+}
+
+# Same as `ubuntu` with with current working directory mapped to container.
+ubuntu-here() {
+  DOCKER_ARGS="-v '$PWD:$PWD' -w '$PWD'" ubuntu "$@"
+}
+
+# Usage: busybox [CMD [ARG...]]
+# Runs CMD with optional arguments inside a containerized Ubuntu or
+# starts an interactive bash shell if no command was passed.
+busybox() {
+  __split_to_array DOCKER_ARGS
+  local -a cmd=(docker run "${DOCKER_ARGS[@]}" --rm -e LANG=C.UTF-8 -e TERM="$TERM")
+  if [ "$#" -eq 0 ]; then
+    "${cmd[@]}" -it busybox /bin/sh
+  else
+    "${cmd[@]}" busybox bash -c "$*"
+  fi
+}
+
+# Same as `busybox` with with current working directory mapped to container.
+busybox-here() {
+  DOCKER_ARGS="-v '$PWD:$PWD' -w '$PWD'" busybox "$@"
+}
+
 # Prints the ID of the most recently created docker container
-function docker-latest() {
+docker-latest() {
   docker container ls --format "{{.ID}}" --latest
+}
+
+# Returns the IP address of the specified container.
+docker-ip() {
+  local id=${1-}
+  [ "$id" ] || id=$(docker-latest)
+  docker inspect "$id" >inspect.json | jq --raw-output --join-output '.[].NetworkSettings.Networks.bridge.IPAddress'
 }
 
 # Usage: ubuntu [CMD [ARG...]]
 # Run the specified command in the Docker VM
 # If no CMD is provided, defaults to `sh`
-function docker-host() {
+docker-host() {
   if [[ "${#@}" == "0" ]]; then set -- "sh"; fi
   docker run -it --rm --privileged --pid=host alpine:edge nsenter -t 1 -m -u -n -i "${@}"
 }
 
 # Prints the log path of the specified container (default: latest container)
-function docker-logs() {
+docker-logs() {
   local id="${1:-"$(docker-latest)"}"
   docker inspect -f "{{.LogPath}}" "$id"
 }
 
 # Prints the log path of the specified container (default: latest container)
-function docker-logs-raw() {
+docker-logs-raw() {
   local -r log="$(docker-host cat "$(docker-logs "${@}")")"
   local -r language="json"
   cat --language "${language}" <(echo "$log")
@@ -167,32 +255,26 @@ alias kc.current-cluster-hostname="kc.current-cluster-url | awk -F[/:] '{print \
 
 # Prints the latest release version of a GitHub project.
 # Example: gh-latest bkahlert/kommons
-function gh-latest() {
-    curl -s https://api.github.com/repos/"${1?Repository missing}"/releases/latest | jq -r .tag_name
+gh-latest() {
+    curl -LfsS https://api.github.com/repos/"${1?Repository missing}"/releases/latest | jq -r .tag_name
 }
 
 ## macOS aliases
 if [[ $OSTYPE == darwin* ]]; then
 
-    function update() {
+    update() {
         brew update
         brew upgrade
         brew upgrade --cask
         brew cleanup
     }
 
-    # Bluetooth restart
-    function btrestart() {
-      sudo kextunload -b com.apple.iokit.BroadcomBluetoothHostControllerUSBTransport
-      sudo kextload -b com.apple.iokit.BroadcomBluetoothHostControllerUSBTransport
-    }
-
-    function ql() {
+    ql() {
       (( $# > 0 )) && qlmanage -p $* &>/dev/null &
     }
 
     # Remove .DS_Store files recursively in a directory, default .
-    function rmdsstore() {
+    rmdsstore() {
       find "${@:-.}" -type f -name .DS_Store -delete
     }
 
@@ -211,7 +293,7 @@ if [[ $OSTYPE == darwin* ]]; then
 
     # usage: ec — opens ~/.zshrc with $EDITOR
     # usage: ec name — opens first match of ~/.name* with $EDITOR
-    function ec() {
+    ec() {
         find -L "$HOME" \
              -type f \
              -name ".${1:-zshrc}*" \
@@ -225,20 +307,6 @@ if [[ $OSTYPE == darwin* ]]; then
     alias serve="npx http-server -c -p 80"
     alias live="npx live-server --port=80 --no-browser"
 
-    # session record <name>
-    # https://github.com/faressoft/terminalizer
-    # Usage:
-    # 1) record session: `record name`
-    # 2) play recorded session: `play name`
-    # 3) edit recorded session: `open name.yml`
-    # 4) render preview: `preview name`
-    # 5) render: `render name`
-    alias session="npx terminalizer"
-    alias record="[ ! -f \"${HOME}/.hushlogin\" ] && touch \"${HOME}/.hushlogin\"; osascript -e \"tell application \\\"iTerm\\\"\" -e \"set bounds of front window to {300, 30, 1290, 740}\" -e \"end tell\"; npx terminalizer record --skip-sharing"
-    alias play="npx terminalizer play"
-    alias preview="npx terminalizer render -s 10 -q 30"
-    alias render="npx terminalizer render -s 1 -q 30"
-
     # https://github.com/nvbn/thefuck
     # type fuck to auto-correct failed commands
     eval $(thefuck --alias fuck)
@@ -251,9 +319,12 @@ if [[ $OSTYPE == darwin* ]]; then
     alias cat="bat --theme=\$(defaults read -globalDomain AppleInterfaceStyle &> /dev/null && echo default || echo GitHub)"
 
     alias ft="grep -rn -H -C 5 --exclude-dir={.git,.svn,CVS} --devices=skip -e"
-    killport() {
-     local port="$1"
-     lsof -P -i:"${port}" | grep -i "listen" | sed -n 2p | awk '{print $2}' | xargs kill -9
+
+    # Kills the process listening on the specified port.
+    kill_listening_process() {
+      local port=${1?port missing} pid
+      pid=$(lsof -i ":$port" -P -n | tail -n 1 | awk '{print $2}')
+      [ ! "${pid}" ] || kill "$pid" || kill "$pid" -9 || die "failed to kill process $pid"
     }
 
     # https://gitlab.dev.codefactory.sh/banking-platform/tooling-api-doc-builder#run-the-generator-locally
@@ -264,10 +335,10 @@ if [[ $OSTYPE == darwin* ]]; then
      local specFile="${1:-$(find specs -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.yml \) | head -n 1)}"
      local generator="${2:-kotlin}"
      local outDir="out/${generator}"
-     local absOutDir="${PWD}/${outDir}"
+     local absOutDir="$PWD/${outDir}"
      echo "Generating ${generator} code for ${specFile} at ${absOutDir}"
      mkdir -p "${absOutDir}"
-     docker run --rm -v "${PWD}:/local" openapitools/openapi-generator-cli generate \
+     docker run --rm -v "$PWD:/local" openapitools/openapi-generator-cli generate \
        -i "/local/${specFile}" \
        -g "${generator}" \
        -o "/local/${outDir}"
@@ -276,10 +347,10 @@ if [[ $OSTYPE == darwin* ]]; then
      local specFile="${1:-$(find specs -type f \( -iname \*.json -o -iname \*.yaml -o -iname \*.yml \) | head -n 1)}"
      local lang="${2:-kotlin}"
      local outDir="out/${lang}"
-     local absOutDir="${PWD}/${outDir}"
+     local absOutDir="$PWD/${outDir}"
      echo "Generating ${lang} code for ${specFile} at ${absOutDir}"
      mkdir -p "${absOutDir}"
-     docker run --rm -v "${PWD}:/local" swaggerapi/swagger-codegen-cli generate \
+     docker run --rm -v "$PWD:/local" swaggerapi/swagger-codegen-cli generate \
        -i "/local/${specFile}" \
        -l "${lang}" \
        -o "/local/${outDir}"

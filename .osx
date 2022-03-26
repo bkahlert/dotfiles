@@ -9,18 +9,16 @@
 # Options:
 #   --no-restart: Don't restart any apps or services after running the script.
 #
-# If you want to figure out what default needs changing, do the following:
-#
-#   1. `cd /tmp`
-#   2. Store current defaults in file: `defaults read > before`
-#   3. Make a change to your system.
-#   4. Store new defaults in file: `defaults read > after`
-#   5. Diff the files: `diff before after`
+# 💡 To capture default changes use `scripts/capture-defaults-key`.
 #
 # @see: http://secrets.blacktree.com/?showapp=com.apple.finder
 # @see: https://github.com/herrbischoff/awesome-macos-command-line
 #
-# @author Jeff Geerling
+# How-to add user defined shortcuts:
+# defaults write com.apple.iTunes NSUserKeyEquivalents -dict-add "Target Search Field" "@F"
+
+# TODO associate file extensions with application
+# TODO e.g. with idea
 
 # Warn that some commands will not be run if the script is not run as root.
 if [[ $EUID -ne 0 ]]; then
@@ -29,14 +27,16 @@ if [[ $EUID -ne 0 ]]; then
 else
   RUN_AS_ROOT=true
   # Update existing `sudo` timestamp until `.osx` has finished
-  while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+  while true; do
+    sudo -n true
+    sleep 60
+    kill -0 "$$" || exit
+  done 2>/dev/null &
 fi
 
 # Close any open System Preferences panes, to prevent them from overriding
 # settings we’re about to change
 osascript -e 'tell application "System Preferences" to quit'
-
-
 
 ###############################################################################
 # General UI/UX                                                               #
@@ -47,8 +47,8 @@ osascript -e 'tell application "System Preferences" to quit'
 defaults write -g NSQuitAlwaysKeepsWindows -bool true
 
 # Expand save panel by default
-defaults write -g NSNavPanelExpandedStateForSaveMode -bool true && \
-defaults write -g NSNavPanelExpandedStateForSaveMode2 -bool true
+defaults write -g NSNavPanelExpandedStateForSaveMode -bool true \
+  && defaults write -g NSNavPanelExpandedStateForSaveMode2 -bool true
 
 # Expand print panel by default
 defaults write -g PMPrintingExpandedStateForPrint -bool true
@@ -76,7 +76,7 @@ defaults write com.apple.AppleMultitouchTrackpad TrackpadRightClick -bool true
 defaults write com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick -int 2
 defaults write NSGlobalDomain ContextMenuGesture -int 1
 
-# Enable extra multifinger gestures (such as three finger swipe down = app expose)
+# Enable extra multi-finger gestures (such as three finger swipe down = app expose)
 defaults write com.apple.dock showMissionControlGestureEnabled -bool true
 defaults write com.apple.dock showAppExposeGestureEnabled -bool true
 defaults write com.apple.dock showDesktopGestureEnabled -bool true
@@ -84,7 +84,7 @@ defaults write com.apple.dock showDesktopGestureEnabled -bool true
 # Disable press-and-hold for keys in favor of key repeat
 defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 
-# Set a blazingly fast keyboard repeat rate, and make it happen more quickly.
+# Set keyboard repeat rate, and make it happen more quickly.
 defaults write NSGlobalDomain InitialKeyRepeat -int 25
 defaults write NSGlobalDomain KeyRepeat -int 2
 
@@ -173,12 +173,13 @@ defaults write NSGlobalDomain AppleTemperatureUnit -string "Celsius"
 defaults write NSGlobalDomain AppleMetricUnits -bool true
 defaults write NSGlobalDomain AppleICUForce12HourTime -bool false
 
-
 # Set Lock Message to show on login screen
-#sudo defaults write /Library/Preferences/com.apple.loginwindow LoginwindowText -string "Found me? Shoot a mail to mail@bkahlert.com to return me. Thanks."
+defaults write /Library/Preferences/com.apple.loginwindow LoginwindowText -string "Found me? Shoot a mail to mail@bkahlert.com to return me. Thanks."
+# Reveal IP address, hostname, OS version, etc. when clicking the clock in the login window
+defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
 
 # Set the timezone; see `sudo systemsetup -listtimezones` for other values
-sudo systemsetup -settimezone "Europe/Berlin" > /dev/null
+sudo systemsetup -settimezone "Europe/Berlin" >/dev/null
 
 ###############################################################################
 # Screen                                                                      #
@@ -341,14 +342,14 @@ defaults write com.apple.Safari InstallExtensionUpdatesAutomatically -bool true
 # Spotlight                                                                   #
 ###############################################################################
 
-if [[ "$RUN_AS_ROOT" = true ]]; then
+if [ ! "${RUN_AS_ROOT:-false}" = false ]; then
   # Disable Spotlight indexing for any volume that gets mounted and has not yet
   # been indexed before.
   # Use `sudo mdutil -i off "/Volumes/foo"` to stop indexing any volume.
   sudo defaults write /.Spotlight-V100/VolumeConfiguration Exclusions -array "/Volumes"
 
   # Restart spotlight
-  killall mds > /dev/null 2>&1
+  killall mds >/dev/null 2>&1
 fi
 
 ###############################################################################
@@ -410,7 +411,7 @@ defaults write com.apple.messageshelper.MessageController SOInputLineSettings -d
 # Restart affected applications if `--no-restart` flag is not present.
 if [[ ! ($* == *--no-restart*) ]]; then
   for app in "cfprefsd" "Dock" "Finder" "Mail" "SystemUIServer" "Terminal"; do
-    killall "${app}" > /dev/null 2>&1
+    killall "${app}" >/dev/null 2>&1
   done
 fi
 
