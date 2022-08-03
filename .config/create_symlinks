@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+for f in *; do
+  [ ! "${f##*/}" = "${0##*/}" ] || continue
+  declare source=$PWD/${f##*/}
+  declare target=$HOME/.config/${f##*/}
+
+  printf "Linking %s ..." "$target"
+  if [ -e "$target" ]; then
+    printf " skipped (already exists)"
+  else
+    ln -s "$source" "$target" && printf " done"
+  fi
+  printf "\n"
+done

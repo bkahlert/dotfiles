@@ -31,6 +31,7 @@ HOMEBREW_AUTO_UPDATE_SECS=604800
 
 printf -v ZSH_AUTO''SUGGEST_HIGHLIGHT_STYLE fg=#666666                          # color of auto-suggestions
 printf -v ZLE_R''PROMPT_INDENT 0                                                # no right margin for Powerlevel10k prompt
+eval "$(/opt/homebrew/bin/brew shellenv)"
 [ "${INTELLIJ_ENVIRONMENT_READER-}" ] || {
   source $(brew --prefix)/share/antigen/antigen.zsh
   antigen use oh-my-zsh
@@ -53,7 +54,7 @@ anatolykopyl/sshukh                                     # offers to remove known
 skywind3000/z.lua                                       # use z instead of cd
 colored-man-pages                                       # colors man pages
 web-search                                              # search using google, bing, etc.
-osx                                                     # pfs=return the current Finder selection; cdf=cd to the current Finder directory
+macos                                                   # pfs=return the current Finder selection; cdf=cd to the current Finder directory
 BUNDLES
   antigen theme romkatv/powerlevel10k
   antigen apply
@@ -90,10 +91,10 @@ unsetopt nomatch                                                                
 # no 'export LANG=C.UTF-8' as that would require C locales
 export LC_CTYPE=UTF-8                                                           # UTF-8 for string functions
 export EDITOR=idea
-export JAVA_HOME=~/Library/Java/JavaVirtualMachines/temurin-11.0.12/Contents/Home
+export JAVA_HOME=~/Library/Java/JavaVirtualMachines/corretto-17.0.2/Contents/Home
 
 [ "${INTELLIJ_ENVIRONMENT_READER-}" ] || fix_terminfo
-prepend_path /usr/local/sbin ~/bin ~/.local/bin ~/.arkade/bin ~/.krew/bin
+prepend_path /usr/local/sbin ~/Library/Python/3.8/bin ~/bin ~/.local/bin ~/.arkade/bin ~/.krew/bin ~/.rd/bin
 export ANSIBLE_VAULT_PASS_CLIENT=lastpass
 export ANSIBLE_VAULT_PASS_CLIENT_USERNAME=mail@bkahlert.com
 export ANSIBLE_VAULT_PASSWORD_FILE=$(command -v ansible-vault-pass-client)

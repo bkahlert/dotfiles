@@ -7,7 +7,7 @@ banr diff preferences
 
 # Check for bash; the usage of read is different in zsh
 interpreter="$(ps h -p $$ -o args='' | cut -f1 -d' ')"
-if [ ! "${interpreter}" = "bash" ]; then
+if [ ! "$interpreter" = "bash" ]; then
   echo >&2 "This script must be called with bash."
   exit 1
 fi
@@ -16,9 +16,9 @@ logr task "preparing" -- bash -c 'defaults read > /tmp/prefs.before'
 
 logr info "You can customize your configuration now."
 
-prompt4 Yn '%s\n' "As soon as you have finished, hit Enter to see the changed defaults." \
+prompt4 Y/n '%s\n' "As soon as you have finished, hit Enter to see the changed defaults." \
                   "Ready?"
-
+# TODO check if ksdiff is installed
 defaults read > /tmp/prefs.after
 sed -i '' \
   -e '/[Dd]uration\ \{0,1\}=/d' \

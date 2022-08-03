@@ -307,10 +307,6 @@ if [[ $OSTYPE == darwin* ]]; then
     alias serve="npx http-server -c -p 80"
     alias live="npx live-server --port=80 --no-browser"
 
-    # https://github.com/nvbn/thefuck
-    # type fuck to auto-correct failed commands
-    eval $(thefuck --alias fuck)
-
     # type "samples x" instead of "man x" for examples for a command
     alias samples="tldr"
     alias examples="tldr"
