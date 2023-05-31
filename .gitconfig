@@ -1,15 +1,16 @@
 [user]
-	name = Björn Kahlert
-	email = mail@bkahlert.com
+  name = Björn Kahlert
+  email = mail@bkahlert.com
 [core]
   editor = idea --wait
-	excludesfile = /Users/bkahlert/.gitignore_global
+  excludesfile = /Users/bkahlert/.gitignore_global
   autocrlf = input
 [color]
   branch = auto
   diff = auto
   interactive = auto
   status = auto
+  ui = auto
 [diff]
   tool = Kaleidoscope
 [difftool "Kaleidoscope"]
@@ -27,7 +28,7 @@
 [mergetool "Kaleidoscope"]
   cmd = ksdiff --merge --output \"$MERGED\" --base \"$BASE\" -- \"$LOCAL\" --snapshot \"$REMOTE\" --snapshot
   trustexitcode = true
-prompt = false
+  prompt = false
 [web]
   browser = google-chrome
 [credential]
@@ -44,12 +45,12 @@ prompt = false
 [pull]
   rebase = true
 [includeIf "gitdir/i:~/Development/DKB/"]
-    path = ~/Development/DKB/.gitconfig_include
+  path = ~/Development/DKB/.gitconfig_include
 [difftool "sourcetree"]
-	cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-	path = 
+  cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+  path =
 [mergetool "sourcetree"]
-	cmd = /Applications/Sourcetree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
-	trustExitCode = true
+  cmd = /Applications/Sourcetree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+  trustExitCode = true
 [commit]
-	template = /Users/bkahlert/.stCommitMsg
+  template = /Users/bkahlert/.stCommitMsg

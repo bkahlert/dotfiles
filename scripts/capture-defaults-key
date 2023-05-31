@@ -18,7 +18,7 @@ logr info "You can customize your configuration now."
 
 prompt4 Y/n '%s\n' "As soon as you have finished, hit Enter to see the changed defaults." \
                   "Ready?"
-# TODO check if ksdiff is installed
+
 defaults read > /tmp/prefs.after
 sed -i '' \
   -e '/[Dd]uration\ \{0,1\}=/d' \
@@ -27,8 +27,5 @@ sed -i '' \
   /tmp/prefs.before /tmp/prefs.after
 diff --unified=3 \
   /tmp/prefs.before /tmp/prefs.after &
-command -v "ksdiff" >/dev/null && ksdiff \
-  --diff \
-  --wait \
-  /tmp/prefs.before /tmp/prefs.after
+command -v "idea" >/dev/null && idea --wait diff /tmp/prefs.before /tmp/prefs.after
 rm /tmp/prefs.before /tmp/prefs.after

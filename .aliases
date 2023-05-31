@@ -354,3 +354,14 @@ if [[ $OSTYPE == darwin* ]]; then
 
     alias fix-spotlight='find . -type d \( -name "node_modules" -o -name ".git" \) -exec touch "{}/.metadata_never_index" \;'
 fi
+
+kill-port() {
+    local port=${1?missing port} pid
+    while nc -z localhost "$port" &>/dev/null; do
+        1>&2 printf "stopping ... "
+        pid=$(lsof -Fp -Pi ":$port" -sTCP:LISTEN | grep --extended-regexp 'p\d+' | cut -c2-)
+        kill "$pid" || exit
+        sleep 1
+    done
+    1>&2 printf "✔\n"
+}
