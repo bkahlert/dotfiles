@@ -5,7 +5,7 @@
 ## Link dot file
 
 ```shell
-ln -s .hushlogin "$HOME/.hushlogin"
+ln -s "$PWD/.hushlogin" "$HOME/.hushlogin"
 ```
 
 ## License
