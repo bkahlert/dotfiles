@@ -30,7 +30,6 @@ alias alias-print='declare -f'
 alias git+x='git update-index --chmod=+x'
 
 # Aliases
-alias ssh='sshukh'                                                              # Always use sshukh
 alias lsl="ls -1lAFhct"                                                         # Prints directory contents human-readable and detailed
 alias lsr="ls -1lAFhcrt"                                                        # Prints directory contents recursively human-readable and detailed
 

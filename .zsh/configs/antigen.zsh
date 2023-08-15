@@ -33,7 +33,6 @@ Cloudstek/zsh-plugin-appup                              # up, down, start, resta
 desyncr/auto-ls                                         # automatically call ls on cwd
 unixorn/autoupdate-antigen.zshplugin                    # auto-updates for Antigen and bundles
 TamCore/autoupdate-oh-my-zsh-plugins                    # auto-updates for Oh-my-ZSH plugins
-anatolykopyl/sshukh                                     # offers to remove known_host entry if connection failed
 skywind3000/z.lua                                       # use z instead of cd
 colored-man-pages                                       # colors man pages
 web-search                                              # search using google, bing, etc.
