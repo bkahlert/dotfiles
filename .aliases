@@ -304,7 +304,7 @@ if [[ $OSTYPE == darwin* ]]; then
     }
 
     # serve . (or public dir if exists) by http
-    alias serve="npx http-server -c -p 80"
+    alias serve="npx http-server -c-1 -p 80"
     alias live="npx live-server --port=80 --no-browser"
 
     # type "samples x" instead of "man x" for examples for a command
