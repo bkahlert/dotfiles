@@ -1,5 +1,5 @@
-# No 'export LANG=C.UTF-8' as that would require C locales
-export LC_CTYPE=UTF-8 # UTF-8 for string functions
+# Default locale
+export LANG=en_US.UTF-8
 
 # Enable word splitting as in `sh`
 setopt shwordsplit
