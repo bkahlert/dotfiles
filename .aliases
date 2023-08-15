@@ -29,13 +29,6 @@ alias alias-print='declare -f'
 ## Git
 alias git+x='git update-index --chmod=+x'
 
-## Kubernetes
-alias kube_configs='echo "$(find ~/.kube -type f -regex '"'"'.*\.ya\{0,1\}ml'"'"' | tr '"'"'\n'"'"' ':')$HOME/.kube/config"'
-export KUBECONFIG="$(kube_configs)"
-alias kubectx='export KUBECONFIG="$(kube_configs)"; command kubectx'
-
-export KUBE_EDITOR="idea --wait"
-
 # Aliases
 alias ssh='sshukh'                                                              # Always use sshukh
 alias lsl="ls -1lAFhct"                                                         # Prints directory contents human-readable and detailed
@@ -246,12 +239,6 @@ docker-logs-raw() {
   cat --language "${language}" <(echo "$log")
 }
 
-
-
-## Kubernetes
-alias kc.current-cluster-url="kubectl config view --minify -o jsonpath='{.clusters[].cluster.server}'"
-alias kc.current-cluster-hostname="kc.current-cluster-url | awk -F[/:] '{print \$4}'"
-#alias microk8s="ssh "$(kc.current-cluster-hostname)" microk8s $*"
 
 # Prints the latest release version of a GitHub project.
 # Example: gh-latest bkahlert/kommons
