@@ -1,21 +1,30 @@
-[user]
-  name = Björn Kahlert
-  email = mail@bkahlert.com
-[core]
-  editor = idea --wait
-  excludesfile = /Users/bkahlert/.gitignore_global
-  autocrlf = input
+[alias]
+  stash-staged = "!bash -c \"git stash --keep-index; git stash push -m \"staged\" --keep-index; git stash pop stash@{1}\""
+  move-staged = "!bash -c \"git stash-staged;git commit -m \"temp\"; git stash; git reset --hard HEAD^; git stash pop\""
 [color]
   branch = auto
   diff = auto
   interactive = auto
   status = auto
   ui = auto
+[commit]
+  template = /Users/bkahlert/.stCommitMsg
+[core]
+  editor = idea --wait
+  excludesfile = /Users/bkahlert/.gitignore_global
+  autocrlf = input
+[credential]
+  helper = osxkeychain
 [diff]
   tool = Kaleidoscope
+[difftool]
+  prompt = false
 [difftool "Kaleidoscope"]
   cmd = ksdiff --partial-changeset --relative-path \"$MERGED\" -- \"$LOCAL\" \"$REMOTE\"
   prompt = false
+[difftool "sourcetree"]
+  cmd = opendiff \"$LOCAL\" \"$REMOTE\"
+  path =
 [filter "lfs"]
   required = true
   clean = git-lfs clean -- %f
@@ -23,34 +32,22 @@
   process = git-lfs filter-process
 [init]
   defaultBranch = master
-[merge]
-  tool = Kaleidoscope
-[mergetool "Kaleidoscope"]
-  cmd = ksdiff --merge --output \"$MERGED\" --base \"$BASE\" -- \"$LOCAL\" --snapshot \"$REMOTE\" --snapshot
-  trustexitcode = true
-  prompt = false
-[web]
-  browser = google-chrome
-[credential]
-  helper = osxkeychain
-[push]
-  default = simple
-[merge]
-  tool = kdiff3
-[difftool]
-  prompt = false
-[alias]
-  stash-staged = "!bash -c \"git stash --keep-index; git stash push -m \"staged\" --keep-index; git stash pop stash@{1}\""
-  move-staged = "!bash -c \"git stash-staged;git commit -m \"temp\"; git stash; git reset --hard HEAD^; git stash pop\""
-[pull]
-  rebase = true
 [includeIf "gitdir/i:~/Development/DKB/"]
   path = ~/Development/DKB/.gitconfig_include
-[difftool "sourcetree"]
-  cmd = opendiff \"$LOCAL\" \"$REMOTE\"
-  path =
+[merge]
+  tool = kdiff3
 [mergetool "sourcetree"]
   cmd = /Applications/Sourcetree.app/Contents/Resources/opendiff-w.sh \"$LOCAL\" \"$REMOTE\" -ancestor \"$BASE\" -merge \"$MERGED\"
+[pull]
+  rebase = true
   trustExitCode = true
-[commit]
-  template = /Users/bkahlert/.stCommitMsg
+[push]
+  default = simple
+  useForceIfIncludes = true
+[rerere]
+  enabled = true
+[user]
+  name = Björn Kahlert
+  email = mail@bkahlert.com
+[web]
+  browser = google-chrome
