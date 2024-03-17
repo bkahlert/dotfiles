@@ -1,6 +1,7 @@
 [alias]
   stash-staged = "!bash -c \"git stash --keep-index; git stash push -m \"staged\" --keep-index; git stash pop stash@{1}\""
   move-staged = "!bash -c \"git stash-staged;git commit -m \"temp\"; git stash; git reset --hard HEAD^; git stash pop\""
+  push = push --force-with-lease
 [color]
   branch = auto
   diff = auto
