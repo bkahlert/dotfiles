@@ -1,12 +1,15 @@
-# Link brew-installed JDK
-if [ -r "$(brew --prefix)/opt/openjdk/libexec/openjdk.jdk" ] && [ ! -e '/Library/Java/JavaVirtualMachines/openjdk.jdk' ]; then
-  ln -sfn "$(brew --prefix)/opt/openjdk/libexec/openjdk.jdk" '/Library/Java/JavaVirtualMachines/openjdk.jdk'
+declare -r brew_jdk="$(brew --prefix)/opt/openjdk/libexec/openjdk.jdk"
+declare -r system_jdk='/Library/Java/JavaVirtualMachines/openjdk.jdk'
+
+# Link brew-installed JDK to system JDK
+if [ -r "$brew_jdk" ] && [ ! -e "$system_jdk" ]; then
+  ln -sfn "$brew_jdk" "$system_jdk"
 fi
 
-# Use brew-installed JDK as JAVA_HOME by default
-[ -e '/Library/Java/JavaVirtualMachines/openjdk.jdk' ] && JAVA_HOME='/Library/Java/JavaVirtualMachines/openjdk.jdk'
+# Use system JDK as JAVA_HOME by default
+[ -e "$system_jdk" ] && JAVA_HOME="$system_jdk/Contents/Home"
 
-# Use OS default if no brew-installed JDK is available
+# Fall back to OS default
 [ -x "$JAVA_HOME/bin/java" ] || JAVA_HOME=$(/usr/libexec/java_home)
 
 export JAVA_HOME
