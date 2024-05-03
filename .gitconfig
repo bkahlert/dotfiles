@@ -35,6 +35,8 @@
   defaultBranch = master
 [includeIf "gitdir/i:~/Development/DKB/"]
   path = ~/Development/DKB/.gitconfig_include
+[includeIf "gitdir/i:~/Development/formation/"]
+  path = ~/Development/formation/.gitconfig_include
 [merge]
   tool = kdiff3
 [mergetool "sourcetree"]
