@@ -100,6 +100,9 @@ defaults write NSGlobalDomain KeyRepeat -int 2
 # Set "Press 🌐︎ key to" to "Do Nothing"
 defaults write com.apple.HIToolbox AppleFnUsageType -int "0"
 
+# Enable "Use F1, F2, etc. keys as standard function keys"
+defaults write NSGlobalDomain com.apple.keyboard.fnState -bool true
+
 defaults write NSGlobalDomain NSUserDictionaryReplacementItems -string '
 (
         {
