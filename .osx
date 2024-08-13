@@ -8,7 +8,8 @@
 #
 # Options:
 #   --no-restart: Don't restart any apps or services after running the script.
-#
+# 
+# 💡 For an incomplete list of defaults, see https://macos-defaults.com/
 # 💡 To capture default changes use `scripts/capture-defaults-key`.
 #
 # @see: http://secrets.blacktree.com/?showapp=com.apple.finder
@@ -95,6 +96,9 @@ defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 # Set keyboard repeat rate, and make it happen more quickly.
 defaults write NSGlobalDomain InitialKeyRepeat -int 25
 defaults write NSGlobalDomain KeyRepeat -int 2
+
+# Set "Press 🌐︎ key to" to "Do Nothing"
+defaults write com.apple.HIToolbox AppleFnUsageType -int "0"
 
 defaults write NSGlobalDomain NSUserDictionaryReplacementItems -string '
 (
