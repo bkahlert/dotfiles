@@ -35,7 +35,7 @@
     os_icon                 # os identifier
     dir                     # current directory
     vcs                     # git status
-    last_pass               # LastPass status
+    # last_pass               # LastPass status
     # =========================[ Line #2 ]=========================
     newline                 # \n
     prompt_char             # prompt symbol
@@ -109,7 +109,7 @@
     # =========================[ Line #2 ]=========================
     newline
     # ip                    # ip address and bandwidth usage for a specified network interface
-    public_ip               # public IP address
+    # public_ip               # public IP address
     # proxy                 # system-wide http/https/ftp proxy
     # battery               # internal battery
     # wifi                  # wifi speed
