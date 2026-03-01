@@ -1,0 +1,46 @@
+[alias]
+  stash-staged = "!bash -c \"git stash --keep-index; git stash push -m 'staged' --keep-index; git stash pop stash@{1}\""
+  move-staged = "!bash -c \"git stash-staged;git commit -m 'temp'; git stash; git reset --hard HEAD^; git stash pop\""
+  push = push --force-with-lease
+[color]
+  branch = auto
+  diff = auto
+  interactive = auto
+  status = auto
+  ui = auto
+[core]
+  editor = idea --wait
+  autocrlf = input
+[diff]
+  tool = Kaleidoscope
+[difftool]
+  prompt = false
+[difftool "Kaleidoscope"]
+  cmd = ksdiff --partial-changeset --relative-path "$MERGED" -- "$LOCAL" "$REMOTE"
+  prompt = false
+[filter "lfs"]
+  required = true
+  clean = git-lfs clean -- %f
+  smudge = git-lfs smudge -- %f
+  process = git-lfs filter-process
+[init]
+  defaultBranch = master
+[merge]
+  tool = kdiff3
+[pull]
+  rebase = true
+  trustExitCode = true
+[push]
+  default = simple
+  useForceIfIncludes = true
+[rerere]
+  enabled = true
+[user]
+  name = {{ .name }}
+  email = {{ .email }}
+[web]
+  browser = google-chrome
+{{ if eq .chezmoi.os "darwin" -}}
+[credential]
+  helper = osxkeychain
+{{ end -}}
