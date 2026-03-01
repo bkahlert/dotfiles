@@ -36,8 +36,9 @@ palette = 13=#df00ff
 palette = 14=#1be1fe
 palette = 15=#eeeeee
 
-# Bold uses bright colors
-bold-is-bright = true
+# Window
+background-opacity = 0.95
+background-blur-radius = 20
 
 # Shell integration
 shell-integration = zsh
