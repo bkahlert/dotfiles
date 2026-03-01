@@ -41,3 +41,6 @@ alias sc='source ~/.aliases'
 
 # Added by Toolbox App
 export PATH="$PATH:$HOME/Library/Application Support/JetBrains/Toolbox/scripts"
+
+# OpenClaw Completion
+source <(openclaw completion --shell zsh)
