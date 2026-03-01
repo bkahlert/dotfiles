@@ -1,0 +1,10 @@
+# Ghostty terminal configuration
+# Reference: https://ghostty.org/docs/config/reference
+# Live reload: Cmd+Shift+, (macOS) / Ctrl+Shift+, (Linux)
+
+# Font
+font-family = JetBrains Mono
+font-size = 14
+
+# Shell integration
+shell-integration = zsh

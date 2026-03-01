@@ -1,0 +1,9 @@
+# Starship prompt configuration
+# Reference: https://starship.rs/config/
+
+# Don't add a blank line before the prompt
+add_newline = false
+
+[character]
+success_symbol = "[>](bold green)"
+error_symbol = "[>](bold red)"
