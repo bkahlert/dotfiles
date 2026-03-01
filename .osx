@@ -8,14 +8,12 @@
 #
 # Options:
 #   --no-restart: Don't restart any apps or services after running the script.
-#
+# 
+# 💡 For an incomplete list of defaults, see https://macos-defaults.com/
 # 💡 To capture default changes use `scripts/capture-defaults-key`.
 #
 # @see: http://secrets.blacktree.com/?showapp=com.apple.finder
 # @see: https://github.com/herrbischoff/awesome-macos-command-line
-#
-# How-to add user defined shortcuts:
-# defaults write com.apple.iTunes NSUserKeyEquivalents -dict-add "Target Search Field" "@F"
 
 # TODO associate file extensions with application
 # TODO e.g. with idea
@@ -89,12 +87,45 @@ defaults write com.apple.dock showAppExposeGestureEnabled -bool true
 defaults write com.apple.dock showDesktopGestureEnabled -bool true
 defaults write com.apple.dock.showLaunchpadGestureEnabled -bool false
 
+# Disable "Open man Page in Terminal" and "Search man Page Index in Terminal" shortcuts
+TEMP_SETTINGS_FILE=$(mktemp -t 'man-shortcuts-off.json')
+cat > "$TEMP_SETTINGS_FILE" <<EOF
+{
+  "NSServicesStatus": {
+    "com.apple.Terminal - Open man Page in Terminal - openManPage": {
+      "presentation_modes": {
+        "ContextMenu": false,
+        "ServicesMenu": false
+      },
+      "enabled_context_menu": false,
+      "enabled_services_menu": false
+    },
+    "com.apple.Terminal - Search man Page Index in Terminal - searchManPages": {
+      "presentation_modes": {
+        "ContextMenu": false,
+        "ServicesMenu": false
+      },
+      "enabled_context_menu": false,
+      "enabled_services_menu": false
+    }
+  }
+}
+EOF
+plutil -convert xml1 -o - "${TEMP_SETTINGS_FILE}" | defaults import pbs -
+rm "${TEMP_SETTINGS_FILE}"
+
 # Disable press-and-hold for keys in favor of key repeat
 defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 
 # Set keyboard repeat rate, and make it happen more quickly.
 defaults write NSGlobalDomain InitialKeyRepeat -int 25
 defaults write NSGlobalDomain KeyRepeat -int 2
+
+# Set "Press 🌐︎ key to" to "Do Nothing"
+defaults write com.apple.HIToolbox AppleFnUsageType -int "0"
+
+# Enable "Use F1, F2, etc. keys as standard function keys"
+defaults write NSGlobalDomain com.apple.keyboard.fnState -bool true
 
 defaults write NSGlobalDomain NSUserDictionaryReplacementItems -string '
 (
@@ -231,6 +262,9 @@ defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
 
 # When performing a search, search the current folder by default
 defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+
+# Keep folder at top when sorting
+defaults write com.apple.finder _FXSortFoldersFirst -bool true
 
 # Disable the warning when changing a file extension
 defaults write com.apple.finder FXEnableExtensionChangeWarning -bool false
