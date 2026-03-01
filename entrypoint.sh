@@ -3,6 +3,14 @@ set -euo pipefail
 
 # Apply dotfiles if repo is mounted
 if [ -d /dotfiles/home ]; then
+  # Provide default data for non-interactive container use
+  mkdir -p ~/.config/chezmoi
+  cat > ~/.config/chezmoi/chezmoi.toml <<'TOML'
+[data]
+    email = "test@example.com"
+    name = "Test User"
+    is_personal = true
+TOML
   chezmoi init --apply --source /dotfiles/home
 fi
 

@@ -21,9 +21,6 @@ github = "djui/alias-tips"
 github = "ohmyzsh/ohmyzsh"
 dir = "plugins/colored-man-pages"
 
-[plugins.zsh-helmfile]
-github = "Datenworks/zsh-helmfile"
-
 [plugins.zsh-ansible]
 github = "sparsick/ansible-zsh"
 
