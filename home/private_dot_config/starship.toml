@@ -1,9 +1,32 @@
 # Starship prompt configuration
 # Reference: https://starship.rs/config/
 
-# Don't add a blank line before the prompt
 add_newline = false
+
+format = "$os$directory$all$character"
+right_format = "$custom"
+
+[os]
+disabled = false
+format = "[$symbol]($style) "
+style = "white"
+
+[os.symbols]
+Macos = ""
+
+[directory]
+format = "[ $path]($style)[$read_only]($read_only_style) "
+home_symbol = " ~"
+truncation_length = 3
+truncate_to_repo = false
+read_only = " "
 
 [character]
 success_symbol = "[>](bold green)"
 error_symbol = "[>](bold red)"
+
+[custom.disk]
+command = "df -h / | awk 'NR==2 {print $5}'"
+when = true
+format = "[ $output]($style)"
+style = "white"
