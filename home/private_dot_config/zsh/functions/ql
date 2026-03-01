@@ -1,3 +1,0 @@
-# Quick Look files (macOS)
-[[ $OSTYPE == darwin* ]] || return 0
-(( $# > 0 )) && qlmanage -p "$@" &>/dev/null &

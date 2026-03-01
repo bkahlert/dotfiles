@@ -1,4 +1,0 @@
-# Kills the process listening on the specified port
-local port=${1?port missing} pid
-pid=$(lsof -i ":$port" -P -n | tail -n 1 | awk '{print $2}')
-[[ -z "$pid" ]] || kill "$pid" || kill -9 "$pid"

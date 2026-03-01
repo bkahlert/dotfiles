@@ -1,9 +1,0 @@
-# Kills processes listening on the specified port
-local port=${1?missing port} pid
-while nc -z localhost "$port" &>/dev/null; do
-  printf >&2 "stopping ... "
-  pid=$(lsof -Fp -Pi ":$port" -sTCP:LISTEN | grep -E 'p\d+' | cut -c2-)
-  kill "$pid" || exit
-  sleep 1
-done
-printf >&2 "done\n"

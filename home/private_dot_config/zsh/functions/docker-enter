@@ -1,5 +1,0 @@
-# Starts command in Docker image without entrypoint
-# Usage: docker-enter <image> <command> [args...]
-local -r image=${1?Docker image missing}; shift
-local -r command=${1?command missing}; shift
-docker run --rm --entrypoint "$command" "$image" "$@"

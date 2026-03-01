@@ -1,3 +1,0 @@
-# Prints log path of a container (default: latest)
-local id="${1:-$(docker-latest)}"
-docker inspect -f "{{.LogPath}}" "$id"
