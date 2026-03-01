@@ -1,0 +1,8 @@
+# Runs command in Docker image (interactive if no args)
+# Usage: docker-command <image> [command...]
+local -r image=${1?Docker image missing}; shift
+if [[ $# == 0 ]]; then
+  docker run -it --rm "$image"
+else
+  docker run --rm "$image" "$@"
+fi

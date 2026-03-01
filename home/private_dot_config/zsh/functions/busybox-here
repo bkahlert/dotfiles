@@ -1,0 +1,2 @@
+# Same as busybox but with cwd mounted
+DOCKER_ARGS="-v $PWD:$PWD -w $PWD" busybox "$@"

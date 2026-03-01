@@ -1,0 +1,1 @@
+tar -cz "$@" | base64 | pbcopy

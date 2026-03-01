@@ -1,0 +1,6 @@
+# Use btop if available, fallback to real top
+if command -v btop &>/dev/null; then
+  btop "$@"
+else
+  command top "$@"
+fi

@@ -1,0 +1,8 @@
+# Runs command in Ubuntu container (interactive if no args)
+# Usage: ubuntu [command...]
+local -a cmd=(docker run --rm -e LANG=C.UTF-8 -e TERM="$TERM")
+if [[ $# == 0 ]]; then
+  "${cmd[@]}" -it ubuntu /bin/bash
+else
+  "${cmd[@]}" ubuntu bash -c "$*"
+fi

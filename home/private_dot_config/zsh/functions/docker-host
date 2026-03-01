@@ -1,0 +1,4 @@
+# Run command in the Docker VM
+# Usage: docker-host [command...] (default: sh)
+if [[ $# == 0 ]]; then set -- "sh"; fi
+docker run -it --rm --privileged --pid=host alpine:edge nsenter -t 1 -m -u -n -i "$@"

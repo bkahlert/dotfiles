@@ -1,0 +1,4 @@
+# Lists available shells in a Docker image
+# Usage: docker-list-shells <image>
+local -r image=${1?Docker image missing}
+docker run --rm --entrypoint cat "$image" /etc/shells | sed -E '/^#/d' | tr '\n' ' '
