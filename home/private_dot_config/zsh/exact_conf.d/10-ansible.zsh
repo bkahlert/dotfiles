@@ -1,0 +1,2 @@
+export ANSIBLE_VAULT_PASS_CLIENT=lastpass
+export ANSIBLE_VAULT_PASS_CLIENT_USERNAME=mail@bkahlert.com
