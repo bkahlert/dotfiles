@@ -3,30 +3,29 @@
 
 add_newline = false
 
-format = "$os$directory$all$character"
+format = " $os$directory$all$character"
 right_format = "$custom"
 
 [os]
 disabled = false
-format = "[$symbol]($style) "
+format = "[$symbol]($style)"
 style = "white"
 
 [os.symbols]
 Macos = ""
 
 [directory]
-format = "[ $path]($style)[$read_only]($read_only_style) "
-home_symbol = " ~"
+format = "[$path]($style)[$read_only]($read_only_style) "
 truncation_length = 3
 truncate_to_repo = false
-read_only = " "
 
 [character]
-success_symbol = "[>](bold green)"
-error_symbol = "[>](bold red)"
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
 
 [custom.disk]
-command = "df -h / | awk 'NR==2 {print $5}'"
-when = true
-format = "[ $output]($style)"
+command = "df / | awk 'NR==2 {print $5}'"
+when = "true"
+shell = ["bash", "--noprofile", "--norc"]
+format = "[$output]($style)"
 style = "white"
