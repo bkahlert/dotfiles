@@ -1,0 +1,35 @@
+shell = "zsh"
+
+[plugins.zsh-defer]
+github = "romkatv/zsh-defer"
+
+[plugins.zsh-autosuggestions]
+github = "zsh-users/zsh-autosuggestions"
+
+[plugins.zsh-syntax-highlighting]
+github = "zsh-users/zsh-syntax-highlighting"
+
+[plugins.zsh-completions]
+github = "zsh-users/zsh-completions"
+dir = "src"
+apply = ["fpath"]
+
+[plugins.alias-tips]
+github = "djui/alias-tips"
+
+[plugins.colored-man-pages]
+github = "ohmyzsh/ohmyzsh"
+dir = "plugins/colored-man-pages"
+
+[plugins.zsh-helmfile]
+github = "Datenworks/zsh-helmfile"
+
+[plugins.zsh-ansible]
+github = "sparsick/ansible-zsh"
+
+[plugins.appup]
+github = "Cloudstek/zsh-plugin-appup"
+
+[plugins.web-search]
+github = "ohmyzsh/ohmyzsh"
+dir = "plugins/web-search"
