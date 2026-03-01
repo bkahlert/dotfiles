@@ -3,16 +3,7 @@
 
 add_newline = false
 
-format = " $os$directory$all$character"
-right_format = "$custom"
-
-[os]
-disabled = false
-format = "[$symbol]($style)"
-style = "white"
-
-[os.symbols]
-Macos = ""
+format = " $directory$all$character"
 
 [directory]
 format = "[$path]($style)[$read_only]($read_only_style) "
@@ -22,10 +13,3 @@ truncate_to_repo = false
 [character]
 success_symbol = "[❯](bold green)"
 error_symbol = "[❯](bold red)"
-
-[custom.disk]
-command = "df / | awk 'NR==2 {print $5}'"
-when = "true"
-shell = ["bash", "--noprofile", "--norc"]
-format = "[$output]($style)"
-style = "white"
