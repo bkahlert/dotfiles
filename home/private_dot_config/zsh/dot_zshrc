@@ -1,0 +1,11 @@
+# Autoload functions
+fpath=($ZDOTDIR/functions $ZDOTDIR/completions $fpath)
+autoload -Uz $ZDOTDIR/functions/*(N.:t)
+
+# Source modular configs in order
+for config in $ZDOTDIR/conf.d/*.zsh(N); do
+  source "$config"
+done
+
+# Machine-local overrides (not managed by chezmoi)
+[[ -f $ZDOTDIR/.zshrc.local ]] && source $ZDOTDIR/.zshrc.local
