@@ -2,9 +2,42 @@
 # Reference: https://ghostty.org/docs/config/reference
 # Live reload: Cmd+Shift+, (macOS) / Ctrl+Shift+, (Linux)
 
-# Font
+# Font (JetBrains Mono Nerd Font from Terminal.app BKAHLERT profile)
 font-family = JetBrains Mono
-font-size = 14
+font-size = 13
+
+# Cursor
+cursor-style = bar
+cursor-style-blink = true
+
+# Colors (from Terminal.app BKAHLERT profile)
+foreground = #a0a0a0
+background = #202020
+cursor-color = #b2b2b2
+selection-background = #0c6f7c
+
+# Normal colors (0-7)
+palette = 0=#060604
+palette = 1=#b2005f
+palette = 2=#59ac36
+palette = 3=#fdd01f
+palette = 4=#2297da
+palette = 5=#9f00b4
+palette = 6=#0d6e7b
+palette = 7=#d3d5d3
+
+# Bright colors (8-15)
+palette = 8=#5b5a5a
+palette = 9=#fc0085
+palette = 10=#83ff4e
+palette = 11=#fefd55
+palette = 12=#29b2fe
+palette = 13=#df00ff
+palette = 14=#1be1fe
+palette = 15=#eeeeee
+
+# Bold uses bright colors
+bold-is-bright = true
 
 # Shell integration
 shell-integration = zsh
