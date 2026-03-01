@@ -1,0 +1,4 @@
+[data]
+    email = {{ promptStringOnce . "email" "Email address" | quote }}
+    name = {{ promptStringOnce . "name" "Full name" | quote }}
+    is_personal = {{ promptBoolOnce . "is_personal" "Is this a personal machine" }}

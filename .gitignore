@@ -1,0 +1,7 @@
+# chezmoi
+home/.chezmoiexternal.toml.lock
+# macOS
+.DS_Store
+# IDE
+.idea/
+*.iml
