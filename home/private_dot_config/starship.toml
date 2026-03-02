@@ -2,14 +2,45 @@
 # Reference: https://starship.rs/config/
 
 add_newline = false
-
-format = " $directory$all$character"
-
-[directory]
-format = "[$path]($style)[$read_only]($read_only_style) "
-truncation_length = 3
-truncate_to_repo = false
+command_timeout = 5000
 
 [character]
 success_symbol = "[❯](bold green)"
 error_symbol = "[❯](bold red)"
+
+[cmd_duration]
+format = " took [$duration]($style) "
+
+[directory]
+format = "[$path]($style)[$read_only]($read_only_style) "
+truncation_length = 1
+truncate_to_repo = false
+
+[direnv]
+disabled = false
+
+[gcloud]
+format = 'on [$symbol$account]($style) [$project]($style dimmed)'
+symbol = '☁️ '
+project_aliases = { "ista-express-development" = "ies-dev", "ista-express-stage" = "ies-stage", "ista-express-prod" = "ies-prod" }
+
+[git_branch]
+disabled = true
+
+[gradle]
+disabled = true
+symbol = '󰟆 '
+
+[java]
+disabled = true
+
+[kotlin]
+disabled = true
+
+[localip]
+disabled = false
+
+[status]
+disabled = false
+symbol = ''
+failure_style = 'dimmed red'
