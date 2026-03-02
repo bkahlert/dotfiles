@@ -135,6 +135,10 @@ Use autoloaded functions for zsh-specific utilities. Use `~/.local/bin` scripts 
 **Add a brew package:**
 Edit [run_once_before_01-install-packages.sh.tmpl](home/.chezmoiscripts/run_once_before_01-install-packages.sh.tmpl) and add to the Brewfile.
 
+## Git Commits
+
+- Do **not** include `Co-Authored-By:` or any AI attribution lines in commit messages.
+
 ## Testing
 
 ```sh
