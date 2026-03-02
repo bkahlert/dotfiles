@@ -1,0 +1,4 @@
+{{ if not .is_personal -}}
+@express-service:registry=https://gitlab.com/api/v4/packages/npm/
+//gitlab.com/api/v4/packages/npm/:_authToken={{ onepasswordRead "op://Employee/GitLab NPM Token/credential" }}
+{{ end -}}

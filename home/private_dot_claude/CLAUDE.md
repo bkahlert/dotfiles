@@ -1,3 +1,104 @@
+# Skills
+
+## Superpowers Framework
+- You MUST follow the `superpowers:using-superpowers` protocol for every request.
+- If any task has a matching skill (e.g., `superpowers:brainstorming`, `superpowers:systematic-debugging`), you must invoke it via the Skill tool before proceeding.
+- If multiple skills apply, ask for clarification on which workflow to prioritize.
+- For implementation please default to `Subagent-Driven`
+
+If multiple skills can be used, ask which one to use.
+
+
+# Git
+
+- Do never commit on the main/master branch.
+- I use IntelliJ which has no support for `git worktree`.
+  - Therefor don't use `git worktree`
+
+
+# Markdown
+
+- When you reference a file, do so with a proper Markdown link
+  - `[filename](path)`, or
+  - `[path](path)`, or
+  - `[title of the references file](path)`
+
+
+# SVG
+
+Whenever possible "relative" colors like `currentColor` (e.g. `fill="currentColor"`).
+
+
+# Test Naming & Structure
+
+## 1. Specificity via Nesting
+Achieve test specificity through hierarchical nesting rather than long BDD descriptions. Each level should add a single layer of context.
+- **Concise Strings**: Keep individual descriptions brief.
+- **No Redundancy**: Do not repeat words from a parent block in a child block.
+- **The "Full Path" Rule**: The test's intent should be clear when reading the nested breadcrumbs (e.g., Resource > Name > On missing technician > should be null).
+
+## 2. Phrasing & Conditional Logic
+- **Favor "on" over "if"**: Use "on [state/event]" for triggers (e.g., `on missing foo` instead of `if foo is missing`).
+- **Time Dimension**: Only use "when" or "if" if the condition implies a temporal sequence or complex logic that "on" cannot represent.
+- **Direct Outcomes**: The final leaf node should focus strictly on the result/assertion (e.g., `should be null`, `it returns 200`).
+
+## 3. Framework Adaptability
+Adapt the syntax to the project's specific framework while maintaining the hierarchical philosophy:
+- **Kotest (ShouldSpec)**: Use `context(...)` for nesting and `should(...)` for assertions.
+- **Jest/RSpec/Mocha**: Use `describe(...)` for subjects, `context(...)` for states, and `it(...)` for assertions.
+- **JUnit 5**: Use `@Nested` classes with `@DisplayName`.
+
+## Examples
+
+**Bad (Flat & Verbose)**
+"If the technician exists the name of the resource should equal the technician's name"
+"If the technician does not exist the name of the resource should equal null"
+
+**Good (Nested & Specific)**
+context("resource") {
+  context("name") {
+    should("be technician's name")
+    context("on missing technician") {
+      should("be null")
+    }
+  }
+}
+
+
+# Shell/Bash scripts
+
+## Files
+- must follow the [Google Shell Style Guide](https://google.github.io/styleguide/shellguide.html), i.e. file header with purpose and usage
+- must not contain hard coded escape sequences but use tput or a similar semantic approach
+- shell script libraries must have a .bash extension
+- shell scripts must
+  - not have a file extension
+  - be executable
+  - use shebang `#!/usr/bin/env bash`
+
+## Parameter handling
+- prefer named parameters over positional arguments (unless those are actual files)
+- adopt the following pattern for parse named parameters:
+```
+    local code=1
+    while [ $# -gt 0 ]; do
+        case $1 in
+        --code) code=${2?$1: parameter value not set} && shift 2 ;;
+        --code=*) code=${1#*=} && shift ;;
+        *) break ;;
+        esac
+    done
+```
+
+- for boolean parameters you can use
+```
+  # Boolean flags
+  local verbose=false
+  case $1 in
+      --verbose) verbose=true && shift ;;
+```
+
+
 # Context awareness and multi-window workflows
 
 Your context window will be automatically compacted as it approaches its limit, allowing you to continue working indefinitely from where you left off. Therefore, do not stop tasks early due to token budget concerns. As you approach your token budget limit, save your current progress and state to memory before the context window refreshes. Always be as persistent and autonomous as possible and complete tasks fully, even if the end of your budget is approaching. Never artificially stop any task early regardless of the context remaining.

@@ -1,0 +1,19 @@
+# Kills the process listening on a given port
+# Usage: killport <port_number>
+
+if [[ -z "$1" ]]; then
+  printf_error "Usage: killport <port_number>"
+  return 1
+fi
+
+local pid
+pid=$(lsof -t -i:"$1")
+
+if [[ -z "$pid" ]]; then
+  printf_error "No process found listening on port $1."
+  return 1
+fi
+
+echo "Found process with PID ${pid} on port $1. Killing it now..."
+kill "${pid}"
+echo "Process killed."

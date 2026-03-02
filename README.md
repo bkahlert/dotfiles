@@ -13,6 +13,7 @@ sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply bkahlert --source ~/.local/
 **Existing machine:**
 
 ```sh
+brew install chezmoi
 chezmoi init --apply bkahlert
 ```
 
@@ -127,8 +128,11 @@ dotfiles/
     │   ├── starship.toml      # prompt config
     │   └── ghostty/           # terminal config
     │
-    ├── dot_gitconfig.tmpl     # git (templated for name/email)
-    └── dot_tmux.conf          # tmux
+    ├── private_dot_ssh/           # SSH config (1Password agent)
+    ├── dot_curlrc                 # curl defaults
+    ├── dot_npmrc.tmpl             # npm config (business: GitLab registry)
+    ├── dot_gitconfig.tmpl         # git (templated for name/email)
+    └── dot_tmux.conf              # tmux
 ```
 
 ## Zsh load order
@@ -144,6 +148,7 @@ dotfiles/
   05-prompt.zsh                    → starship init
   06-aliases.zsh                   → suffix aliases only
   07-plugins.zsh                   → sheldon source
+  08-print.zsh                     → printf_error, printf_info, printf_success, ...
   10-*.zsh                         → tool-specific (homebrew, nvm, java, go, ...)
 ```
 
@@ -160,14 +165,44 @@ make stop       # stop the container
 make clean      # remove the image
 ```
 
+## Secrets
+
+Secrets (GitLab tokens, npm auth tokens) are stored in [1Password](https://1password.com/) and fetched at `chezmoi apply` time via `onepasswordRead` in `.tmpl` files. Tokens never appear in the repo.
+
+**Prerequisites:**
+- 1Password desktop app installed and signed in
+- 1Password CLI (`op`) installed (included in the Brewfile)
+- CLI integration enabled in 1Password settings
+
+**Required 1Password items** (business machines only):
+- `op://Employee/GitLab Token/credential` — GitLab private token
+- `op://Employee/GitLab NPM Token/credential` — npm registry auth token
+
+## Repairing the startup LaunchAgent
+
+The `~/.startup` script runs at login via a LaunchAgent. If it stops working:
+
+```sh
+# Re-run the chezmoi setup script
+chezmoi apply --force
+```
+
+Or manually recreate:
+
+```sh
+launchctl unload ~/Library/LaunchAgents/com.user.startup.plist 2>/dev/null
+chezmoi state delete-bucket --bucket=scriptState
+chezmoi apply
+```
+
 ## Design decisions
 
-| Decision | Choice | Why |
-|---|---|---|
-| Dotfiles manager | chezmoi | Real files (not symlinks), templating, multi-machine, can stop using anytime |
-| Zsh layout | ZDOTDIR | Keeps `$HOME` clean — only `~/.zshenv` |
-| Plugin manager | Sheldon | TOML config, fast (Rust), actively maintained |
-| Prompt | Starship | Actively maintained (p10k is on life support), cross-shell |
-| Functions vs scripts | Scripts for POSIX, functions for zsh-only | Scripts work in any shell and from cron/other tools |
-| exact_ on conf.d/ | yes | Removing a module from the repo removes it from the target |
-| exact_ on .config/ | no | Other apps create dirs in .config/ freely |
+| Decision             | Choice                                    | Why                                                                          |
+|----------------------|-------------------------------------------|------------------------------------------------------------------------------|
+| Dotfiles manager     | chezmoi                                   | Real files (not symlinks), templating, multi-machine, can stop using anytime |
+| Zsh layout           | ZDOTDIR                                   | Keeps `$HOME` clean — only `~/.zshenv`                                       |
+| Plugin manager       | Sheldon                                   | TOML config, fast (Rust), actively maintained                                |
+| Prompt               | Starship                                  | Actively maintained (p10k is on life support), cross-shell                   |
+| Functions vs scripts | Scripts for POSIX, functions for zsh-only | Scripts work in any shell and from cron/other tools                          |
+| exact_ on conf.d/    | yes                                       | Removing a module from the repo removes it from the target                   |
+| exact_ on .config/   | no                                        | Other apps create dirs in .config/ freely                                    |

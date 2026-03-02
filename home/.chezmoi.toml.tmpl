@@ -2,3 +2,9 @@
     email = {{ promptStringOnce . "email" "Email address" | quote }}
     name = {{ promptStringOnce . "name" "Full name" | quote }}
     is_personal = {{ promptBoolOnce . "is_personal" "Is this a personal machine" }}
+{{ if not (promptBoolOnce . "is_personal" "Is this a personal machine") -}}
+    op_account = {{ promptStringOnce . "op_account" "1Password account UUID (from `op account list`)" | quote }}
+
+[env]
+    OP_ACCOUNT = {{ promptStringOnce . "op_account" "1Password account UUID" | quote }}
+{{ end -}}
