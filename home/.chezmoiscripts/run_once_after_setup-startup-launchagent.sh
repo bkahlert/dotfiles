@@ -1,9 +1,10 @@
-{{ if eq .chezmoi.os "darwin" -}}
-#!/bin/bash
+#!/usr/bin/env bash
+# Purpose: Sets up a LaunchAgent that runs ~/.startup at login.
+# Usage:   Run automatically by chezmoi on first apply. Re-run with: chezmoi apply --force
+
 set -euo pipefail
 
-# Sets up a LaunchAgent that runs ~/.startup at login.
-# Re-run with: chezmoi apply --force
+[[ $(uname) == Darwin ]] || exit 0
 
 plist_path="$HOME/Library/LaunchAgents/com.user.startup.plist"
 startup_script="$HOME/.startup"
@@ -40,4 +41,3 @@ launchctl unload "$plist_path" 2>/dev/null || true
 launchctl load "$plist_path"
 
 echo "LaunchAgent for ~/.startup configured"
-{{ end -}}
