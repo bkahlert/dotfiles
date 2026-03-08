@@ -1,3 +1,9 @@
+# Starts a Claude session pre-loaded with ista Express architecture context
+# Usage: istaexpress-debug [claude options]
+istaexpress-debug() {
+  claude --append-system-prompt "$(cat ~/Development/istaexpress/dev-chapter/ai/claude/sessions/istaexpress-debug.md)" "$@"
+}
+
 # Logs into gcloud with the specified account
 # Usage: gcloud-login [--admin]
 gcloud-login() {

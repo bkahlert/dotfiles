@@ -150,6 +150,19 @@ When writing or updating `AGENTS.md`, `CLAUDE.md`, or equivalent guidance files:
 - **Review guidance after making code changes.** After any significant refactor, scan the guidance file for descriptions that no longer match the codebase. Stale guidance is worse than no guidance — it actively misleads future agents.
 
 
+# Quality Assurance Gate
+
+Before applying any code or config change, establish a **verification strategy** if none has been stated yet in this session:
+
+- **What observable outcome confirms this change has its intended effect?**
+- For code: TDD, test-after with rationale, or explicit manual steps
+- For config/infra: what command output, log entry, or runtime behavior proves the change took effect (e.g. a pipeline cache tweak is only confirmed when a downstream job demonstrably skips the rebuild)
+
+State this once, upfront, as: *"QA for this change: [method] — verified by [observable outcome]"*
+
+For trivially non-functional changes (e.g. fixing a typo in a comment), say so explicitly — making the decision visible rather than silent.
+
+
 # Codebase Invariants
 
 When a session introduces or discovers a cross-cutting constraint that all code must comply with (e.g., adopting a code style, renaming convention, architectural boundary), update the project's AI guidance file (`AGENTS.md`, `CLAUDE.md`, or equivalent) before the session ends.
