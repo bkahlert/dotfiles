@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Purpose: Login startup script — updates Homebrew and runs ista-specific tasks.
+# Purpose: Login startup script — updates Homebrew on all machines and, on ista
+#          machines, keeps caffeinate and 1Password active.
 # Usage: ~/.startup (invoked automatically by the startup LaunchAgent at login)
 
 set -euo pipefail
@@ -47,7 +48,7 @@ keep_1password_alive() {
   (
     while true; do
       # Use AppleScript to interact with 1Password and restore focus
-      osascript <<'EOF' 2>/dev/null
+      osascript <<'EOF' 2>/dev/null || true
           tell application "System Events"
               -- Check if 1Password is running
               if exists (process "1Password") then
@@ -98,7 +99,6 @@ main() {
   echo "========================================="
   echo "Startup script finished at: $(date)"
   echo "========================================="
-  echo ""
 }
 
 # Run main and redirect output to log file, and to console if interactive
