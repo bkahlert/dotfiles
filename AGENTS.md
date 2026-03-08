@@ -104,6 +104,12 @@ Use autoloaded functions for zsh-specific utilities. Use `~/.local/bin` scripts 
 
 ## Install Scripts
 
+Each package entry in install scripts must have an inline comment stating:
+1. What the tool does (one phrase)
+2. What requires it or why it's installed this way (e.g. "required by chezmoi secrets", "no distro package available")
+
+Example: `brew "1password-cli" # 1Password CLI (op); required by chezmoi to read secrets at apply time`
+
 [.chezmoiscripts/](home/.chezmoiscripts/) contains:
 - `run_once_before_00-install-homebrew.sh.tmpl` — installs Homebrew (macOS)
 - `run_once_before_01-install-packages.sh.tmpl` — installs core packages via Brewfile (macOS) or curl (Linux)
