@@ -1,1 +1,1 @@
-export KUBE_EDITOR="idea --wait"
+export KUBE_EDITOR="ideaw --wait"
