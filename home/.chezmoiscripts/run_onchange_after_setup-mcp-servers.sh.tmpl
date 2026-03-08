@@ -21,8 +21,8 @@ claude mcp add --scope user serena -- uvx \
   --project-from-cwd \
   --enable-web-dashboard false
 
-# gcloud-observability — GCP logs/traces (work machines only, detected by ~/Development/istaexpress)
+{{ if .company -}}
+# gcloud-observability — GCP logs/traces (work machines only)
 claude mcp remove --scope user gcloud-observability 2>/dev/null || true
-if [[ -d "${HOME}/Development/istaexpress" ]]; then
-  claude mcp add --scope user gcloud-observability -- npx -y @google-cloud/observability-mcp
-fi
+claude mcp add --scope user gcloud-observability -- npx -y @google-cloud/observability-mcp
+{{ end -}}
