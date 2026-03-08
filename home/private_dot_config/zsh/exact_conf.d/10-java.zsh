@@ -1,4 +1,5 @@
-{{ if eq .chezmoi.os "darwin" -}}
+[[ $OSTYPE == darwin* ]] || return 0
+
 if command -v brew &>/dev/null; then
   local brew_jdk="$(brew --prefix)/opt/openjdk/libexec/openjdk.jdk"
   local system_jdk='/Library/Java/JavaVirtualMachines/openjdk.jdk'
@@ -11,4 +12,3 @@ if command -v brew &>/dev/null; then
   [ -x "$JAVA_HOME/bin/java" ] || JAVA_HOME=$(/usr/libexec/java_home 2>/dev/null)
   export JAVA_HOME
 fi
-{{ end -}}
