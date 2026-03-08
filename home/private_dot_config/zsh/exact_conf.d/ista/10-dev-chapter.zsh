@@ -45,7 +45,7 @@ if [[ -d "$DEV_CHAPTER_REPO/.git" ]]; then
   fi
 
   if [[ "$should_pull" == "true" ]]; then
-    if git -C "$DEV_CHAPTER_REPO" pull --quiet 2>/dev/null; then
+    if git -C "$DEV_CHAPTER_REPO" pull --quiet --autostash 2>/dev/null; then
       mkdir -p "$_DC_CACHE_DIR"
       date +%s > "$_DC_LAST_PULL_FILE"
     else
