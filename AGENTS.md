@@ -26,11 +26,34 @@ Defined in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), prompted on `chezmoi i
 |---|---|---|
 | `.email` | string | Git config email |
 | `.name` | string | Git config name |
-| `.is_personal` | bool | `true` on personal machines; `false` on business machines |
+| `.company` | string | Company name (empty on personal machines, e.g. `"ista"` on business) |
 | `.chezmoi.os` | string | `"darwin"` or `"linux"` (built-in) |
 
-Use `{{ if not .is_personal }}` to gate business-only configs.
-Use `{{ if eq .chezmoi.os "darwin" }}` to gate macOS-only configs.
+**Never use `.is_personal`** — it has been replaced by `.company`.
+
+### Runtime context: `$DOTFILES_CONTEXT`
+
+`conf.d/00-context.zsh.tmpl` stamps `$DOTFILES_CONTEXT` at apply time (e.g. `ista`). On personal machines the file renders empty. All runtime code should branch on `$DOTFILES_CONTEXT` instead of template conditionals:
+
+```zsh
+[[ -n "$DOTFILES_CONTEXT" ]] && ...   # any business machine
+[[ "$DOTFILES_CONTEXT" == ista ]] && ... # ista specifically
+```
+
+In shell scripts use the env var with a default:
+```bash
+[[ "${DOTFILES_CONTEXT:-}" == ista ]] && ...
+```
+
+### Avoid templates — prefer runtime checks
+
+**Only use `.tmpl` when there is no runtime alternative.** Prefer:
+- `[[ $OSTYPE == darwin* ]]` over `{{ if eq .chezmoi.os "darwin" }}`
+- `[[ $(uname) == Darwin ]] || exit 0` in `.chezmoiscripts/` shell scripts
+- `[[ -n "$DOTFILES_CONTEXT" ]]` over `{{ if .company }}`
+- Directory structure (`conf.d/ista/`) over template conditionals
+
+A template is justified when the value must be baked in at apply time and the target format has no runtime equivalent — e.g. secrets in static config files, interpolated identity fields, or chezmoi-specific change detection. When in doubt, ask whether a runtime check could replace it.
 
 ## Secrets
 
@@ -52,14 +75,20 @@ Zsh config lives in `~/.config/zsh/` (set by `~/.zshenv`). Only `~/.zshenv` rema
 
 ### conf.d Modules
 
-Files in `exact_conf.d/` are sourced in alphabetical order by [dot_zshrc](home/private_dot_config/zsh/dot_zshrc). Only `*.zsh` files are sourced (non-zsh files like `.kts` are safe to colocate).
+Files in `exact_conf.d/` are sourced by [dot_zshrc](home/private_dot_config/zsh/dot_zshrc) in two passes:
+1. Generic modules (`conf.d/*.zsh`) in alphabetical order
+2. Company-specific modules (`conf.d/$DOTFILES_CONTEXT/*.zsh`) if `$DOTFILES_CONTEXT` is set
+
+Only `*.zsh` files are sourced (non-zsh files like `.kts` are safe to colocate).
 
 **Numbering convention:**
 - `01`–`07`: Core zsh setup (options, history, completions, keybindings, prompt, aliases, plugins)
 - `08`: Infrastructure utilities (`08-print.zsh` — print functions used by other modules)
 - `10-*`: Tool-specific modules (one per tool: homebrew, nvm, gradle, etc.)
 
-When adding a new tool, create `10-<toolname>.zsh` (or `.zsh.tmpl` if it needs template data).
+**For business-specific modules**, place them in `conf.d/ista/` as plain `.zsh` files — no template needed. The directory itself is the conditional.
+
+When adding a new tool, create `10-<toolname>.zsh`. Only use `.zsh.tmpl` if the file embeds a secret or requires `sha256sum` change detection.
 
 The `exact_` prefix on `conf.d/` means **removing a file from the repo removes it from the target**. Always add new modules to the source state.
 
@@ -93,7 +122,7 @@ Use autoloaded functions for zsh-specific utilities. Use `~/.local/bin` scripts 
 | `~/.claude/CLAUDE.md` | [CLAUDE.md](home/private_dot_claude/CLAUDE.md) | AI coding conventions |
 | `~/.claude/settings.json` | [settings.json](home/private_dot_claude/settings.json) | Claude Code settings |
 | `~/.npmrc` | [dot_npmrc.tmpl](home/dot_npmrc.tmpl) | Business: GitLab registry |
-| `~/.osx` | [executable_dot_osx](home/executable_dot_osx) | macOS defaults |
+| `~/.startup` | [executable_dot_startup](home/executable_dot_startup) | Login script (macOS, run via LaunchAgent) |
 
 ## Common Tasks
 
@@ -109,23 +138,17 @@ Use autoloaded functions for zsh-specific utilities. Use `~/.local/bin` scripts 
 # File contains only the function body
 ```
 
-**Add a business-only config:**
+**Add a business-only zsh module:**
 ```sh
-# Use .tmpl extension and wrap content in:
-# {{ if not .is_personal -}}
-# ...content...
-# {{ end -}}
+# Place it in conf.d/ista/ as a plain .zsh file — no template needed.
+# Create home/private_dot_config/zsh/exact_conf.d/ista/10-<tool>.zsh
 ```
 
 **Add a macOS-only config:**
 ```sh
-# Option A: Runtime check in .zsh file
-# if [[ "$OSTYPE" == darwin* ]]; then ... fi
-
-# Option B: Chezmoi template (.tmpl)
-# {{ if eq .chezmoi.os "darwin" -}}
-# ...content...
-# {{ end -}}
+# Prefer a runtime check — avoid .tmpl:
+# In .zsh files:   [[ $OSTYPE == darwin* ]] || return 0
+# In .sh scripts:  [[ $(uname) == Darwin ]] || exit 0
 ```
 
 **Add a secret:**
