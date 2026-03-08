@@ -15,22 +15,6 @@
 # @see: http://secrets.blacktree.com/?showapp=com.apple.finder
 # @see: https://github.com/herrbischoff/awesome-macos-command-line
 
-# TODO associate file extensions with application
-# TODO e.g. with idea
-
-# Warn that some commands will not be run if the script is not run as root.
-if [[ $EUID -ne 0 ]]; then
-  RUN_AS_ROOT=false
-  printf "Certain commands will not be run without sudo privileges. To run as root, run the same command prepended with 'sudo', for example: $ sudo $0\n\n" | fold -s -w 80
-else
-  RUN_AS_ROOT=true
-  # Update existing `sudo` timestamp until `.osx` has finished
-  while true; do
-    sudo -n true
-    sleep 60
-    kill -0 "$$" || exit
-  done 2>/dev/null &
-fi
 
 # Close any open System Preferences panes, to prevent them from overriding
 # settings we’re about to change
@@ -212,13 +196,8 @@ defaults write NSGlobalDomain AppleTemperatureUnit -string "Celsius"
 defaults write NSGlobalDomain AppleMetricUnits -bool true
 defaults write NSGlobalDomain AppleICUForce12HourTime -bool false
 
-# Set Lock Message to show on login screen
-defaults write /Library/Preferences/com.apple.loginwindow LoginwindowText -string "Found me? Shoot a mail to mail@bkahlert.com to return me. Thanks."
 # Reveal IP address, hostname, OS version, etc. when clicking the clock in the login window
 defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
-
-# Set the timezone; see `sudo systemsetup -listtimezones` for other values
-sudo systemsetup -settimezone "Europe/Berlin" >/dev/null
 
 ###############################################################################
 # Screen                                                                      #
@@ -380,19 +359,6 @@ defaults write com.apple.Safari SendDoNotTrackHTTPHeader -bool true
 # Update extensions automatically
 defaults write com.apple.Safari InstallExtensionUpdatesAutomatically -bool true
 
-###############################################################################
-# Spotlight                                                                   #
-###############################################################################
-
-if [ ! "${RUN_AS_ROOT:-false}" = false ]; then
-  # Disable Spotlight indexing for any volume that gets mounted and has not yet
-  # been indexed before.
-  # Use `sudo mdutil -i off "/Volumes/foo"` to stop indexing any volume.
-  sudo defaults write /.Spotlight-V100/VolumeConfiguration Exclusions -array "/Volumes"
-
-  # Restart spotlight
-  killall mds >/dev/null 2>&1
-fi
 
 ###############################################################################
 # Activity Monitor                                                            #
