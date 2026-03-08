@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# Purpose: Login startup script — updates Homebrew and runs ista-specific tasks.
+# Usage: ~/.startup (invoked automatically by the startup LaunchAgent at login)
+
+set -euo pipefail
+
+[[ $(uname) == Darwin ]] || exit 0
+
+# --- functions ---
+
+# Update Homebrew and all installed packages.
+update_homebrew() {
+  command -v brew &>/dev/null || return 0
+  echo "Updating Homebrew..."
+  brew update
+  echo "Upgrading Homebrew packages..."
+  brew upgrade
+}
+
+# Prevent Mac from sleeping/locking.
+# To stop manually: pkill -f "caffeinate -disu"
+start_caffeinate() {
+  # Kill any existing caffeinate processes
+  pkill -f "caffeinate -disu" 2>/dev/null && echo "Killed existing caffeinate process"
+
+  echo "Starting caffeinate to prevent system sleep..."
+  caffeinate -disu &
+  echo "Caffeinate started with PID: $!"
+}
+
+# Keep 1Password app unlocked by simulating activity.
+keep_1password_alive() {
+  # TODO: AppleScript interaction is broken — fix separately
+  local pidfile="$HOME/.1password-keeper.pid"
+
+  # Kill any existing 1Password keeper process
+  if [[ -f "$pidfile" ]]; then
+    local old_pid
+    old_pid=$(cat "$pidfile")
+    if kill -0 "$old_pid" 2>/dev/null; then
+      kill "$old_pid" 2>/dev/null && echo "Killed existing 1Password keeper process (PID: $old_pid)"
+    fi
+    rm -f "$pidfile"
+  fi
+
+  echo "Starting 1Password activity simulator..."
+  (
+    while true; do
+      # Use AppleScript to interact with 1Password and restore focus
+      osascript <<'EOF' 2>/dev/null
+          tell application "System Events"
+              -- Check if 1Password is running
+              if exists (process "1Password") then
+                  -- Save the currently frontmost application
+                  set frontApp to name of first application process whose frontmost is true
+
+                  -- Interact with 1Password
+                  tell process "1Password"
+                      set frontmost to true
+                      delay 0.05
+
+                      -- Try to click the search field or any UI element to simulate activity
+                      try
+                          -- Click on the first window if it exists
+                          if (count of windows) > 0 then
+                              click window 1
+                          end if
+                      end try
+                  end tell
+
+                  -- Immediately restore focus to the original application
+                  delay 0.05
+                  try
+                      set frontmost of process frontApp to true
+                  end try
+              end if
+          end tell
+EOF
+      sleep 240  # Every 4 minutes
+    done
+  ) &
+  local keeper_pid=$!
+  echo "$keeper_pid" > "$pidfile"
+  echo "1Password keeper started with PID: $keeper_pid"
+}
+
+main() {
+  echo "========================================="
+  echo "Startup script started at: $(date)"
+  echo "========================================="
+
+  update_homebrew
+  if [[ "${DOTFILES_CONTEXT:-}" == ista ]]; then
+    start_caffeinate
+    keep_1password_alive
+  fi
+
+  echo "========================================="
+  echo "Startup script finished at: $(date)"
+  echo "========================================="
+  echo ""
+}
+
+# Run main and redirect output to log file, and to console if interactive
+if [[ -t 1 ]]; then
+  # Interactive - output to both console and log file
+  main 2>&1 | tee -a "$HOME/.startup.log"
+else
+  # Non-interactive - only log to file
+  main >> "$HOME/.startup.log" 2>&1
+fi
