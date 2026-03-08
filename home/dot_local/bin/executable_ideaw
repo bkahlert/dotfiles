@@ -35,14 +35,13 @@ _find_idea() {
 }
 
 idea_bin="$(_find_idea)" || {
-  printf '%s: idea binary not found\n' "$(basename "$0")" >&2
-  printf 'Searched:\n' >&2
-  printf '  idea (PATH)\n' >&2
-  printf '  ~/Library/Application Support/JetBrains/Toolbox/scripts/idea\n' >&2
-  printf '  ~/.local/share/JetBrains/Toolbox/scripts/idea\n' >&2
-  printf '  /Applications/IntelliJ IDEA.app/Contents/MacOS/idea\n' >&2
-  printf '  /Applications/IntelliJ IDEA CE.app/Contents/MacOS/idea\n' >&2
-  exit 1
+  printf '%s: idea CLI binary not found — falling back to nano\n' "$(basename "$0")" >&2
+  printf '\n' >&2
+  printf 'To set up the IntelliJ IDEA CLI, choose one of:\n' >&2
+  printf '  Toolbox:   Settings → Configuration → Shell scripts location\n' >&2
+  printf '  IntelliJ:  Tools → Create Command-line Launcher\n' >&2
+  printf '\n' >&2
+  exec nano "$@"
 }
 
 exec "${idea_bin}" "$@"
