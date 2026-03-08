@@ -15,9 +15,9 @@
 #   http://secrets.blacktree.com/?showapp=com.apple.finder
 #   https://github.com/herrbischoff/awesome-macos-command-line
 
-[[ $(uname) == Darwin ]] || exit 0
-
 set -euo pipefail
+
+[[ $(uname) == Darwin ]] || exit 0
 
 # Close any open System Preferences panes, to prevent them from overriding
 # settings we're about to change
@@ -202,10 +202,8 @@ defaults write NSGlobalDomain AppleICUForce12HourTime -bool false
 # Reveal IP address, hostname, OS version, etc. when clicking the clock in the login window
 defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
 
-# Set mouse speed
-set_mouse_speed() {
-    defaults write -g com.apple.mouse.scaling 6
-}
+# Set mouse speed (vertical mouse)
+defaults write -g com.apple.mouse.scaling 6
 
 ###############################################################################
 # Screen                                                                      #
@@ -423,8 +421,6 @@ defaults write com.apple.messageshelper.MessageController SOInputLineSettings -d
 ###############################################################################
 # Kill/restart affected applications                                          #
 ###############################################################################
-
-set_mouse_speed
 
 # Restart affected applications if `--no-restart` flag is not present.
 if [[ ! ($* == *--no-restart*) ]]; then
