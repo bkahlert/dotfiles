@@ -199,9 +199,6 @@ defaults write NSGlobalDomain AppleTemperatureUnit -string "Celsius"
 defaults write NSGlobalDomain AppleMetricUnits -bool true
 defaults write NSGlobalDomain AppleICUForce12HourTime -bool false
 
-# Reveal IP address, hostname, OS version, etc. when clicking the clock in the login window
-defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
-
 # Set mouse speed (vertical mouse)
 defaults write -g com.apple.mouse.scaling 6
 
@@ -271,9 +268,9 @@ defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
 defaults write NSGlobalDomain AppleShowScrollBars -string "Always"
 
 # Zoom screen using meta key
-defaults write com.apple.universalaccess closeViewScrollWheelToggle -bool true
-defaults write com.apple.universalaccess closeViewScrollWheelModifiersInt -int 1048576
-defaults write com.apple.universalaccess HIDScrollZoomModifierMask -int 1048576
+# defaults write com.apple.universalaccess closeViewScrollWheelToggle -bool true
+# defaults write com.apple.universalaccess closeViewScrollWheelModifiersInt -int 1048576
+# defaults write com.apple.universalaccess HIDScrollZoomModifierMask -int 1048576
 
 # Enable snap-to-grid for icons on the desktop and in other icon views
 #/usr/libexec/PlistBuddy -c "Set :DesktopViewSettings:IconViewSettings:arrangeBy grid" ~/Library/Preferences/com.apple.finder.plist
@@ -316,9 +313,6 @@ defaults write com.apple.dock largesize -int 128
 # Make Dock icons of hidden applications translucent
 defaults write com.apple.dock showhidden -bool true
 
-# Enable the 'reduce transparency' option. Save GPU cycles.
-defaults write com.apple.universalaccess reduceTransparency -bool true
-
 # Hot corners
 # Possible values:
 #  0: no-op
@@ -346,25 +340,6 @@ defaults write com.apple.dock wvous-bl-modifier -int 0
 
 # Don't automatically rearrange Spaces based on most recent use
 defaults write com.apple.dock mru-spaces -bool false
-
-###############################################################################
-# Safari & WebKit                                                             #
-###############################################################################
-
-# Enable the Develop menu and the Web Inspector in Safari
-defaults write com.apple.Safari IncludeDevelopMenu -bool true
-defaults write com.apple.Safari WebKitDeveloperExtrasEnabledPreferenceKey -bool true
-#defaults write com.apple.Safari com.apple.Safari.ContentPageGroupIdentifier.WebKit2DeveloperExtrasEnabled -bool true
-
-# Add a context menu item for showing the Web Inspector in web views
-defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
-
-# Enable "Do Not Track"
-defaults write com.apple.Safari SendDoNotTrackHTTPHeader -bool true
-
-# Update extensions automatically
-defaults write com.apple.Safari InstallExtensionUpdatesAutomatically -bool true
-
 
 ###############################################################################
 # Activity Monitor                                                            #
