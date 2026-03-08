@@ -1,8 +1,8 @@
 [data]
     email = {{ promptStringOnce . "email" "Email address" | quote }}
     name = {{ promptStringOnce . "name" "Full name" | quote }}
-    is_personal = {{ promptBoolOnce . "is_personal" "Is this a personal machine" }}
-{{ if not (promptBoolOnce . "is_personal" "Is this a personal machine") -}}
+    company = {{ promptStringOnce . "company" "Company name (empty for personal)" | quote }}
+{{ if (promptStringOnce . "company" "Company name (empty for personal)") -}}
     op_account = {{ promptStringOnce . "op_account" "1Password account UUID (from `op account list`)" | quote }}
 
 [env]
