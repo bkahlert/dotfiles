@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Purpose: Wrapper for the IntelliJ IDEA CLI that locates the 'idea' binary
+#          from common installation paths (JetBrains Toolbox, app bundle, PATH)
+#          and delegates all arguments to it.
+# Usage:   ideaw [<idea-cli-args>...]
+
+set -euo pipefail
+
+_find_idea() {
+  # Already on PATH (e.g. manually linked or Toolbox shell integration)
+  if command -v idea &>/dev/null; then
+    command -v idea
+    return 0
+  fi
+
+  local candidates=(
+    # JetBrains Toolbox — macOS
+    "${HOME}/Library/Application Support/JetBrains/Toolbox/scripts/idea"
+    # JetBrains Toolbox — Linux
+    "${HOME}/.local/share/JetBrains/Toolbox/scripts/idea"
+    # macOS app bundle — Ultimate Edition
+    "/Applications/IntelliJ IDEA.app/Contents/MacOS/idea"
+    # macOS app bundle — Community Edition
+    "/Applications/IntelliJ IDEA CE.app/Contents/MacOS/idea"
+  )
+
+  for candidate in "${candidates[@]}"; do
+    if [[ -x "${candidate}" ]]; then
+      printf '%s' "${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+idea_bin="$(_find_idea)" || {
+  printf '%s: idea binary not found\n' "$(basename "$0")" >&2
+  printf 'Searched:\n' >&2
+  printf '  idea (PATH)\n' >&2
+  printf '  ~/Library/Application Support/JetBrains/Toolbox/scripts/idea\n' >&2
+  printf '  ~/.local/share/JetBrains/Toolbox/scripts/idea\n' >&2
+  printf '  /Applications/IntelliJ IDEA.app/Contents/MacOS/idea\n' >&2
+  printf '  /Applications/IntelliJ IDEA CE.app/Contents/MacOS/idea\n' >&2
+  exit 1
+}
+
+exec "${idea_bin}" "$@"
