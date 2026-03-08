@@ -16,6 +16,13 @@ If multiple skills can be used, ask which one to use.
   - Therefor don't use `git worktree`
 
 
+# Source location of dependencies
+
+- When you need to know the actual source of a build dependency, chances are they are located in a sibling directory as I tend to keep projects / repos belonging together in the same parent directory. 
+
+- Reason about projects tightly coupled together (e.g. projects `technician-app-service` and `technician-app-web` are tightly coupled, with `-service` being a backend micro service and `-web` being its web (UI))
+
+
 # Markdown
 
 - When you reference a file, do so with a proper Markdown link
