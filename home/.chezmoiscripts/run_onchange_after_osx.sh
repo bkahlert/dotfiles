@@ -400,7 +400,7 @@ defaults write com.apple.messageshelper.MessageController SOInputLineSettings -d
 # Restart affected applications if `--no-restart` flag is not present.
 if [[ ! ($* == *--no-restart*) ]]; then
   for app in "cfprefsd" "Dock" "Finder" "Mail" "SystemUIServer" "Terminal"; do
-    killall "${app}" >/dev/null 2>&1
+    killall "${app}" >/dev/null 2>&1 || printf 'Failed to kill "%s". Is it running?\n' "${app}" >&2 || true
   done
 fi
 

@@ -1,5 +1,7 @@
 # chezmoi
 home/.chezmoiexternal.toml.lock
+# serena (MCP server runtime data)
+.serena/
 # macOS
 .DS_Store
 # IDE
