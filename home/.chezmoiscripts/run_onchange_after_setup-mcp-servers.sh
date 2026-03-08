@@ -8,10 +8,21 @@ set -euo pipefail
 claude mcp remove --scope user context7 2>/dev/null || true
 claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
 
-# serena — codebase intelligence; detects project root from working directory
+# jetbrains — codebase intelligence via IntelliJ IDE (SSE); uses currently active project
+claude mcp remove --scope user jetbrains 2>/dev/null || true
+claude mcp add --scope user --transport sse jetbrains http://localhost:64342/sse
+
+# serena — codebase intelligence fallback when IntelliJ is not running
 claude mcp remove --scope user serena 2>/dev/null || true
 claude mcp add --scope user serena -- uvx \
   --from git+https://github.com/oraios/serena \
   serena start-mcp-server \
   --context ide-assistant \
-  --project-from-cwd
+  --project-from-cwd \
+  --enable-web-dashboard false
+
+# gcloud-observability — GCP logs/traces (work machines only, detected by ~/Development/istaexpress)
+claude mcp remove --scope user gcloud-observability 2>/dev/null || true
+if [[ -d "${HOME}/Development/istaexpress" ]]; then
+  claude mcp add --scope user gcloud-observability -- npx -y @google-cloud/observability-mcp
+fi
