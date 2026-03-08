@@ -1,4 +1,3 @@
-{{ if not .is_personal -}}
 # Manages dev-chapter repository and adds tools to PATH
 # Automatically clones repo if missing and keeps it updated (weekly)
 
@@ -61,4 +60,3 @@ if [[ -d "$DEV_CHAPTER_TOOLS" ]]; then
 else
   printf_warning "dev-chapter tools directory not found at $DEV_CHAPTER_TOOLS"
 fi
-{{ end -}}
