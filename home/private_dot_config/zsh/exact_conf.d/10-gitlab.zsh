@@ -1,8 +1,3 @@
-{{ if not .is_personal -}}
-# GitLab private token (fetched from 1Password)
-export GITLAB_PRIVATE_TOKEN='{{ onepasswordRead "op://Employee/GitLab Token/credential" }}'
-{{ end -}}
-
 # Auto-install glab CLI wrapper
 glab() {
   if ! command -v glab &>/dev/null; then
