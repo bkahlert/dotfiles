@@ -1,4 +1,3 @@
-{{ if not .is_personal -}}
 # Logs into gcloud with the specified account
 # Usage: gcloud-login [--admin]
 gcloud-login() {
@@ -36,4 +35,3 @@ gcloud-login() {
     return 1
   fi
 }
-{{ end -}}
