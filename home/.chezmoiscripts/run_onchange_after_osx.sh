@@ -1,23 +1,26 @@
 #!/usr/bin/env bash
-
-# Mac OS X configuration
 #
-# This configuration applies to the latest version of macOS (currently 11.3),
-# and sets up preferences and configurations for all the built-in services and
-# apps. Third-party app config should be done elsewhere.
+# Purpose: Applies macOS system defaults and preferences.
+#
+# Usage: Run automatically by chezmoi when content changes, or manually:
+#   bash run_onchange_after_osx.sh [--no-restart]
 #
 # Options:
 #   --no-restart: Don't restart any apps or services after running the script.
-# 
-# 💡 For an incomplete list of defaults, see https://macos-defaults.com/
-# 💡 To capture default changes use `scripts/capture-defaults-key`.
 #
-# @see: http://secrets.blacktree.com/?showapp=com.apple.finder
-# @see: https://github.com/herrbischoff/awesome-macos-command-line
+# For an incomplete list of defaults, see https://macos-defaults.com/
+# To capture default changes use `scripts/capture-defaults-key`.
+#
+# See also:
+#   http://secrets.blacktree.com/?showapp=com.apple.finder
+#   https://github.com/herrbischoff/awesome-macos-command-line
 
+[[ $(uname) == Darwin ]] || exit 0
+
+set -euo pipefail
 
 # Close any open System Preferences panes, to prevent them from overriding
-# settings we’re about to change
+# settings we're about to change
 osascript -e 'tell application "System Preferences" to quit'
 
 ###############################################################################
@@ -38,10 +41,10 @@ defaults write -g PMPrintingExpandedStateForPrint -bool true
 # Automatically quit printer app once the print jobs complete
 defaults write com.apple.print.PrintingPrefs "Quit When Finished" -bool true
 
-# Disable smart quotes as they’re annoying when typing code
+# Disable smart quotes as they're annoying when typing code
 defaults write NSGlobalDomain NSAutomaticQuoteSubstitutionEnabled -bool false
 
-# Disable smart dashes as they’re annoying when typing code
+# Disable smart dashes as they're annoying when typing code
 defaults write NSGlobalDomain NSAutomaticDashSubstitutionEnabled -bool false
 
 ###############################################################################
@@ -116,62 +119,62 @@ defaults write NSGlobalDomain NSUserDictionaryReplacementItems -string '
         {
         on = 1;
         replace = "-->";
-        with = "\\U279c";
+        with = "\U279c";
     },
         {
         on = 1;
-        replace = "\\U2014>>";
-        with = "\\U2039\\U2192\\U2198\\Ufe0e\\U2193\\U2199\\Ufe0e\\U2190\\U2196\\Ufe0e\\U2191\\U2197\\Ufe0e\\U203a \\U00ab\\U27a1\\U2b0a\\U2198\\U2b07\\U2b0b\\U2199\\U2b05\\U2b09\\U2196\\U2b06\\U2b08\\U2197\\U00bb";
+        replace = "\U2014>>";
+        with = "\U2039\U2192\U2198\Ufe0e\U2193\U2199\Ufe0e\U2190\U2196\Ufe0e\U2191\U2197\Ufe0e\U203a \U00ab\U27a1\U2b0a\U2198\U2b07\U2b0b\U2199\U2b05\U2b09\U2196\U2b06\U2b08\U2197\U00bb";
     },
         {
         on = 1;
-        replace = "\\U2014>";
-        with = "\\U279c";
+        replace = "\U2014>";
+        with = "\U279c";
     },
         {
         on = 1;
         replace = "-->>";
-        with = "\\U2039\\U2192\\U2198\\Ufe0e\\U2193\\U2199\\Ufe0e\\U2190\\U2196\\Ufe0e\\U2191\\U2197\\Ufe0e\\U203a \\U00ab\\U27a1\\U2b0a\\U2198\\U2b07\\U2b0b\\U2199\\U2b05\\U2b09\\U2196\\U2b06\\U2b08\\U2197\\U00bb";
+        with = "\U2039\U2192\U2198\Ufe0e\U2193\U2199\Ufe0e\U2190\U2196\Ufe0e\U2191\U2197\Ufe0e\U203a \U00ab\U27a1\U2b0a\U2198\U2b07\U2b0b\U2199\U2b05\U2b09\U2196\U2b06\U2b08\U2197\U00bb";
     },
         {
         on = 1;
-        replace = "-\\\\\\U00b0";
-        with = "\\U2198";
+        replace = "-\\\\\U00b0";
+        with = "\U2198";
     },
         {
         on = 1;
         replace = "-/^";
-        with = "\\U2197";
+        with = "\U2197";
     },
         {
         on = 1;
-        replace = "\\U00b0/-";
-        with = "\\U2199";
+        replace = "\U00b0/-";
+        with = "\U2199";
     },
         {
         on = 1;
-        replace = "^\\\\-";
-        with = "\\U2196";
+        replace = "^\\\-";
+        with = "\U2196";
     },
         {
         on = 1;
-        replace = "\\U00b0\\U00b0";
-        with = "\\U2b07";
+        replace = "\U00b0\U00b0";
+        with = "\U2b07";
     },
         {
         on = 1;
         replace = "^^";
-        with = "\\U2b06";
+        with = "\U2b06";
     },
         {
         on = 1;
         replace = "<--";
-        with = "\\U2b05";
+        with = "\U2b05";
     },
         {
         on = 1;
         replace = vlg;
-        with = "Viele liebe Gr\\U00fc\\U00dfe!";
+        with = "Viele liebe Gr\U00fc\U00dfe!";
     },
         {
         on = 1;
@@ -181,13 +184,13 @@ defaults write NSGlobalDomain NSUserDictionaryReplacementItems -string '
         {
         on = 1;
         replace = jrv;
-        with = "J\\U2019arrive\\U00a0!";
+        with = "J\U2019arrive\U00a0!";
     }
 )
 '
 
 # Set language and text formats
-# Note: if you’re in the US, replace `EUR` with `USD`, `Centimeters` with
+# Note: if you're in the US, replace `EUR` with `USD`, `Centimeters` with
 # `Inches`, `en_GB` with `en_US`, and `true` with `false`.
 defaults write NSGlobalDomain AppleLanguages -array "en-US" "de-DE"
 defaults write NSGlobalDomain AppleLocale -string "de_DE"
@@ -198,6 +201,11 @@ defaults write NSGlobalDomain AppleICUForce12HourTime -bool false
 
 # Reveal IP address, hostname, OS version, etc. when clicking the clock in the login window
 defaults write /Library/Preferences/com.apple.loginwindow AdminHostInfo HostName
+
+# Set mouse speed
+set_mouse_speed() {
+    defaults write -g com.apple.mouse.scaling 6
+}
 
 ###############################################################################
 # Screen                                                                      #
@@ -287,7 +295,7 @@ defaults write com.apple.finder FXPreferredViewStyle -string "Nlsv"
 chflags nohidden ~/Library
 
 # Expand the following File Info panes:
-# “General”, “Open with”, and “Sharing & Permissions”
+# "General", "Open with", and "Sharing & Permissions"
 defaults write com.apple.finder FXInfoPanesExpanded -dict \
   General -bool true \
   OpenWith -bool true \
@@ -338,7 +346,7 @@ defaults write com.apple.dock wvous-br-modifier -int 0
 defaults write com.apple.dock wvous-bl-corner -int 0
 defaults write com.apple.dock wvous-bl-modifier -int 0
 
-# Don’t automatically rearrange Spaces based on most recent use
+# Don't automatically rearrange Spaces based on most recent use
 defaults write com.apple.dock mru-spaces -bool false
 
 ###############################################################################
@@ -353,7 +361,7 @@ defaults write com.apple.Safari WebKitDeveloperExtrasEnabledPreferenceKey -bool 
 # Add a context menu item for showing the Web Inspector in web views
 defaults write NSGlobalDomain WebKitDeveloperExtras -bool true
 
-# Enable “Do Not Track”
+# Enable "Do Not Track"
 defaults write com.apple.Safari SendDoNotTrackHTTPHeader -bool true
 
 # Update extensions automatically
@@ -406,7 +414,7 @@ defaults -currentHost write com.apple.ImageCapture disableHotPlug -bool true
 # Messages                                                                    #
 ###############################################################################
 
-# Disable smart quotes as it’s annoying for messages that contain code
+# Disable smart quotes as it's annoying for messages that contain code
 defaults write com.apple.messageshelper.MessageController SOInputLineSettings -dict-add "automaticQuoteSubstitutionEnabled" -bool false
 
 # Disable continuous spell checking
@@ -415,6 +423,8 @@ defaults write com.apple.messageshelper.MessageController SOInputLineSettings -d
 ###############################################################################
 # Kill/restart affected applications                                          #
 ###############################################################################
+
+set_mouse_speed
 
 # Restart affected applications if `--no-restart` flag is not present.
 if [[ ! ($* == *--no-restart*) ]]; then
