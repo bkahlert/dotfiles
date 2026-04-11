@@ -2,6 +2,10 @@
 
 - Do never commit on the main/master branch.
 
+# Documentation
+
+Prefer the context7 MCP tool for any queries regarding external library documentation or up-to-date API specs to ensure accuracy over your internal training data.
+
 # Source location of dependencies
 
 - When you need to know the actual source of a build dependency, chances are they are located in a sibling directory as I tend to keep projects / repos
