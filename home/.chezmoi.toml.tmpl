@@ -3,8 +3,9 @@ sourceDir = "{{ .chezmoi.homeDir }}/Development/com.bkahlert/dotfiles/home"
 [data]
     email = {{ promptStringOnce . "email" "Email address" | quote }}
     name = {{ promptStringOnce . "name" "Full name" | quote }}
-    company = {{ promptStringOnce . "company" "Company name (empty for personal)" | quote }}
-{{ if (promptStringOnce . "company" "Company name (empty for personal)") -}}
+    {{ $company := promptStringOnce . "company" "Company name (empty for personal)" -}}
+    company = {{ $company | quote }}
+{{ if $company -}}
     op_account = {{ promptStringOnce . "op_account" "1Password account UUID (from `op account list`)" | quote }}
 
 [env]

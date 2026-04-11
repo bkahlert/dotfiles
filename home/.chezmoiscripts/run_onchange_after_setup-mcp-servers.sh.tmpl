@@ -14,12 +14,12 @@ claude mcp add --scope user --transport sse jetbrains http://localhost:64342/sse
 
 # serena — codebase intelligence fallback when IntelliJ is not running
 claude mcp remove --scope user serena 2>/dev/null || true
-claude mcp add --scope user serena -- uvx \
-  --from git+https://github.com/oraios/serena \
-  serena start-mcp-server \
-  --context ide-assistant \
-  --project-from-cwd \
-  --enable-web-dashboard false
+#claude mcp add --scope user serena -- uvx \
+#  --from git+https://github.com/oraios/serena \
+#  serena start-mcp-server \
+#  --context ide-assistant \
+#  --project-from-cwd \
+#  --enable-web-dashboard false
 
 {{ if .company -}}
 # gcloud-observability — GCP logs/traces (work machines only)
