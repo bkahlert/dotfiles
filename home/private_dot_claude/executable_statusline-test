@@ -2,8 +2,10 @@
 # Test harness for the Claude Code status line script.
 # Usage: ./statusline-test [path-to-input.json]
 #
-# With no argument, uses statusline-input.json next to this script.
-# Prints the status line output and exits with the script's exit code.
+# Runs the status line script three times:
+#   1. auto-detection (default behavior)
+#   2. Nerd Font icons enforced (--nerd-fonts)
+#   3. emoji fallbacks enforced (--no-nerd-fonts)
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 input_file="${1:-"$script_dir/statusline-input.json"}"
@@ -16,6 +18,8 @@ else
   statusline="$HOME/.claude/statusline"
 fi
 
+dim=$'\033[2m' reset=$'\033[0m'
+
 if [[ ! -f "$input_file" ]]; then
   printf '\033[31m✘\033[0m input file not found: %s\n' "$input_file" >&2
   exit 1
@@ -26,8 +30,16 @@ if [[ ! -x "$statusline" ]]; then
   exit 1
 fi
 
-printf '\033[33mⓘ\033[0m  input: %s\n' "$input_file" >&2
-printf '\033[33mⓘ\033[0m  script: %s\n' "$statusline" >&2
-printf '\033[33m──────────────────────────────\033[0m\n' >&2
+run() {
+  local label="$1"; shift
+  printf '%s%s%s ' "$dim" "$label" "$reset" >&2
+  "$statusline" "$@" < "$input_file"
+}
 
-"$statusline" < "$input_file"
+printf '\033[33mⓘ\033[0m  input:  %s\n' "$input_file" >&2
+printf '\033[33mⓘ\033[0m  script: %s\n' "$statusline" >&2
+printf '%s──────────────────────────────%s\n' "$dim" "$reset" >&2
+
+run "auto:      "
+run "nerd-font: " --nerd-fonts
+run "fallback:  " --no-nerd-fonts

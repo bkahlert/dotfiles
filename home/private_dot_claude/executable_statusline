@@ -2,7 +2,17 @@
 # Status line script for Claude Code.
 # Reads session JSON from stdin and prints a single-line status string.
 # Usage: configured via settings.json as statusLine.command
+#        --nerd-fonts     force Nerd Font icons (overrides detection + NERD_FONTS)
+#        --no-nerd-fonts  force emoji fallbacks  (overrides detection + NERD_FONTS)
 # Requires: bash ≥ 4.2 (for $'\uXXXX'), jq
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --nerd-fonts)    NERD_FONTS=1 && shift ;;
+    --no-nerd-fonts) NERD_FONTS=0 && shift ;;
+    *) break ;;
+  esac
+done
 
 # ── Nerd Font detection ────────────────────────────────────
 # Result is cached in XDG_CACHE_HOME to avoid repeated filesystem probes.
@@ -28,6 +38,11 @@ _nf_detect() {
 }
 
 _nf_supported() {
+  # Explicit override always wins, even over cache
+  case "${NERD_FONTS:-}" in
+    0) return 1 ;;
+    1) return 0 ;;
+  esac
   if [[ ! -f "$_NF_CACHE" ]]; then
     mkdir -p "$(dirname "$_NF_CACHE")"
     _nf_detect > "$_NF_CACHE"
@@ -43,34 +58,104 @@ icon() { _nf_supported && printf '%s' "$1" || printf '%s' "$2"; }
 
 # ── Icons (Nerd Font glyph / text-variant emoji fallback) ──
 IC_SESSION=$'\uf292'            # nf-fa-hashtag
-IC_SESSION_FB=$'\u2328\uFE0E'   # ⌨︎  keyboard  (U+2328, text variant)
-IC_MODEL=$'\uf2db'              # nf-fa-microchip
+IC_SESSION_FB='#'               #
+IC_MODEL=$'\ue28c'              # nf-fae-brain
 IC_MODEL_FB=$'\u2699\uFE0E'     # ⚙︎  gear       (U+2699, text variant)
 IC_AGENT=$'\uf007'              # nf-fa-user
 IC_AGENT_FB=$'\u2692\uFE0E'     # ⚒︎  pick       (U+2692, text variant)
-IC_CTX=$'\uf080'                # nf-fa-bar_chart
-IC_CTX_FB=$'\u23F3\uFE0E'       # ⏳︎  hourglass  (U+23F3, text variant)
-IC_COST=$'\uf155'               # nf-fa-dollar
-IC_COST_FB=$'\u2696\uFE0E'      # ⚖︎  scales     (U+2696, text variant)
-IC_LIMITS=$'\uf017'             # nf-fa-clock
-IC_LIMITS_FB=$'\u23F1\uFE0E'    # ⏱︎  stopwatch  (U+23F1, text variant)
+
+# Progress Bar Icons (Nerd Font Legacy)
+IC_CTX_LF=$'\U000ee03'          # progress-left (full)
+IC_CTX_LE=$'\U000ee00'          # progress-left (empty)
+IC_CTX_MF=$'\U000ee04'          # progress-full
+IC_CTX_ME=$'\U000ee01'          # progress-empty
+IC_CTX_RF=$'\U000ee05'          # progress-right (full)
+IC_CTX_RE=$'\U000ee02'          # progress-right (empty)
+
+IC_CLOCK=$'\uf017'              # nf-fa-clock    (5-hour window)
+IC_CLOCK_FB=$'\u23F1\uFE0E'     # ⏱︎  stopwatch  (U+23F1, text variant)
+IC_CAL=$'\uf272'                # nf-fa-calendar_week (7-day window)
+IC_CAL_FB=$'\u29D7\uFE0E'       # ⧗
+IC_RESTART='' # $'\UF0709'           # nf-md-restart
+IC_RESTART_FB='' # $'\u21BB'         # ↻
+
+# ── Configuration ─────────────────────────────────────────
+_COST_WARN=500        # ¢ — cost threshold for yellow
+_COST_ERR=1000        # ¢ — cost threshold for red
+_MODEL_DEFAULT=''    # override: set to a model ID to force dim/yellow model styling
+# auto-detect configured model from settings (local takes precedence)
+for _mf in ~/.claude/settings.local.json ~/.claude/settings.json; do
+  [[ -f "$_mf" ]] || continue
+  _mv=$(jq -r '.model // ""' "$_mf" 2>/dev/null)
+  [[ -n "$_mv" ]] && _MODEL_DEFAULT="$_mv" && break
+done
+unset _mf _mv
 
 # ── JSON helper ────────────────────────────────────────────
 jq_field() { printf '%s' "$INPUT" | jq -r "$1"; }
 
+# ── Formatting helpers ─────────────────────────────────────
+# _pct_style PCT — prints ANSI style: dim <50, yellow <75, red ≥75
+_pct_style() {
+  local pct=$1
+  if   (( pct >= 75 )); then printf '\033[31m'
+  elif (( pct >= 50 )); then printf '\033[33m'
+  else                       printf '\033[2m'
+  fi
+}
+
+# to_sup STR — converts ASCII digits and unit letters to Unicode superscripts
+to_sup() {
+  local s="$1"
+  s="${s//0/⁰}"; s="${s//1/¹}"; s="${s//2/²}"; s="${s//3/³}"; s="${s//4/⁴}"
+  s="${s//5/⁵}"; s="${s//6/⁶}"; s="${s//7/⁷}"; s="${s//8/⁸}"; s="${s//9/⁹}"
+  s="${s//d/ᵈ}"; s="${s//e/ᵉ}"; s="${s//h/ʰ}"; s="${s//i/ⁱ}"; s="${s//m/ᵐ}"
+  s="${s//p/ᵖ}"; s="${s//r/ʳ}"; s="${s//x/ˣ}"; s="${s//./·}"
+  printf '%s' "$s"
+}
+
+# resets_in EPOCH — prints superscript time until epoch (e.g. "²˙⁵ʰ", "³˙⁵ᵈ")
+resets_in() {
+  local ts=$1
+  [[ -z "$ts" || "$ts" == "null" ]] && return
+  local delta=$(( ts - $(date +%s) ))
+  local raw
+  if   (( delta <= 0 ));      then raw='expired'
+  elif (( delta < 3600 ));    then raw="$(( delta / 60 ))m"
+  elif (( delta < 172800 ));  then raw="$(awk "BEGIN { printf \"%.1fh\", $delta/3600 }")"
+  else                             raw="$(awk "BEGIN { printf \"%.1fd\", $delta/86400 }")"
+  fi
+  to_sup "$raw"
+}
+
 # ── Parts ──────────────────────────────────────────────────
 part_session() {
-  local id name
+  local id name path text
   id=$(jq_field '.session_id // "" | .[0:8]')
   [[ -z "$id" ]] && return
   name=$(jq_field '.session_name // ""')
-  printf '%s %s' "$(icon "$IC_SESSION" "$IC_SESSION_FB")" "${id}${name:+:$name}"
+  path=$(jq_field '.transcript_path // ""')
+  text="$(icon "$IC_SESSION" "$IC_SESSION_FB") ${id}${name:+:$name}"
+  if [[ -n "$path" ]]; then
+    printf '\033]8;;file://%s\033\\%s\033]8;;\033\\' "$path" "$text"
+  else
+    printf '%s' "$text"
+  fi
 }
 
 part_model() {
-  local id
+  local id style='' reset=$'\033[0m'
   id=$(jq_field '.model.id // "?"')
-  printf '%s %s' "$(icon "$IC_MODEL" "$IC_MODEL_FB")" "$id"
+  if [[ -n "$_MODEL_DEFAULT" ]]; then
+    # settings may use short names ("haiku") or full IDs ("claude-haiku-4-5"); substring-match both ways
+    local id_lc="${id,,}" def_lc="${_MODEL_DEFAULT,,}"
+    if [[ "$id_lc" == *"$def_lc"* || "$def_lc" == *"$id_lc"* ]]; then
+      style=$'\033[2m'
+    else
+      style=$'\033[33m'
+    fi
+  fi
+  printf '%s%s %s%s' "$style" "$(icon "$IC_MODEL" "$IC_MODEL_FB")" "$id" "${style:+$reset}"
 }
 
 part_agent() {
@@ -82,32 +167,89 @@ part_agent() {
 
 part_context() {
   local pct
-  pct=$(jq_field '.context_window.used_percentage // "?" | if type == "number" then floor | tostring else . end')
-  printf '%s ctx:%s%%' "$(icon "$IC_CTX" "$IC_CTX_FB")" "$pct"
+  pct=$(jq_field '.context_window.used_percentage // 0 | if type == "number" then floor else 0 end')
+  local style reset=$'\033[0m'
+  style="$(_pct_style "$pct")"
+
+  if _nf_supported; then
+    local bar=""
+    # 10 segments: Left Cap, 8x Mid, Right Cap — each covers 10 pct points, fills at midpoint
+    (( pct >=  5 )) && bar+="$IC_CTX_LF" || bar+="$IC_CTX_LE"
+    (( pct >= 15 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
+    (( pct >= 25 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
+    (( pct >= 35 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
+    (( pct >= 45 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
+    (( pct >= 55 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
+    (( pct >= 65 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
+    (( pct >= 75 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
+    (( pct >= 85 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
+    (( pct >= 95 )) && bar+="$IC_CTX_RF" || bar+="$IC_CTX_RE"
+    printf '%s%s %d%%%s' "$style" "$bar" "$pct" "$reset"
+  else
+    local circle
+    if (( pct < 12 )); then circle=$'\u25CB';
+    elif (( pct < 37 )); then circle=$'\u25D4';
+    elif (( pct < 62 )); then circle=$'\u25D1';
+    elif (( pct < 87 )); then circle=$'\u25D5';
+    else circle=$'\u25CF'; fi
+    printf '%s%s %d%%%s' "$style" "$circle" "$pct" "$reset"
+  fi
 }
 
 part_cost() {
+  local usd
+  usd=$(jq_field '.cost.total_cost_usd // ""')
+  [[ -z "$usd" || "$usd" == "null" ]] && return
+  local cents style reset=$'\033[0m'
+  cents=$(awk "BEGIN { print int($usd * 100) }")
+  if   (( cents >= _COST_ERR  )); then style=$'\033[31m'
+  elif (( cents >= _COST_WARN )); then style=$'\033[33m'
+  else                                 style=$'\033[2m'
+  fi
   local val
-  val=$(jq_field '.cost.total_cost_usd // "" | if type == "number" then ("$" + (. * 100 | round / 100 | tostring)) else "" end')
-  [[ -z "$val" ]] && return
-  printf '%s %s' "$(icon "$IC_COST" "$IC_COST_FB")" "$val"
+  val=$(awk "BEGIN { printf \"\$%.2f\", $usd }")
+  printf '%s%s%s' "$style" "$val" "$reset"
 }
 
-part_rate_limits() {
-  local h5 d7
-  h5=$(jq_field '.rate_limits.five_hour.used_percentage // "" | if type == "number" then (floor | tostring) + "%" else "" end')
-  d7=$(jq_field '.rate_limits.seven_day.used_percentage // "" | if type == "number" then (floor | tostring) + "%" else "" end')
-  [[ -z "$h5" && -z "$d7" ]] && return
-  printf '%s %s/%s' "$(icon "$IC_LIMITS" "$IC_LIMITS_FB")" "${h5:-?}" "${d7:-?}"
+_RATE_LIMIT_URL='https://console.anthropic.com/settings/limits'
+
+
+part_rate_limit_5h() {
+  local pct at
+  pct=$(jq_field '.rate_limits.five_hour.used_percentage // "" | if type == "number" then floor else "" end')
+  [[ -z "$pct" ]] && return
+  at=$(jq_field '.rate_limits.five_hour.resets_at // ""')
+  local style reset=$'\033[0m'
+  style="$(_pct_style "$pct")"
+  local out="${style}$(icon "$IC_CLOCK" "$IC_CLOCK_FB") ${pct}%"
+  local reset_str
+  reset_str="$(resets_in "$at")"
+  [[ -n "$reset_str" ]] && out+=" $(icon "$IC_RESTART" "$IC_RESTART_FB")${reset_str}"
+  out+="${reset}"
+  printf '\033]8;;%s\033\\%s\033]8;;\033\\' "$_RATE_LIMIT_URL" "$out"
+}
+
+part_rate_limit_7d() {
+  local pct at
+  pct=$(jq_field '.rate_limits.seven_day.used_percentage // "" | if type == "number" then floor else "" end')
+  [[ -z "$pct" ]] && return
+  at=$(jq_field '.rate_limits.seven_day.resets_at // ""')
+  local style reset=$'\033[0m'
+  style="$(_pct_style "$pct")"
+  local out="${style}$(icon "$IC_CAL" "$IC_CAL_FB") ${pct}%"
+  local reset_str
+  reset_str="$(resets_in "$at")"
+  [[ -n "$reset_str" ]] && out+=" $(icon "$IC_RESTART" "$IC_RESTART_FB")${reset_str}"
+  out+="${reset}"
+  printf '\033]8;;%s\033\\%s\033]8;;\033\\' "$_RATE_LIMIT_URL" "$out"
 }
 
 # ── Rendering ──────────────────────────────────────────────
 render() {
-  local dim=$'\033[2m' reset=$'\033[0m'
   local out="" part
   for part in "$@"; do
     [[ -z "$part" ]] && continue
-    [[ -n "$out" ]] && out+="${dim} • ${reset}"
+    [[ -n "$out" ]] && out+=" · "
     out+="$part"
   done
   printf '%s\n' "$out"
@@ -122,7 +264,8 @@ main() {
     "$(part_agent)" \
     "$(part_context)" \
     "$(part_cost)" \
-    "$(part_rate_limits)"
+    "$(part_rate_limit_5h)" \
+    "$(part_rate_limit_7d)"
 }
 
 main
