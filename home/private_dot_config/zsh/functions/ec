@@ -1,8 +1,0 @@
-# Edit dotfiles: ec [name] (default: zshrc)
-find -L "$HOME" \
-  -type f \
-  -name ".${1:-zshrc}*" \
-  \( -not -name "*.backup" \) \
-  \( -not -name "*.zwc" \) \
-  -maxdepth 1 \
-  -exec "$EDITOR" {} \;
