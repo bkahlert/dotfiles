@@ -1,0 +1,8 @@
+if (( $+commands[docker] )); then
+  command docker "$@"
+elif (( $+commands[podman] )); then
+  command podman "$@"
+else
+  print -u2 "docker: neither docker nor podman found"
+  return 127
+fi
