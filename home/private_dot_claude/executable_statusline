@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# Status line script for Claude Code.
+# Reads session JSON from stdin and prints a single-line status string.
+# Usage: configured via settings.json as statusLine.command
+# Requires: bash ≥ 4.2 (for $'\uXXXX'), jq
+
+# ── Nerd Font detection ────────────────────────────────────
+# Result is cached in XDG_CACHE_HOME to avoid repeated filesystem probes.
+# Override: set NERD_FONTS=1 (force on) or NERD_FONTS=0 (force off).
+_NF_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/claude/nerd-font-support"
+
+_nf_detect() {
+  case "${NERD_FONTS:-}" in
+    0) printf '0'; return ;;
+    1) printf '1'; return ;;
+  esac
+  # macOS: check user and system font directories for any Nerd Font file
+  if [[ $(uname) == Darwin ]]; then
+    if ls ~/Library/Fonts/ /Library/Fonts/ 2>/dev/null | grep -qi "nerd"; then
+      printf '1'; return
+    fi
+  fi
+  # Linux / fallback: use fc-list if fontconfig is available
+  if command -v fc-list &>/dev/null && fc-list 2>/dev/null | grep -qi "nerd font"; then
+    printf '1'; return
+  fi
+  printf '0'
+}
+
+_nf_supported() {
+  if [[ ! -f "$_NF_CACHE" ]]; then
+    mkdir -p "$(dirname "$_NF_CACHE")"
+    _nf_detect > "$_NF_CACHE"
+  fi
+  [[ "$(< "$_NF_CACHE")" == "1" ]]
+}
+
+# icon NF_CHAR FALLBACK
+# Prints the Nerd Font glyph when supported, otherwise the fallback.
+# Fallbacks use U+FE0E (text variation selector) on chars listed in
+# Unicode's emoji-variation-sequences.txt, ensuring monochrome rendering.
+icon() { _nf_supported && printf '%s' "$1" || printf '%s' "$2"; }
+
+# ── Icons (Nerd Font glyph / text-variant emoji fallback) ──
+IC_SESSION=$'\uf292'            # nf-fa-hashtag
+IC_SESSION_FB=$'\u2328\uFE0E'   # ⌨︎  keyboard  (U+2328, text variant)
+IC_MODEL=$'\uf2db'              # nf-fa-microchip
+IC_MODEL_FB=$'\u2699\uFE0E'     # ⚙︎  gear       (U+2699, text variant)
+IC_AGENT=$'\uf007'              # nf-fa-user
+IC_AGENT_FB=$'\u2692\uFE0E'     # ⚒︎  pick       (U+2692, text variant)
+IC_CTX=$'\uf080'                # nf-fa-bar_chart
+IC_CTX_FB=$'\u23F3\uFE0E'       # ⏳︎  hourglass  (U+23F3, text variant)
+IC_COST=$'\uf155'               # nf-fa-dollar
+IC_COST_FB=$'\u2696\uFE0E'      # ⚖︎  scales     (U+2696, text variant)
+IC_LIMITS=$'\uf017'             # nf-fa-clock
+IC_LIMITS_FB=$'\u23F1\uFE0E'    # ⏱︎  stopwatch  (U+23F1, text variant)
+
+# ── JSON helper ────────────────────────────────────────────
+jq_field() { printf '%s' "$INPUT" | jq -r "$1"; }
+
+# ── Parts ──────────────────────────────────────────────────
+part_session() {
+  local id name
+  id=$(jq_field '.session_id // "" | .[0:8]')
+  [[ -z "$id" ]] && return
+  name=$(jq_field '.session_name // ""')
+  printf '%s %s' "$(icon "$IC_SESSION" "$IC_SESSION_FB")" "${id}${name:+:$name}"
+}
+
+part_model() {
+  local id
+  id=$(jq_field '.model.id // "?"')
+  printf '%s %s' "$(icon "$IC_MODEL" "$IC_MODEL_FB")" "$id"
+}
+
+part_agent() {
+  local name
+  name=$(jq_field '.agent.name // ""')
+  [[ -z "$name" ]] && return
+  printf '%s %s' "$(icon "$IC_AGENT" "$IC_AGENT_FB")" "$name"
+}
+
+part_context() {
+  local pct
+  pct=$(jq_field '.context_window.used_percentage // "?" | if type == "number" then floor | tostring else . end')
+  printf '%s ctx:%s%%' "$(icon "$IC_CTX" "$IC_CTX_FB")" "$pct"
+}
+
+part_cost() {
+  local val
+  val=$(jq_field '.cost.total_cost_usd // "" | if type == "number" then ("$" + (. * 100 | round / 100 | tostring)) else "" end')
+  [[ -z "$val" ]] && return
+  printf '%s %s' "$(icon "$IC_COST" "$IC_COST_FB")" "$val"
+}
+
+part_rate_limits() {
+  local h5 d7
+  h5=$(jq_field '.rate_limits.five_hour.used_percentage // "" | if type == "number" then (floor | tostring) + "%" else "" end')
+  d7=$(jq_field '.rate_limits.seven_day.used_percentage // "" | if type == "number" then (floor | tostring) + "%" else "" end')
+  [[ -z "$h5" && -z "$d7" ]] && return
+  printf '%s %s/%s' "$(icon "$IC_LIMITS" "$IC_LIMITS_FB")" "${h5:-?}" "${d7:-?}"
+}
+
+# ── Rendering ──────────────────────────────────────────────
+render() {
+  local dim=$'\033[2m' reset=$'\033[0m'
+  local out="" part
+  for part in "$@"; do
+    [[ -z "$part" ]] && continue
+    [[ -n "$out" ]] && out+="${dim} • ${reset}"
+    out+="$part"
+  done
+  printf '%s\n' "$out"
+}
+
+# ── Entry point ────────────────────────────────────────────
+main() {
+  INPUT=$(cat)
+  render \
+    "$(part_session)" \
+    "$(part_model)" \
+    "$(part_agent)" \
+    "$(part_context)" \
+    "$(part_cost)" \
+    "$(part_rate_limits)"
+}
+
+main

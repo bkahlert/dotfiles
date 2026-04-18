@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Test harness for the Claude Code status line script.
+# Usage: ./statusline-test [path-to-input.json]
+#
+# With no argument, uses statusline-input.json next to this script.
+# Prints the status line output and exits with the script's exit code.
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+input_file="${1:-"$script_dir/statusline-input.json"}"
+# Support running from the chezmoi source tree (executable_statusline) or installed location (statusline)
+if [[ -x "$script_dir/statusline" ]]; then
+  statusline="$script_dir/statusline"
+elif [[ -x "$script_dir/executable_statusline" ]]; then
+  statusline="$script_dir/executable_statusline"
+else
+  statusline="$HOME/.claude/statusline"
+fi
+
+if [[ ! -f "$input_file" ]]; then
+  printf '\033[31m✘\033[0m input file not found: %s\n' "$input_file" >&2
+  exit 1
+fi
+
+if [[ ! -x "$statusline" ]]; then
+  printf '\033[31m✘\033[0m statusline script not found or not executable: %s\n' "$statusline" >&2
+  exit 1
+fi
+
+printf '\033[33mⓘ\033[0m  input: %s\n' "$input_file" >&2
+printf '\033[33mⓘ\033[0m  script: %s\n' "$statusline" >&2
+printf '\033[33m──────────────────────────────\033[0m\n' >&2
+
+"$statusline" < "$input_file"
