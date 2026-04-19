@@ -61,8 +61,8 @@ IC_SESSION=$'\uf292'            # nf-fa-hashtag
 IC_SESSION_FB='#'               #
 IC_MODEL=$'\ue28c'              # nf-fae-brain
 IC_MODEL_FB=$'\u2699\uFE0E'     # ⚙︎  gear       (U+2699, text variant)
-IC_AGENT=$'\uf007'              # nf-fa-user
-IC_AGENT_FB=$'\u2692\uFE0E'     # ⚒︎  pick       (U+2692, text variant)
+IC_AGENT=$'\UF06A9'             # nf-md-robot
+IC_AGENT_FB=$'\uc6c3'           # 웃
 
 # Progress Bar Icons (Nerd Font Legacy)
 IC_CTX_LF=$'\U000ee03'          # progress-left (full)
@@ -71,6 +71,9 @@ IC_CTX_MF=$'\U000ee04'          # progress-full
 IC_CTX_ME=$'\U000ee01'          # progress-empty
 IC_CTX_RF=$'\U000ee05'          # progress-right (full)
 IC_CTX_RE=$'\U000ee02'          # progress-right (empty)
+
+IC_TOKENS='' # $'\UF0830'            # nf-md-poker_chip
+IC_TOKENS_FB='' # $'\u2742'          # ❂
 
 IC_CLOCK=$'\uf017'              # nf-fa-clock    (5-hour window)
 IC_CLOCK_FB=$'\u23F1\uFE0E'     # ⏱︎  stopwatch  (U+23F1, text variant)
@@ -112,6 +115,15 @@ to_sup() {
   s="${s//d/ᵈ}"; s="${s//e/ᵉ}"; s="${s//h/ʰ}"; s="${s//i/ⁱ}"; s="${s//m/ᵐ}"
   s="${s//p/ᵖ}"; s="${s//r/ʳ}"; s="${s//x/ˣ}"; s="${s//./·}"
   printf '%s' "$s"
+}
+
+# fmt_tokens N — formats a token count as a short string (e.g. 200000 → "200k", 1000000 → "1m")
+fmt_tokens() {
+  local n=$1
+  if   (( n >= 1000000 )); then awk "BEGIN { printf \"%gm\", $n/1000000 }"
+  elif (( n >= 1000     )); then awk "BEGIN { printf \"%gk\", $n/1000 }"
+  else printf '%s' "$n"
+  fi
 }
 
 # resets_in EPOCH — prints superscript time until epoch (e.g. "²˙⁵ʰ", "³˙⁵ᵈ")
@@ -166,8 +178,10 @@ part_agent() {
 }
 
 part_context() {
-  local pct
+  local pct max_tok max_str
   pct=$(jq_field '.context_window.used_percentage // 0 | if type == "number" then floor else 0 end')
+  max_tok=$(jq_field '.context_window.context_window_size // ""')
+  [[ -n "$max_tok" && "$max_tok" != "null" ]] && max_str="$(fmt_tokens "$max_tok")"
   local style reset=$'\033[0m'
   style="$(_pct_style "$pct")"
 
@@ -193,6 +207,11 @@ part_context() {
     elif (( pct < 87 )); then circle=$'\u25D5';
     else circle=$'\u25CF'; fi
     printf '%s%s %d%%%s' "$style" "$circle" "$pct" "$reset"
+  fi
+  if [[ -n "$max_str" ]]; then
+    local tok_icon
+    tok_icon="$(icon "$IC_TOKENS" "$IC_TOKENS_FB")"
+    printf ' %s╱%s%s%s' "$style" "$max_str" "${tok_icon:+ $tok_icon}" "$reset"
   fi
 }
 
