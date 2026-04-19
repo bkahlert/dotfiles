@@ -36,6 +36,9 @@
       "cache_read_input_tokens": 2000
     }
   },
+  "agent": {
+    "name": "security-reviewer"
+  },
   "exceeds_200k_tokens": false,
   "rate_limits": {
     "five_hour": {
