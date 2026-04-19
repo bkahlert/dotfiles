@@ -1,10 +1,17 @@
+# Dotfiles
+
+- Most dotfiles located in the home directory are managed by chezmoi.
+- To update dotfiles, e.g. `~/.config/agents/AGENTS.md`, the corresponding file, e.g. `$(chezmoi source-path)/private_dot_config/exact_agents/AGENTS.md`, needs
+  to be updated first.
+
 # Git
 
 - Do never commit on the main/master branch.
 
 # Documentation
 
-Prefer the context7 MCP tool for any queries regarding external library documentation or up-to-date API specs to ensure accuracy over your internal training data.
+Prefer the context7 MCP tool for any queries regarding external library documentation or up-to-date API specs to ensure accuracy over your internal training
+data.
 
 # Source location of dependencies
 

@@ -35,7 +35,7 @@ background-blur-radius = 20
 background-opacity-cells = true
 
 # Shell integration
-shell-integration-features = true
+shell-integration-features = cursor,sudo,title,no-ssh-env,ssh-terminfo,path
 
 # macOS icon
 macos-icon = chalkboard
