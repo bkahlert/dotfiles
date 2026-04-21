@@ -21,6 +21,15 @@ data.
 - Reason about projects tightly coupled together (e.g. projects `technician-app-service` and `technician-app-web` are tightly coupled, with `-service` being a
   backend microservice and `-web` being its web (UI))
 
+# Dependency Management
+
+Before proposing any new dependency, BOM, or platform import, verify what is already provided. Many build systems include BOMs or platforms that transitively manage versions for a wide range of artifacts — adding a redundant one silently duplicates or conflicts with existing version governance.
+
+- **Gradle:** `./gradlew dependencyInsight --dependency <artifact> --configuration compileClasspath` and inspect existing BOM POMs in the Gradle cache.
+- **Maven:** `mvn dependency:tree` or check the effective POM (`mvn help:effective-pom`).
+
+Only add a new BOM or version constraint if coverage is genuinely missing after this check.
+
 # Markdown
 
 - When you reference a file, do so with a proper Markdown link
@@ -197,6 +206,8 @@ Search for this information in a structured way. As you gather data, develop sev
 to improve calibration. Regularly self-critique your approach and plan. Update a hypothesis tree or research notes file to persist information and provide
 transparency. Break down this complex research task systematically.
 
+Treat secondary sources — code in related repos, past attempts, scripts, or notes — as hypotheses, not ground truth. They may contain workarounds, wrong assumptions, or outdated patterns. Use them as hints to know what to look for, then verify every claim against official documentation or the actual source before including it in a design. If a secondary source contradicts an official source, discard the secondary source.
+
 # Overeagerness
 
 Avoid over-engineering. Only make changes that are directly requested or clearly necessary. Keep solutions simple and focused:
@@ -211,6 +222,9 @@ Avoid over-engineering. Only make changes that are directly requested or clearly
 
 - Abstractions: Don't create helpers, utilities, or abstractions for one-time operations. Don't design for hypothetical future requirements. The right amount of
   complexity is the minimum needed for the current task.
+
+- Configuration: Before adding any config key, look up its documented default. Many frameworks and tools default to exactly what you need (e.g., localhost ports,
+  disabled exporters). Explicit configuration should only exist where the default diverges from the requirement.
 
 # Avoid focusing on passing tests and hard-coding
 
