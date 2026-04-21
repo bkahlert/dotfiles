@@ -1,9 +1,3 @@
-# Starts a Claude session pre-loaded with ista Express GCloud debugging context
-# Usage: gcloud-debug [claude options]
-gcloud-debug() {
-  claude --dangerously-skip-permissions --append-system-prompt "$(cat ~/Development/istaexpress/dev-chapter/ai/claude/agents/gcloud-debugger.md)" "$@"
-}
-
 # Logs into gcloud with the specified account
 # Usage: gcloud-login [--admin]
 gcloud-login() {
