@@ -6,7 +6,7 @@ set -euo pipefail
 
 # context7 — up-to-date library documentation lookup (Upstash)
 claude mcp remove --scope user context7 2>/dev/null || true
-claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
+#claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
 
 # jetbrains — codebase intelligence via IntelliJ IDE (SSE); uses currently active project
 claude mcp remove --scope user jetbrains 2>/dev/null || true
