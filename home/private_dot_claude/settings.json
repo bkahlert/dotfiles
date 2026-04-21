@@ -128,10 +128,15 @@
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.claude/statusline"
+  },
   "enabledPlugins": {
     "superpowers@claude-plugins-official": true,
     "chrome-devtools-mcp@claude-plugins-official": true,
-    "vueuse-functions@vueuse-skills": true
+    "vueuse-functions@vueuse-skills": true,
+    "context7@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "chrome-devtools-plugins": {
@@ -148,9 +153,5 @@
     }
   },
   "effortLevel": "medium",
-  "skipDangerousModePermissionPrompt": true,
-  "statusLine": {
-    "type": "command",
-    "command": "~/.claude/statusline"
-  }
+  "skipDangerousModePermissionPrompt": true
 }
