@@ -288,6 +288,12 @@ When writing or updating `AGENTS.md`, `CLAUDE.md`, or equivalent guidance files:
 - **Review guidance after making code changes.** After any significant refactor, scan the guidance file for descriptions that no longer match the codebase.
   Stale guidance is worse than no guidance — it actively misleads future agents.
 
+# IDE Inspections
+
+After modifying any source file, call `mcp__ide__getDiagnostics` on each changed file and resolve all reported errors and warnings before considering the task done. This surfaces IntelliJ/WebStorm inspections (e.g. SonarJS rules, deprecated API usage, type errors) that are not caught by the compiler or test suite alone.
+
+If the MCP tool is unavailable, note this explicitly rather than skipping the step silently.
+
 # Quality Assurance Gate
 
 Before applying any code or config change, establish a **verification strategy** if none has been stated yet in this session:
