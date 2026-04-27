@@ -2,18 +2,21 @@
 
 # Skills
 
-## Superpowers Framework
-- You MUST follow the `superpowers:using-superpowers` protocol for every request.
-- If any task has a matching skill (e.g., `superpowers:brainstorming`, `superpowers:systematic-debugging`), you must invoke it via the Skill tool before proceeding.
-- If multiple skills apply, ask for clarification on which workflow to prioritize.
-- For implementation please default to `Subagent-Driven`
+Skills are tools — invoke when one strongly matches the task, not by default. Match the ceremony to the stakes:
 
-If multiple skills can be used, ask which one to use.
+- **Conversational / read-only** (Q&A, explaining code, reading docs): no skill ceremony — just answer.
+- **Trivial edits** (typo, single-line, well-scoped change): no mandatory skill. Invoke one only if it directly guides the change (e.g. `superpowers:systematic-debugging` for a real bug).
+- **Routine implementation** (small features, ops/config changes, bounded refactors): use `grill-me` to pressure-test the design when the approach isn't obvious; otherwise plan in-context and proceed.
+- **Substantial work** (multi-file features, architectural decisions): full superpowers flow — grill (or brainstorm if grill exposes architectural ambiguity), plan, implement, review.
+
+Process skills (`grill-me`, `superpowers:systematic-debugging`) take precedence over implementation skills (`frontend-design`, `mcp-builder`) when both could apply. Ask which skill to use only when the choice is genuinely load-bearing.
+
+Project-level `AGENTS.md` / `CLAUDE.md` may strengthen these defaults; honor them when they do.
 
 
-# Context awareness and multi-window workflows
+# Context awareness
 
-Your context window will be automatically compacted as it approaches its limit, allowing you to continue working indefinitely from where you left off. Therefore, do not stop tasks early due to token budget concerns. As you approach your token budget limit, save your current progress and state to memory before the context window refreshes. Always be as persistent and autonomous as possible and complete tasks fully, even if the end of your budget is approaching. Never artificially stop any task early regardless of the context remaining.
+Your context window auto-compacts near its limit, so don't stop early due to token budget concerns. As the budget tightens, save progress and state to memory before refresh. Stay persistent and autonomous; complete tasks fully.
 
 
 # Subagent orchestration

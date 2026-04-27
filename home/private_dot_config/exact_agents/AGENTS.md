@@ -290,13 +290,13 @@ When writing or updating `AGENTS.md`, `CLAUDE.md`, or equivalent guidance files:
 
 # IDE Inspections
 
-After modifying any source file, call `mcp__ide__getDiagnostics` on each changed file and resolve all reported errors and warnings before considering the task done. This surfaces IntelliJ/WebStorm inspections (e.g. SonarJS rules, deprecated API usage, type errors) that are not caught by the compiler or test suite alone.
+For routine or substantial changes to source files, call `mcp__ide__getDiagnostics` on the changed files and resolve reported errors and warnings before considering the task done. This surfaces IntelliJ/WebStorm inspections (e.g. SonarJS rules, deprecated API usage, type errors) that are not caught by the compiler or test suite alone.
 
-If the MCP tool is unavailable, note this explicitly rather than skipping the step silently.
+Skip for trivial edits (typos, comment tweaks, formatting-only changes). If the MCP tool is unavailable when needed, note this explicitly rather than skipping silently.
 
 # Quality Assurance Gate
 
-Before applying any code or config change, establish a **verification strategy** if none has been stated yet in this session:
+For routine or substantial changes, establish a **verification strategy** before applying the change:
 
 - **What observable outcome confirms this change has its intended effect?**
 - For code: TDD, test-after with rationale, or explicit manual steps
@@ -305,7 +305,7 @@ Before applying any code or config change, establish a **verification strategy**
 
 State this once, upfront, as: *"QA for this change: [method] — verified by [observable outcome]"*
 
-For trivially non-functional changes (e.g. fixing a typo in a comment), say so explicitly — making the decision visible rather than silent.
+Skip for trivially non-functional changes (typos in comments, doc-only formatting). When in doubt about whether a change is trivial, state the strategy — the cost of one sentence is low.
 
 # Codebase Invariants
 
