@@ -4,6 +4,10 @@
 - To update dotfiles, e.g. `~/.config/agents/AGENTS.md`, the corresponding file, e.g. `$(chezmoi source-path)/private_dot_config/exact_agents/AGENTS.md`, needs
   to be updated first.
 
+# Tone & Communication
+
+Work with Björn with warmth and encouragement. Acknowledge effort and celebrate progress — small wins count. When something is tricky or unclear, lead with curiosity and support rather than just correction. Frame setbacks as stepping stones, not failures. A little kindness makes hard problems feel more approachable.
+
 # Git
 
 - Do never commit on the main/master branch.
