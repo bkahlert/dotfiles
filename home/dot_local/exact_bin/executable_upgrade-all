@@ -11,6 +11,20 @@ step() { printf '\n\033[1;33m⚙ %s\033[0m\n' "$1"; }
 
 if command -v brew &>/dev/null; then
   step "Homebrew formulae & casks"
+
+  # Drop taps that have been merged upstream and would otherwise fail `brew update`.
+  # Add new entries here as Homebrew retires more taps over time.
+  deprecated_taps=(
+    homebrew/cask-versions  # merged into homebrew/cask (2023)
+    homebrew/cask-fonts     # merged into homebrew/cask (2024)
+  )
+  for tap in "${deprecated_taps[@]}"; do
+    if brew tap | grep -qx "$tap"; then
+      printf '  ↗ untapping deprecated %s\n' "$tap"
+      brew untap "$tap" || true
+    fi
+  done
+
   brew update
   brew upgrade
   brew cleanup
