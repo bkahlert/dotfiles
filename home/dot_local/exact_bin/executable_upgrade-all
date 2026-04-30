@@ -27,6 +27,18 @@ if command -v brew &>/dev/null; then
 
   brew update
   brew upgrade
+
+  # `brew upgrade` skips formulas without bottles to avoid slow source builds
+  # in the middle of a batch. Anything still listed in `brew outdated` after
+  # the first pass is unbottled — rebuild it from source so tap formulas
+  # don't accumulate stale versions indefinitely.
+  unbottled=$(brew outdated --formula --quiet)
+  if [ -n "$unbottled" ]; then
+    printf '  ⚙ rebuilding unbottled formulae from source: %s\n' "$(echo "$unbottled" | tr '\n' ' ')"
+    # shellcheck disable=SC2086 # intentional word splitting
+    brew upgrade --build-from-source $unbottled || true
+  fi
+
   brew cleanup
 fi
 
@@ -40,7 +52,10 @@ if command -v npm &>/dev/null; then
   npm update -g
 fi
 
-if command -v gem &>/dev/null; then
+# Skip Apple's frozen system Ruby (/usr/bin/gem) — its 2.6.x is too old for
+# modern gems and `gem update` just churns failures. If a real Ruby (brew,
+# rbenv, asdf, ...) gets installed, `gem` resolves elsewhere and this runs.
+if command -v gem &>/dev/null && [ "$(command -v gem)" != /usr/bin/gem ]; then
   step "Ruby gems"
   gem update --user-install
 fi
