@@ -24,6 +24,15 @@ if command -v tldr &>/dev/null; then
   alias examples="tldr"
 fi
 
+# Brew's python@X.Y kegs only link versioned names (python3, pip3) into PATH;
+# bare `python`/`pip` stay in keg-only libexec. These aliases bridge that.
+if command -v python3 &>/dev/null; then
+  alias python=python3
+fi
+if command -v pip3 &>/dev/null; then
+  alias pip=pip3
+fi
+
 # Picks the first bindable port from 80, 8080, or any free port.
 # Bind-test uses python so EACCES (port 80 without sudo) is caught too.
 _pick_port() {
