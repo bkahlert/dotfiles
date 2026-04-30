@@ -1,8 +1,7 @@
-if [ -z "$GOROOT" ] && [ -d /usr/local/go ]; then
-  export GOROOT=/usr/local/go
-fi
-
-if [ -d "$GOROOT" ]; then
+# Add $GOPATH/bin (where `go install` puts binaries) to PATH.
+# GOROOT itself is managed by Homebrew's shellenv on macOS.
+if command -v go &>/dev/null; then
   export GOPATH=${GOPATH:-$HOME/go}
-  export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+  PATH="$PATH:$GOPATH/bin"
+  export -U PATH
 fi

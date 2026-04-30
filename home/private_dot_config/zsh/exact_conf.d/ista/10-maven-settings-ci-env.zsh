@@ -5,8 +5,6 @@
 #          when not already set (e.g. skips when running in CI).
 # Usage:   Sourced automatically from ~/.config/zsh/conf.d/
 
-[ "${DOTFILES_CONTEXT}" = ista ] || return 0
-
 [[ -f "${HOME}/.m2/settings.xml" ]] || return 0
 
 # Skip if all vars are already set (e.g. in CI)

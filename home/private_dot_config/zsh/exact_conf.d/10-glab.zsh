@@ -1,4 +1,4 @@
-# Auto-install glab CLI wrapper
+# Lazy glab CLI: shadows `glab` with a function that brew-installs on first use.
 glab() {
   if ! command -v glab &>/dev/null; then
     if command -v brew &>/dev/null; then

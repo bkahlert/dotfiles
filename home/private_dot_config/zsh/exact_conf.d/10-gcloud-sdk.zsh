@@ -1,7 +1,16 @@
-# Google Cloud SDK
-if [[ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]]; then
-  source "$HOME/google-cloud-sdk/path.zsh.inc"
+# Google Cloud SDK — source PATH + completion from tarball or brew install.
+_gcloud_sdk_dirs=(
+  "$HOME/google-cloud-sdk"
+)
+if command -v brew &>/dev/null; then
+  _gcloud_sdk_dirs+=("$(brew --prefix)/share/google-cloud-sdk")
 fi
-if [[ -f "$HOME/google-cloud-sdk/completion.zsh.inc" ]]; then
-  source "$HOME/google-cloud-sdk/completion.zsh.inc"
-fi
+
+for _gcloud_sdk_dir in "${_gcloud_sdk_dirs[@]}"; do
+  [[ -d $_gcloud_sdk_dir ]] || continue
+  [[ -f $_gcloud_sdk_dir/path.zsh.inc ]]       && source "$_gcloud_sdk_dir/path.zsh.inc"
+  [[ -f $_gcloud_sdk_dir/completion.zsh.inc ]] && source "$_gcloud_sdk_dir/completion.zsh.inc"
+  break
+done
+
+unset _gcloud_sdk_dirs _gcloud_sdk_dir

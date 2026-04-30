@@ -9,7 +9,11 @@ claude() {
 }
 
 if (( $+commands[claude] )); then
-  zsh-defer source <(command claude completion --shell zsh)
+  if (( $+functions[zsh-defer] )); then
+    zsh-defer source <(command claude completion --shell zsh)
+  else
+    source <(command claude completion --shell zsh)
+  fi
 fi
 
 alias clauded="claude --dangerously-skip-permissions"
