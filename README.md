@@ -24,7 +24,8 @@ chezmoi init --apply bkahlert
 - **[Sheldon](https://sheldon.cli.rs/)** — zsh plugin manager (TOML config, Rust-based).
 - **[Starship](https://starship.rs/)** — cross-shell prompt (TOML config, Rust-based).
 - **Autoloaded functions** — zsh-specific functions are files in `functions/`, loaded on first call.
-- **Standalone scripts** — shell-agnostic utilities live in `~/.local/bin` (managed separately).
+- **Standalone scripts** — shell-agnostic utilities under `home/dot_local/exact_bin/` mirror `~/.local/bin` exactly: removing a script from the repo removes it from the target.
+- **AI assistant configs** — `~/.claude/`, `~/.gemini/`, and `~/.config/agents/` are tracked so prompt rules and slash commands stay in sync across machines.
 
 ## Making changes
 
@@ -110,46 +111,54 @@ See [Ghostty configuration reference](https://ghostty.org/docs/config/reference)
 
 ```
 dotfiles/
-├── .chezmoiroot              # points chezmoi to home/
-├── Containerfile              # test container (Fedora + Ghostty + VNC)
-├── Makefile                   # build/run/validate targets
+├── .chezmoiroot                  # points chezmoi to home/
+├── Containerfile                 # test container (Fedora + Ghostty + VNC)
+├── Makefile                      # build/run/validate targets
 │
-└── home/                      # chezmoi source state
-    ├── .chezmoi.toml.tmpl     # machine config (prompted on init)
-    ├── .chezmoiscripts/       # install scripts (homebrew, packages, sheldon)
-    ├── dot_zshenv             # sets ZDOTDIR → only file in $HOME
+└── home/                         # chezmoi source state
+    ├── .chezmoi.toml.tmpl        # machine config (prompted on init)
+    ├── .chezmoiscripts/          # install + setup scripts (homebrew, packages,
+    │                             #   sheldon, nanorc, LaunchAgent, MCP, skills, .osx)
+    ├── dot_zshenv                # sets ZDOTDIR → only file kept in $HOME
+    ├── executable_dot_startup    # login script run via LaunchAgent (macOS)
+    ├── Library/                  # LaunchAgents (macOS)
+    │
+    ├── dot_local/exact_bin/      # mirrors ~/.local/bin exactly (upgrade-all,
+    │                             #   cleanup, cert-get, apply-macos-defaults, ...)
     │
     ├── private_dot_config/
     │   ├── zsh/
-    │   │   ├── dot_zshrc      # thin loader
-    │   │   ├── exact_conf.d/  # numbered zsh modules
-    │   │   └── functions/     # autoloaded functions (zsh-specific only)
-    │   ├── sheldon/           # plugin definitions
-    │   ├── starship.toml      # prompt config
-    │   └── ghostty/           # terminal config
+    │   │   ├── dot_zshrc         # thin loader
+    │   │   ├── exact_conf.d/     # numbered zsh modules
+    │   │   └── functions/        # autoloaded functions (zsh-specific only)
+    │   ├── sheldon/              # plugin definitions
+    │   ├── starship.toml         # prompt config
+    │   ├── ghostty/              # terminal config
+    │   └── exact_agents/         # shared AI agent rules (AGENTS.md)
     │
-    ├── private_dot_ssh/           # SSH config (1Password agent)
-    ├── dot_curlrc                 # curl defaults
-    ├── dot_npmrc.tmpl             # npm config (business: GitLab registry)
-    ├── dot_gitconfig.tmpl         # git (templated for name/email)
-    └── dot_tmux.conf              # tmux
+    ├── private_dot_claude/       # Claude Code config + skills
+    ├── private_dot_gemini/       # Gemini CLI config
+    ├── private_dot_ssh/          # SSH config (1Password agent on macOS)
+    ├── dot_gitconfig.tmpl        # git (templated for name/email)
+    ├── dot_npmrc.tmpl            # npm (templated for GitLab registry on business)
+    ├── dot_curlrc                # curl defaults
+    └── dot_tmux.conf             # tmux
 ```
 
 ## Zsh load order
 
 ```
-~/.zshenv                         → sets ZDOTDIR=~/.config/zsh
+~/.zshenv                          → sets ZDOTDIR=~/.config/zsh
 ~/.config/zsh/.zprofile            → Homebrew shellenv
 ~/.config/zsh/.zshrc               → autoloads functions, sources conf.d/*
-  01-options.zsh                   → locale, colors, setopt
-  02-history.zsh                   → history size, dedup, append
-  03-completions.zsh               → compinit (cached daily)
-  04-keybindings.zsh               → bindkey
-  05-prompt.zsh                    → starship init
-  06-aliases.zsh                   → suffix aliases only
-  07-plugins.zsh                   → sheldon source
-  08-print.zsh                     → printf_error, printf_info, printf_success, ...
-  10-*.zsh                         → tool-specific (homebrew, nvm, java, go, ...)
+  00-context.zsh.tmpl              → stamps $DOTFILES_CONTEXT (e.g. "ista" or empty)
+  01–07                            → core: options, history, completions,
+                                       keybindings, prompt, aliases, plugins
+  08-print.zsh                     → printf_error/info/success/warning, die
+  10-*.zsh                         → tool modules (homebrew, nvm, fzf, java, go,
+                                       gradle, kubernetes, gcloud, glab, aws, …)
+  20-claude.zsh                    → Claude CLI auto-install + completion
+  conf.d/$DOTFILES_CONTEXT/*.zsh   → company-specific modules (sourced last)
 ```
 
 ## Testing in a container
