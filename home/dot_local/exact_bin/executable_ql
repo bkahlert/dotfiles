@@ -1,0 +1,4 @@
+#!/bin/bash
+# Quick Look files (macOS)
+[[ $OSTYPE == darwin* ]] || exit 0
+(( $# > 0 )) && qlmanage -p "$@" &>/dev/null &

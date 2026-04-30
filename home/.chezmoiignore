@@ -7,3 +7,7 @@ Containerfile
 Makefile
 entrypoint.sh
 docs/
+
+# Anthropic Claude CLI symlink — managed by https://claude.ai/install.sh,
+# not chezmoi. Without this, exact_bin/ would remove it on apply.
+.local/bin/claude

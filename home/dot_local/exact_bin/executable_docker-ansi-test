@@ -1,0 +1,6 @@
+#!/bin/bash
+# Prints ANSI demo screen inside a Docker container
+# Usage: docker-ansi-test <image>
+image=${1?Docker image missing}; shift
+docker run -i --rm --entrypoint sh "$image" -c \
+  "printf '%s' '$(curl -LfsS https://raw.githubusercontent.com/bkahlert/-/master/ansi-test.ansi)'"

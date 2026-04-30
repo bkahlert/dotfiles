@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+#bashsupport disable=BP5004
+#
+# notify—A tiny Apple Script wrapper to send macOS notifications.
+# https://github.com/bkahlert/#TODO
+#
+# MIT License
+#
+# Copyright (c) 2023 Dr. Björn Kahlert
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+if [ "${DEBUG-}" ]; then
+  printf 'Invocation: %b\n' "$*" >>~/.notify.log
+fi
+
+# Joins remaining args with first arg.
+join_by() {
+  local d=${1-} f=${2-}
+  if shift 2; then
+    printf %s "$f" "${@/#/$d}"
+  fi
+}
+
+if [ $# -eq 0 ]; then
+  printf "\e[1mUsage:\e[0m %s \e[3mmessage\e[23m [--title \e[3mtitle\e[23m] [--subtitle \e[3msub-title\e[23m] [--sound \e[3msound\e[23m]\n" "${0##*/}" >&2
+  printf "\e[1mExample:\e[0m %s \e[3m'%s'\e[23m --title \e[3m'%s'\e[23m --sound \e[3m%s\e[23m\n" "${0##*/}" "You have just been notified" "🎉 Congratulations" purr >&2
+  exit 1
+fi
+
+declare -a args
+declare title subtitle sound
+while (($#)); do
+  case $1 in
+  --title)
+    shift
+    [ $# -gt 0 ] || { printf "\e[31m\e[3m%s\e[23m set but the required argument is missing.\e[0m\n" --title >&2 && exit 1; }
+    title=$1 && shift
+    ;;
+  --subtitle)
+    shift
+    [ $# -gt 0 ] || { printf "\e[31m\e[3m%s\e[23m set but the required argument is missing.\e[0m\n" --subtitle >&2 && exit 1; }
+    subtitle=$1 && shift
+    ;;
+  --sound)
+    # ~/Library/Sounds, /System/Library/Sounds
+    shift
+    [ $# -gt 0 ] || { printf "\e[31m\e[3m%s\e[23m set but the required argument is missing.\e[0m\n" --sound >&2 && exit 1; }
+    sound=$1 && shift
+    ;;
+  *)
+    args+=("$1") && shift
+    ;;
+  esac
+done
+
+notification=$(join_by ' ' "${args[@]}")
+
+# AppleScript sucks
+osascript - "$notification" "${title:-Notification}" "$subtitle" "$sound" <<EOF
+  on run {theNotification, theTitle, theSubtitle, theSound}
+    if theSound is "" then
+      display notification theNotification with title theTitle subtitle theSubtitle
+    else
+      display notification theNotification with title theTitle subtitle theSubtitle sound name theSound
+    end if
+  end run
+EOF

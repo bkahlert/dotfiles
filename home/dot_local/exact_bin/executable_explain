@@ -1,0 +1,13 @@
+#!/bin/bash
+# Opens explainshell.com for the given command
+if [[ $# == 0 ]]; then
+  echo "usage: explain <cmd> <args>"
+  exit 0
+fi
+
+cmd=${*/ /+}
+if command -v xdg-open &>/dev/null; then
+  xdg-open "http://explainshell.com/explain?cmd=$cmd"
+elif command -v open &>/dev/null; then
+  open "http://explainshell.com/explain?cmd=$cmd"
+fi

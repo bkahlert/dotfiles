@@ -1,0 +1,7 @@
+#!/bin/bash
+# Use btop if available, fallback to real top
+if command -v btop &>/dev/null; then
+  exec btop "$@"
+else
+  exec /usr/bin/top "$@"
+fi

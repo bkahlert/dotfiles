@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+declare domain=${1?domain missing} port=${2:-443}
+
+cert-get() {
+  openssl s_client -showcerts -servername "$domain" -connect "$domain":"$port" </dev/null 2>/dev/null | openssl x509 -outform PEM
+}
+
+case $0 in
+  */cert-download) cert-get > "$domain".pem ;;
+  *) cert-get ;;
+esac

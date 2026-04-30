@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+declare domain=${1?domain missing} port=${2:-443}
+echo | openssl s_client -showcerts -servername "$domain" -connect "$domain":"$port" 2>/dev/null | openssl x509 -inform pem -noout -text

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+LOG_FILE="$(dirname "${0}")/debug.log"
+HR="$(printf '%*s' "${COLUMNS:-$(tput cols)}" '' | tr ' ' -)"
+
+log() (
+  printf "${1}" | tee -a "${LOG_FILE}"
+)
+
+logArgument() (
+  log "⟨${1}⟩"
+)
+
+echo "EVERYTHING BELOW THIS LINE IS ALSO LOGGED TO ${LOG_FILE}"
+echo "$(tput 'smso')""${HR}""$(tput 'rmso')"
+
+#------------------------------------------------------------------------------#
+
+log "${0} was called with: "
+while (("$#")); do
+  logArgument $1
+  shift
+done
+log "\nSTDIN: "
+if [ ! -t 0 ]; then
+  logArgument "$(xargs -0)"
+fi
+log "\n"
+
+#------------------------------------------------------------------------------#
+
+printf "\n" >> "${LOG_FILE}"

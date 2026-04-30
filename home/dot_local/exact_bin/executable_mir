@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# mirror a directory
+
+declare src=${1?source missing}
+declare dst=${2?destination missing}
+
+# remove trailing slash
+src="${1%/}"
+dst="${2%/}"
+
+[ -d "$src" ] || { printf "\e[31mERROR: The provided source \e[3m%s\e[23m is no directory.\e[0m\n" "$dst" >&2 && exit 1; }
+[ ! -f "$dst" ] || { printf "\e[31mERROR: The provided destination \e[3m%s\e[23m is an existing file.\e[0m\n" "$dst" >&2 && exit 1; }
+
+declare src_basename dst_basename
+src_basename="$(basename "$src")"
+dst_basename="$(basename "$dst")"
+[ "$src_basename" = "$dst_basename" ] || { printf "\e[31mERROR: The base names of the provided source \e[3m%s\e[23m and destination \e[3m%s\e[23m don't match.\e[0m\n" "$src_basename" "$dst_basename" >&2 && exit 1; }
+
+rsync -av \
+  --progress \
+  --delete \
+  --no-perms --no-owner --no-group \
+  "$src"/ "$dst"/

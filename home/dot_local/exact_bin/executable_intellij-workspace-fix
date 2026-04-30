@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+#bashsupport disable=BP5004
+#
+# intellij-workspace-fix — Fixes settings in all IntelliJ workspace.xml files
+#                          recursively found in the current working directory.
+#
+# MIT License
+#
+# Copyright (c) 2022 Dr. Björn Kahlert
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+# uses xmlstarlet
+# https://xmlstar.sourceforge.net/
+
+fixSaveOptions() {
+  local xml=${1?XML missing}
+  xml="$(fixOnSaveOption 'OptimizeOnSaveOptions' "$xml")"
+  xml="$(fixOnSaveOption 'FormatOnSaveOptions' "$xml")"
+  echo "$xml"
+}
+
+fixOnSaveOption() {
+  local name=${1?option name missing} xml=${2?XML missing}
+  match=$(echo "$xml" | xmlstarlet sel -t -v '/project/component[@name="'$name'"]')
+  if [ "$match" = "" ]; then
+    # create new component
+    xml=$(    echo "$xml" \
+        | xmlstarlet ed --subnode '/project' --type elem -n 'component' \
+        | xmlstarlet ed --insert '/project/component[position()=last()]' --type attr -n 'name' -v ''$name''
+        )
+  else
+    # deletes options of existing component
+    xml=$(    echo "$xml" \
+        | xmlstarlet ed --delete '/project/component[@name="'$name'"]/option'
+        )
+  fi
+  echo "$xml" \
+    | xmlstarlet ed --subnode '/project/component[@name="'$name'"]' --type elem -n 'option' \
+    | xmlstarlet ed --insert '/project/component[@name="'$name'"]/option[position()=last()]' --type attr -n 'name' -v 'myRunOnSave' \
+    | xmlstarlet ed --insert '/project/component[@name="'$name'"]/option[position()=last()]' --type attr -n 'value' -v 'true'
+}
+
+command -v xmlstarlet >/dev/null || brew install xmlstarlet
+
+declare timestamp backup dry_run
+timestamp=$(date +%s)
+
+declare -a excluded_directories=('.git' 'build' 'cache' 'node_modules') find_args
+for excluded_directory in "${excluded_directories[@]}"; do
+    find_args=("${find_args[@]}" -type d -path '*/'"$excluded_directory" -prune -o -not -name "$excluded_directory")
+done
+
+while IFS= read -r -d '' file; do
+  backup="${file%.*}.$timestamp.${file##*.}"
+  xml=$(<"$file")
+  fixed=$(fixSaveOptions "$xml" | sed 's, \{0\,\}/>$, />,g')
+
+  diff=$(diff --unified=3 <(printf %s "$xml") <(printf %s "$fixed"))
+
+  if [ "$xml" = "$fixed" ]; then
+    echo "Already fixed $file. Skipping."
+  else
+    if [ ! "$dry_run" ]; then
+      cp "$file" "$backup"
+      # shellcheck disable=SC2001
+      printf %s "$fixed" >"$file"
+    fi
+
+    echo "Fixed $file (backup: ${backup##*/})"
+  fi
+done < <(find . "${find_args[@]}" -type f -name 'workspace.xml' -print0)

@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+#bashsupport disable=BP5004
+
+auto_confirm_change_browser() {
+  osascript -- - "'$1'" <<'APPLE_SCRIPT'
+on run(argv)
+  do shell script "defaultbrowser " & item 1 of argv
+  try
+    tell application "System Events"
+      tell application process "CoreServicesUIAgent"
+        tell window 1
+          tell (first button whose name starts with "use")
+            perform action "AXPress"
+          end tell
+        end tell
+      end tell
+    end tell
+  end try
+end run
+APPLE_SCRIPT
+}
+
+start_apps() {
+  while (($#)); do
+      osascript -e "tell application \"$1\" to activate" || true
+      shift
+  done
+}
+
+close_apps() {
+  while (($#)); do
+      osascript -e "tell application \"$1\" to quit" || true
+      shift
+  done
+}
+
+run_commands() {
+  while (($#)); do
+      "$1" || true
+      shift
+  done
+}
+
+declare -a work_apps=(
+  'Google Chrome'
+  'Microsoft Excel'
+  'Microsoft Outlook'
+  'Microsoft Teams'
+  'Parallels Desktop'
+  'Parallels Mac VM'
+)
+
+declare -a work_commands=(
+  'share-dkb'
+)
+
+declare -a home_apps=(
+  'Microsoft Edge'
+)
+
+declare -a home_commands=(
+  'unshare-dkb'
+)
+
+command -v default""browser >/dev/null || {
+  brew install default""browser
+}
+
+case $0 in
+  */work-time)
+    close_apps "${home_apps[@]}"
+    start_apps "${work_apps[@]}"
+    auto_confirm_change_browser chrome
+    run_commands "${work_commands[@]}"
+    ;;
+  */home-time)
+    close_apps "${work_apps[@]}"
+    start_apps "${home_apps[@]}"
+    auto_confirm_change_browser edgemac
+    run_commands "${home_commands[@]}"
+    ;;
+esac

@@ -1,0 +1,4 @@
+#!/bin/bash
+# Returns IP address of a container (default: latest)
+id=${1:-$(docker-latest)}
+docker inspect "$id" | jq -r '.[].NetworkSettings.Networks.bridge.IPAddress'

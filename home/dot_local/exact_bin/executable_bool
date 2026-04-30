@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+
+declare custom_expression='*' status_filter='*'
+while(($#)); do
+  case $1 in
+  true)
+    custom_expression=true
+    ;;
+  false)
+    custom_expression=false
+    ;;
+  0)
+    status_filter=0
+    ;;
+  1)
+    status_filter=1
+    ;;
+  esac
+  shift
+done
+
+#x=("true" "||" "false" "||" "true")
+#echo "${x[@]:0:$((${#x[@]} - 1))}"
+#echo "${x[$((${#x[@]} - 1))]}"
+#exit
+
+print_eval() {
+  local last=$# expr status evaluated=false
+
+  expr="${*:1:$(($#-1))} { evaluated=true; ${!last}; }"
+  eval "$expr"
+  status=$?
+
+  local formatted color
+  if [ "$evaluated" = 'true' ]; then
+    color=$(tput setaf 2)
+  else
+    color=$(tput setaf 1)
+  fi
+  printf -v formatted "%s %s%s%s => %s" "${*:1:$(($#-1))}" "$color" "${!last}" "$(tput sgr0)" "$status"
+
+  case $status in
+  $status_filter)
+    echo "$formatted"
+    ;;
+  esac
+}
+
+bool() {
+  case $custom_expression in
+  true)
+    print_eval "$@" 'true'
+    ;;
+  false)
+    print_eval "$@" 'false'
+    ;;
+  *)
+    print_eval "$@" 'true'
+    print_eval "$@" 'false'
+    ;;
+  esac
+}
+
+headline() {
+  echo "$(tput setaf 4)$*$(tput sgr0)"
+}
+
+headline "cond 1 || command"
+bool 'true' '||'
+bool 'false' '||'
+
+echo
+headline "cond 1 && command"
+bool 'true' '&&'
+bool 'false' '&&'
+
+echo
+headline "cond 1 || cond 2 || command"
+bool 'true' '||' 'true' '||'
+bool 'true' '||' 'false' '||'
+echo
+bool 'false' '||' 'true' '||'
+bool 'false' '||' 'false' '||'
+
+echo
+
+headline "$(tput setaf 3)cond 1 && cond 2 || command"
+bool 'true' '&&' 'true' '||'
+bool 'true' '&&' 'false' '||'
+echo
+bool 'false' '&&' 'true' '||'
+bool 'false' '&&' 'false' '||'
+
+echo
+headline "cond 1 || cond 2 && command"
+bool 'true' '||' 'true' '&&'
+bool 'true' '||' 'false' '&&'
+echo
+bool 'false' '||' 'true' '&&'
+bool 'false' '||' 'false' '&&'
+
+echo
+headline "cond 1 && cond 2 && command"
+bool 'true' '&&' 'true' '&&'
+bool 'true' '&&' 'false' '&&'
+echo
+bool 'false' '&&' 'true' '&&'
+bool 'false' '&&' 'false' '&&'

@@ -1,0 +1,9 @@
+#!/bin/bash
+# Runs command in Alpine container with cwd mounted
+# Usage: alpine-here [command...]
+cmd=(docker run --rm -e LANG=C.UTF-8 -e TERM="$TERM" -v "$PWD:$PWD" -w "$PWD")
+if [[ $# == 0 ]]; then
+  "${cmd[@]}" -it docker:20.10.10-alpine3.14 /bin/sh
+else
+  "${cmd[@]}" docker:20.10.10-alpine3.14 sh -c "$*"
+fi

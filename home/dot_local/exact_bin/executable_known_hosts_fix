@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Remove the specified line from ~/.ssh/known_hosts
+
+case $1 in
+'')
+  printf "Usage: \e[3m%s\e[23m \e[3m%s\e[23m\n" "${0##*/}" "line-number" >&2
+  exit 1
+  ;;
+*[!0-9]*)
+  printf "\e[31mline-number \e[3m%s\e[23m must be non-negative integer\e[0m\n" "$1" >&2
+  exit 1
+  ;;
+*)
+  # line = $1 plus 1
+  line=$(($1 + 0))
+  sed -i.bak -e "${line}d" ~/.ssh/known_hosts
+  ;;
+esac

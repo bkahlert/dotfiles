@@ -98,6 +98,10 @@ Files in `functions/` are autoloaded by zsh. Each file is named after the functi
 
 Use autoloaded functions for zsh-specific utilities. Use `~/.local/bin` scripts for shell-agnostic tools.
 
+### `~/.local/bin` (exact_-managed)
+
+Scripts in `home/dot_local/exact_bin/` mirror `~/.local/bin` exactly: anything in the target directory that is not in source state is removed on `chezmoi apply`. Add a script as `executable_<name>` (regular file) or `symlink_<name>` (file content = symlink target). Exception: the Anthropic Claude CLI symlink at `~/.local/bin/claude` is owned by its installer (`https://claude.ai/install.sh`) and is preserved via `.chezmoiignore`.
+
 ### Print Utilities
 
 [08-print.zsh](home/private_dot_config/zsh/exact_conf.d/08-print.zsh) provides `printf_error`, `printf_info`, `printf_success`, `printf_warning`, and `die`. These are designed as a single sourceable file so they can be copy-pasted into standalone scripts. Other conf.d modules and autoloaded functions can use them freely since they're sourced first.

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+#bashsupport disable=BP5004
+
+kill_zscaler() {
+  /usr/bin/osascript -e 'do shell script "find /Library/LaunchDaemons -name *zscaler* -exec launchctl unload {} \\;" with administrator privileges'
+  /usr/bin/osascript -e 'do shell script "find /Library/LaunchAgents -name *zscaler* -exec launchctl unload {} \\;"'
+}
+start_zscaler() {
+  /usr/bin/osascript -e 'do shell script "open -a /Applications/Zscaler/Zscaler.app --hide"'
+  /usr/bin/osascript -e 'do shell script "find /Library/LaunchDaemons -name *zscaler* -exec launchctl load {} \\;" with administrator privileges'
+}
+
+auto_confirm_change_browser() {
+  osascript -- - "$1" <<'APPLE_SCRIPT'
+on run(argv)
+  do shell script "/usr/local/bin/defaultbrowser " & item 1 of argv
+  try
+    tell application "System Events"
+      tell application process "CoreServicesUIAgent"
+        tell window 1
+          tell (first button whose name starts with "use")
+            perform action "AXPress"
+          end tell
+        end tell
+      end tell
+    end tell
+  end try
+end run
+APPLE_SCRIPT
+}
+
+command -v default""browser >/dev/null || {
+  /usr/local/bin/brew install default""browser
+}
+
+case $1 in
+  --work-time)
+    start_zscaler
+    auto_confirm_change_browser chrome
+    ;;
+  --home-time)
+    kill_zscaler
+    auto_confirm_change_browser firefox
+    ;;
+esac

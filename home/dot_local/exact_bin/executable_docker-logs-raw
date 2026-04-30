@@ -1,0 +1,8 @@
+#!/bin/bash
+# Prints raw container logs (default: latest container)
+log="$(docker-host cat "$(docker-logs "$@")")"
+if command -v bat &>/dev/null; then
+  echo "$log" | bat --language json
+else
+  echo "$log"
+fi

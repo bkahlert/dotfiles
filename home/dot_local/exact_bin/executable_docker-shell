@@ -1,0 +1,19 @@
+#!/bin/bash
+# Starts preferred shell in Docker image
+# Usage: docker-shell <image> [script...]
+image=${1?Docker image missing}; shift
+shells=$(docker-list-shells "$image")
+preferred=('/bin/zsh$' '/zsh$' '/bin/bash$' 'bash$')
+for pref in "${preferred[@]}"; do
+  for shell in $shells; do
+    if [[ $shell =~ $pref ]]; then
+      if [[ $# == 0 ]]; then
+        docker run -it --rm --entrypoint "$shell" "$image"
+      else
+        docker run --rm --entrypoint "$shell" "$image" -c "$*"
+      fi
+      exit $?
+    fi
+  done
+done
+exit 1
