@@ -1,158 +1,253 @@
 #!/usr/bin/env bash
+# Purpose: Reclaim disk space by clearing caches, logs, and stale build artifacts on macOS.
+# Usage:   cleanup           # dry-run: shows what would be deleted (default, safe)
+#          cleanup --apply   # actually perform the deletions
+#          cleanup --yes     # auto-accept risky prompts (still needs --apply to delete)
+
+set -uo pipefail
+
+[[ $(uname) == Darwin ]] || { printf 'cleanup: macOS only\n' >&2; exit 1; }
+
+apply=false
+assume_yes=false
+while [ $# -gt 0 ]; do
+  case $1 in
+    --apply) apply=true && shift ;;
+    --yes|-y) assume_yes=true && shift ;;
+    -h|--help) sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//' && exit 0 ;;
+    *) printf 'cleanup: unknown argument: %s\n' "$1" >&2 && exit 2 ;;
+  esac
+done
+
+if [ -t 1 ]; then
+  c_bold=$(tput bold); c_reset=$(tput sgr0); c_yellow=$(tput setaf 3)
+  c_green=$(tput setaf 2); c_red=$(tput setaf 1); c_blue=$(tput setaf 4); c_gray=$(tput setaf 8)
+else
+  c_bold=''; c_reset=''; c_yellow=''; c_green=''; c_red=''; c_blue=''; c_gray=''
+fi
+
+step() { printf '\n%s⚙ %s%s\n' "$c_yellow" "$1" "$c_reset"; }
+info() { printf '%sℹ%s %s\n' "$c_blue" "$c_reset" "$1"; }
+ok()   { printf '%s✔%s %s\n' "$c_green" "$c_reset" "$1"; }
+warn() { printf '%s!%s %s\n' "$c_yellow" "$c_reset" "$1"; }
+skip() { printf '%s▪%s %s\n' "$c_gray" "$c_reset" "$1"; }
 
 bytes_to_human() {
-  b=${1:-0}
-  d=''
-  s=0
-  S=(Bytes {K,M,G,T,E,P,Y,Z}iB)
+  local b=${1:-0} d='' s=0
+  local S=(B KiB MiB GiB TiB PiB EiB ZiB YiB)
   while ((b > 1024)); do
-    d="$(printf ".%02d" $((b % 1024 * 100 / 1024)))"
-    b=$((b / 1024))
-    ((s++))
+    d=$(printf ".%02d" $((b % 1024 * 100 / 1024)))
+    b=$((b / 1024)); ((s++))
   done
-  echo "$b$d ${S[$s]} of space was cleaned up"
+  printf '%s%s %s' "$b" "$d" "${S[$s]}"
 }
 
-delete_caches() {
-  local cacheName=$1
-  shift
-  local paths=("$@")
-  echo "Initiating cleanup ${cacheName} cache..."
-  for folderPath in "${paths[@]}"; do
-    if [[ -d ${folderPath} ]]; then
-      dirSize=$(du -hs "${folderPath}" | awk '{print $1}')
-      echo "Deleting ${folderPath} to free up ${dirSize}..."
-      rm -rfv "${folderPath}" &>/dev/null
-    fi
+size_of() {
+  local total=0 p sz
+  for p in "$@"; do
+    [[ -e $p ]] || continue
+    sz=$(du -sk "$p" 2>/dev/null | awk '{print $1}')
+    [[ -n $sz ]] && total=$((total + sz * 1024))
   done
+  printf '%s' "$total"
 }
 
-# Default arguments
-declare doUpdates=true
+reclaimable=0
 
-# sudo until the script has finished
-sudo -v
-
-# Keep-alive sudo until `cleanup.sh` has finished
-while true; do
-  sudo -n true
-  sleep 60
-  kill -0 "$$" || exit
-done 2>/dev/null &
-
-oldAvailable=$(df / | tail -1 | awk '{print $4}')
-
-echo 'Empty the Trash on all mounted volumes and the main HDD...'
-sudo rm -rfv /Volumes/*/.Trashes/* &>/dev/null
-sudo rm -rfv ~/.Trash/* &>/dev/null
-
-echo 'Clear System Log Files...'
-sudo rm -rfv /private/var/log/asl/*.asl &>/dev/null
-sudo rm -rfv /Library/Logs/DiagnosticReports/* &>/dev/null
-sudo rm -rfv /Library/Logs/Adobe/* &>/dev/null
-rm -rfv ~/Library/Containers/com.apple.mail/Data/Library/Logs/Mail/* &>/dev/null
-
-echo 'Cleanup iOS Applications...'
-rm -rfv ~/Music/iTunes/iTunes\ Media/Mobile\ Applications/* &>/dev/null
-
-echo 'Remove iOS Device Backups...'
-rm -rfv ~/Library/Application\ Support/MobileSync/Backup/* &>/dev/null
-
-echo 'Cleanup XCode Derived Data and Archives...'
-rm -rfv ~/Library/Developer/Xcode/DerivedData/* &>/dev/null
-rm -rfv ~/Library/Developer/Xcode/Archives/* &>/dev/null
-
-if type "xcrun" &>/dev/null; then
-  echo 'Cleanup iOS Simulators...'
-  osascript -e 'tell application "com.apple.CoreSimulator.CoreSimulatorService" to quit'
-  osascript -e 'tell application "iOS Simulator" to quit'
-  osascript -e 'tell application "Simulator" to quit'
-  xcrun simctl shutdown all
-  xcrun simctl erase all
-fi
-
-if [ -d "$HOME/Library/Caches/CocoaPods" ]; then
-  echo 'Cleanup CocoaPods cache...'
-  rm -rfv "$HOME/Library/Caches/CocoaPods/"* &>/dev/null
-fi
-
-# support delete gradle caches
-if [ -d "$HOME/.gradle/caches" ]; then
-  echo 'Cleanup Gradle cache...'
-  rm -rfv "$HOME/.gradle/caches/" &>/dev/null
-fi
-
-# support delete Dropbox Cache
-if [ -d "$HOME/Dropbox" ]; then
-  echo 'Clear Dropbox 📦 Cache Files...'
-  sudo rm -rfv "$HOME/Dropbox/.dropbox.cache/"* &>/dev/null
-fi
-
-if type "composer" &>/dev/null; then
-  echo 'Cleanup composer...'
-  composer clearcache &>/dev/null
-fi
-
-if type "brew" &>/dev/null; then
-  if [ "$doUpdates" -ne 0 ]; then
-    echo 'Update Homebrew Recipes...'
-    brew update
-    echo 'Upgrade and remove outdated formulae'
-    brew upgrade
+confirm_delete() {
+  local label=$1
+  $assume_yes && { info "auto-yes: $label"; return 0; }
+  local prompt
+  $apply && prompt="Delete $label? [y/N] " || prompt="Would you delete $label? [y/N] "
+  local reply=''
+  if [ -t 0 ]; then
+    read -r -p "$prompt" reply || reply=''
+  else
+    info "non-interactive: keeping $label"; return 1
   fi
-  echo 'Cleanup Homebrew Cache...'
-  brew cleanup -s &>/dev/null
-  rm -rfv "$(brew --cache)" &>/dev/null
-  brew tap --repair &>/dev/null
+  [[ $reply =~ ^[Yy]([Ee][Ss])?$ ]]
+}
+
+do_rm()   { $apply && rm -rf "$@" 2>/dev/null; return 0; }
+sudo_rm() { $apply && sudo rm -rf "$@" 2>/dev/null; return 0; }
+
+# clean <label> <risky:true|false> <sudo:true|false> <paths...>
+clean() {
+  local label=$1 risky=$2 use_sudo=$3; shift 3
+  local existing=() p
+  for p in "$@"; do [[ -e $p ]] && existing+=("$p"); done
+  if [ ${#existing[@]} -eq 0 ]; then skip "$label: nothing to clean"; return; fi
+  local bytes; bytes=$(size_of "${existing[@]}")
+  info "$label: $(bytes_to_human "$bytes") across ${#existing[@]} path(s)"
+  if $risky; then
+    for p in "${existing[@]}"; do printf '  %s%s%s\n' "$c_gray" "$p" "$c_reset"; done
+    confirm_delete "$label" || { skip "$label kept"; return; }
+  fi
+  reclaimable=$((reclaimable + bytes))
+  if $use_sudo; then sudo_rm "${existing[@]}"; else do_rm "${existing[@]}"; fi
+  $apply && ok "$label cleaned" || skip "$label (dry-run)"
+}
+
+if $apply; then
+  printf '%s%s⚠ APPLY MODE — destructive actions will run%s\n' "$c_bold" "$c_red" "$c_reset"
+else
+  printf '%s%s↗ DRY-RUN — no files will be deleted (use --apply to clean)%s\n' "$c_bold" "$c_blue" "$c_reset"
 fi
 
-if type "gem" &>/dev/null; then
-  echo 'Cleanup any old versions of gems'
-  gem cleanup &>/dev/null
+if $apply; then
+  if ! sudo -v; then
+    warn 'sudo not granted; system-level steps will be skipped'
+  else
+    while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done &
+    sudo_pid=$!
+    trap 'kill "$sudo_pid" 2>/dev/null || true' EXIT
+  fi
 fi
 
-if type "docker" &>/dev/null; then
-  echo 'Cleanup Docker'
+old_avail=$(df / | tail -1 | awk '{print $4}')
 
-  # remove dangling volumes
-  while read -r volume; do
-    docker volume rm "$volume"
-  done < <(docker volume ls -q -f "dangling=true")
+# ---------- safe ----------
+step 'Trash (all volumes + ~/.Trash)'
+clean 'Trash' false true /Volumes/*/.Trashes/* "$HOME/.Trash"/*
 
-  # remove exited containers
-  while read -r container; do
-    docker rm "$container"
-  done < <(docker ps -q -f "status=exited")
+step 'System & diagnostic logs'
+clean 'Logs' false true \
+  /private/var/log/asl/*.asl \
+  /Library/Logs/DiagnosticReports/* \
+  /Library/Logs/Adobe/* \
+  "$HOME/Library/Containers/com.apple.mail/Data/Library/Logs/Mail"/*
 
-  # remove dangling images
-  while read -r image; do
-    docker rmi "$image"
-  done < <(docker images -q -f "dangling=true")
+step 'Xcode DerivedData'
+clean 'DerivedData' false false "$HOME/Library/Developer/Xcode/DerivedData"/*
+
+step 'CocoaPods cache'
+clean 'CocoaPods' false false "$HOME/Library/Caches/CocoaPods"/*
+
+step 'Gradle caches'
+clean 'Gradle' false false "$HOME/.gradle/caches"
+
+step 'pip cache'
+clean 'pip' false false "$HOME/Library/Caches/pip"
+
+step 'pyenv-virtualenv cache'
+if [[ -n ${PYENV_VIRTUALENV_CACHE_PATH:-} ]]; then
+  clean 'pyenv-virtualenv' false false "$PYENV_VIRTUALENV_CACHE_PATH"
+else
+  skip 'PYENV_VIRTUALENV_CACHE_PATH not set'
 fi
 
-echo 'Cleanup pip cache...'
-rm -rfv "$HOME/Library/Caches/pip"
+# ---------- risky ----------
+step 'iOS Mobile Applications archive'
+clean 'iOS Mobile Applications' true false "$HOME/Music/iTunes/iTunes Media/Mobile Applications"/*
 
-if [ "$PYENV_VIRTUALENV_CACHE_PATH" ]; then
-  echo 'Removing Pyenv-VirtualEnv Cache...'
-  rm -rfv $PYENV_VIRTUALENV_CACHE_PATH &>/dev/null
+step 'iOS Device Backups (iPhone/iPad)'
+clean 'iOS Device Backups' true false "$HOME/Library/Application Support/MobileSync/Backup"/*
+
+step 'Xcode Archives (submission artifacts)'
+clean 'Xcode Archives' true false "$HOME/Library/Developer/Xcode/Archives"/*
+
+step 'Dropbox cache'
+if [[ -d "$HOME/Dropbox/.dropbox.cache" ]]; then
+  clean 'Dropbox cache' true true "$HOME/Dropbox/.dropbox.cache"/*
+else
+  skip 'Dropbox not installed'
 fi
 
-if type "npm" &>/dev/null; then
-  echo 'Cleanup npm cache...'
-  npm cache clean --force
+step 'iOS Simulators (xcrun simctl erase all)'
+if command -v xcrun &>/dev/null; then
+  if confirm_delete 'all iOS Simulator state'; then
+    if $apply; then
+      osascript -e 'tell application "com.apple.CoreSimulator.CoreSimulatorService" to quit' 2>/dev/null || true
+      osascript -e 'tell application "Simulator" to quit' 2>/dev/null || true
+      xcrun simctl shutdown all 2>/dev/null || true
+      xcrun simctl erase all 2>/dev/null || true
+      ok 'Simulators erased'
+    else
+      skip 'Simulators (dry-run)'
+    fi
+  else
+    skip 'Simulators kept'
+  fi
+else
+  skip 'xcrun not installed'
 fi
 
-if type "yarn" &>/dev/null; then
-  echo 'Cleanup Yarn Cache...'
-  yarn cache clean --force
+# ---------- tool-specific (safe) ----------
+step 'Composer cache'
+if command -v composer &>/dev/null; then
+  $apply && { composer clearcache &>/dev/null; ok 'composer cleared'; } || info 'composer clearcache (would run)'
+else
+  skip 'composer not installed'
 fi
 
-echo 'Purge inactive memory...'
-sudo purge
+step 'Homebrew cleanup'
+if command -v brew &>/dev/null; then
+  brew_cache=$(brew --cache 2>/dev/null || true)
+  if [[ -n $brew_cache && -e $brew_cache ]]; then
+    bytes=$(size_of "$brew_cache")
+    reclaimable=$((reclaimable + bytes))
+    info "brew cache: $(bytes_to_human "$bytes")"
+  fi
+  if $apply; then
+    brew cleanup -s &>/dev/null || true
+    [[ -n $brew_cache ]] && rm -rf "$brew_cache" 2>/dev/null
+    brew tap --repair &>/dev/null || true
+    ok 'brew cleaned'
+  else
+    skip 'brew (dry-run)'
+  fi
+else
+  skip 'brew not installed'
+fi
 
-echo 'Success!'
+step 'RubyGems cleanup'
+if command -v gem &>/dev/null; then
+  $apply && { gem cleanup &>/dev/null; ok 'gem cleanup done'; } || info 'gem cleanup (would run)'
+else
+  skip 'gem not installed'
+fi
 
-newAvailable=$(df / | tail -1 | awk '{print $4}')
-count=$((oldAvailable - newAvailable))
-bytes_to_human $count
+step 'Docker prune (dangling volumes/containers/images)'
+if command -v docker &>/dev/null && docker info &>/dev/null; then
+  if $apply; then
+    while read -r v; do [[ -n $v ]] && docker volume rm "$v" &>/dev/null; done < <(docker volume ls -q -f 'dangling=true')
+    while read -r c; do [[ -n $c ]] && docker rm "$c" &>/dev/null; done < <(docker ps -q -f 'status=exited')
+    while read -r i; do [[ -n $i ]] && docker rmi "$i" &>/dev/null; done < <(docker images -q -f 'dangling=true')
+    ok 'docker pruned'
+  else
+    info 'docker prune (would run)'
+  fi
+else
+  skip 'docker not installed or daemon not running'
+fi
+
+step 'npm cache'
+if command -v npm &>/dev/null; then
+  $apply && { npm cache clean --force &>/dev/null; ok 'npm cache cleared'; } || info 'npm cache clean (would run)'
+else
+  skip 'npm not installed'
+fi
+
+step 'Yarn cache'
+if command -v yarn &>/dev/null; then
+  $apply && { yarn cache clean --force &>/dev/null; ok 'yarn cache cleared'; } || info 'yarn cache clean (would run)'
+else
+  skip 'yarn not installed'
+fi
+
+step 'Purge inactive memory'
+if $apply; then
+  sudo purge 2>/dev/null && ok 'memory purged' || warn 'purge skipped (no sudo?)'
+else
+  info 'sudo purge (would run)'
+fi
+
+new_avail=$(df / | tail -1 | awk '{print $4}')
+delta_kb=$((old_avail - new_avail))
+if $apply; then
+  freed=$((delta_kb < 0 ? 0 : delta_kb * 1024))
+  printf '\n%s✔ Reclaimed: %s%s\n' "$c_green" "$(bytes_to_human "$freed")" "$c_reset"
+else
+  printf '\n%s↗ Would reclaim: ~%s (estimated)%s\n' "$c_blue" "$(bytes_to_human "$reclaimable")" "$c_reset"
+  printf '%sRun with --apply to actually clean.%s\n' "$c_gray" "$c_reset"
+fi

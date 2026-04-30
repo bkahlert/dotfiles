@@ -7,6 +7,10 @@ fi
 alias alias-print='declare -f'
 alias git+x='git update-index --chmod=+x'
 
+# ls sorted by ctime: lsl = newest first, lsr = oldest first
+alias lsl='ls -1lAFhct'
+alias lsr='ls -1lAFhcrt'
+
 # bat as cat (auto-detects dark/light mode on macOS)
 if command -v bat &>/dev/null; then
   if [[ $OSTYPE == darwin* ]]; then

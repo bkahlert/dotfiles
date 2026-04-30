@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Purpose: Share the Zscaler VPN tunnel of another host (e.g. a VM running
+#          Zscaler) with this machine, by routing selected domains through it.
+#          Invoked as `unshare-example` (a symlink) to undo the configuration.
+# Usage:   share-example         # apply share configuration
+#          unshare-example       # revert the configuration created by share
+#
+# Requires a remote host with Zscaler running. Setup instructions:
+#   https://github.com/bkahlert/kill-zscaler#sharing-zscaler
+
+declare share_script
+share_script=$(cat <<'SHARE_SCRIPT'
+bash -c "$(curl -so- https://raw.githubusercontent.com/bkahlert/kill-zscaler/main/share-zscaler.v2.sh)" -- \
+  --domain example.com \
+  --domain example.org \
+  --probe sample
+SHARE_SCRIPT
+)
+
+declare remote_share_script
+remote_share_script=$(cat <<'REMOTE_SHARE_SCRIPT'
+REMOTE_SHARE_USER='zscaler'
+REMOTE_SHARE_HOST_PORT='22'
+REMOTE_SHARE_HOST_IP_RANGE='192.168.206.2-254'
+REMOTE_SHARE_HOST=$(sudo nmap -n -p "$REMOTE_SHARE_HOST_PORT" "$REMOTE_SHARE_HOST_IP_RANGE" -oG - | awk '/Up$/{print $2}')
+printf '%sShare using %s@%s:%s ...%s\n' "$(tput bold)" "$REMOTE_SHARE_USER" "$REMOTE_SHARE_HOST" "$REMOTE_SHARE_HOST_PORT" "$(tput sgr0)" >&2
+REMOTE_SHARE_SCRIPT
+# shellcheck disable=SC2016
+printf 'ssh -4 -p "$REMOTE_SHARE_HOST_PORT" "$REMOTE_SHARE_USER@$REMOTE_SHARE_HOST" %q\n' "$share_script"
+)
+
+# Runs the share invocation on the (remote) machine REMOTE_SHARE_HOST,
+# which outputs a host configuration script. The host configuration is
+# piped to this machine's bash to finalize the share.
+share() {
+  bash -c "$remote_share_script" | bash
+
+  # Alternative: invoke the share script on the Zscaler host itself; in
+  # that case the output configuration script must be executed manually
+  # on the host wanting to make use of the shared connection.
+  # bash -c "$share_script"
+}
+
+# Runs the undo configuration script created by share().
+# shellcheck disable=SC2120
+unshare() {
+  local command=${1:-$HOME/unshare-zscaler.v2.sh}
+  if [ -x "$command" ]; then
+    "$command"
+  fi
+}
+
+# Dispatches based on invocation name (real file or 'un'-prefixed symlink).
+main() {
+  case $0 in
+    */share*)   share ;;
+    */unshare*) unshare ;;
+  esac
+}
+
+main "$@"

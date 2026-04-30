@@ -5,7 +5,7 @@ if [[ $# == 0 ]]; then
   exit 0
 fi
 
-cmd=${*/ /+}
+cmd=${*// /+}
 if command -v xdg-open &>/dev/null; then
   xdg-open "http://explainshell.com/explain?cmd=$cmd"
 elif command -v open &>/dev/null; then

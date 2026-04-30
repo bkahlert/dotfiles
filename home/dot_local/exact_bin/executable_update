@@ -1,7 +1,0 @@
-#!/bin/bash
-# Update Homebrew and all packages
-[[ $OSTYPE == darwin* ]] || exit 0
-brew update
-brew upgrade
-brew upgrade --cask
-brew cleanup

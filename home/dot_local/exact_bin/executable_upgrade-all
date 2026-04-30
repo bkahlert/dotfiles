@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Purpose: Upgrade the typical developer tooling on this machine.
+# Usage:   upgrade-all
+#
+# Each step is skipped if the tool isn't installed. A failure in one step
+# does not abort the remaining steps.
+
+set -uo pipefail
+
+step() { printf '\n\033[1;33m⚙ %s\033[0m\n' "$1"; }
+
+if command -v brew &>/dev/null; then
+  step "Homebrew formulae & casks"
+  brew update
+  brew upgrade
+  brew cleanup
+fi
+
+if command -v mas &>/dev/null; then
+  step "Mac App Store"
+  mas upgrade
+fi
+
+if command -v npm &>/dev/null; then
+  step "Global npm packages"
+  npm update -g
+fi
+
+if command -v gem &>/dev/null; then
+  step "Ruby gems"
+  gem update --user-install
+fi
+
+if command -v gh &>/dev/null; then
+  step "gh extensions"
+  gh extension upgrade --all
+fi
+
+step "macOS system updates (listing only)"
+softwareupdate -l

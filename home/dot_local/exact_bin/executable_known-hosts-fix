@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Purpose: Remove offending entries from ~/.ssh/known_hosts. Accepts either a
+#          hostname/IP (preferred — uses ssh-keygen -R to nuke all entries for
+#          that host atomically, including the hostname/IP twin) or a raw line
+#          number from ssh's "Offending key in known_hosts:N" message.
+# Usage:   known-hosts-fix <host>     # ssh-keygen -R <host>
+#          known-hosts-fix <line>     # extract host from that line, then -R it
+#                                     # (or delete the line directly if it's a
+#                                     #  hashed entry we can't reverse)
+
+set -uo pipefail
+
+readonly known_hosts="${HOME}/.ssh/known_hosts"
+
+usage() {
+  printf 'Usage: %s <host-or-line>\n' "${0##*/}" >&2
+  exit 1
+}
+
+[[ $# -eq 1 ]] || usage
+arg=$1
+
+# Branch on whether the arg is purely numeric (line) or anything else (host).
+if [[ $arg =~ ^[0-9]+$ ]]; then
+  line=$arg
+  [[ -f $known_hosts ]] || { printf '%s: %s does not exist\n' "${0##*/}" "$known_hosts" >&2; exit 1; }
+
+  total=$(wc -l < "$known_hosts")
+  (( line >= 1 && line <= total )) || {
+    printf '%s: line %d is out of range (1..%d)\n' "${0##*/}" "$line" "$total" >&2
+    exit 1
+  }
+
+  raw=$(sed -n "${line}p" "$known_hosts")
+  first_field=${raw%% *}
+
+  if [[ $first_field == \|1\|* ]]; then
+    # Hashed entry — cannot recover the hostname. Fall back to direct deletion.
+    # Note: the IP-vs-hostname twin (if any) is also hashed, so we can't fix
+    # both atomically; the user may need a second invocation if a twin exists.
+    printf 'Hashed entry; deleting line %d directly (twin entries, if any, will need separate handling).\n' "$line" >&2
+    sed -i.bak -e "${line}d" "$known_hosts"
+    exit 0
+  fi
+
+  # Plain entry: first field is comma-separated hostnames/IPs.
+  # Pick the first one as the lookup key for ssh-keygen -R.
+  host=${first_field%%,*}
+  [[ -n $host ]] || { printf '%s: could not extract host from line %d\n' "${0##*/}" "$line" >&2; exit 1; }
+
+  printf 'Line %d → host %s\n' "$line" "$host" >&2
+  exec ssh-keygen -R "$host"
+fi
+
+# Non-numeric: treat as hostname/IP directly.
+exec ssh-keygen -R "$arg"

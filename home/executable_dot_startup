@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Purpose: Login startup script — updates Homebrew on all machines and, on ista
-#          machines, keeps caffeinate and 1Password active.
+# Purpose: Login startup script — on ista machines, keeps caffeinate and
+#          1Password active. (Package upgrades are handled manually via
+#          the `upgrade-all` script, not on every login.)
 # Usage: ~/.startup (invoked automatically by the startup LaunchAgent at login)
 
 set -euo pipefail
@@ -8,15 +9,6 @@ set -euo pipefail
 [[ $(uname) == Darwin ]] || exit 0
 
 # --- functions ---
-
-# Update Homebrew and all installed packages.
-update_homebrew() {
-  command -v brew &>/dev/null || return 0
-  echo "Updating Homebrew..."
-  brew update
-  echo "Upgrading Homebrew packages..."
-  brew upgrade
-}
 
 # Prevent Mac from sleeping/locking.
 # To stop manually: pkill -f "caffeinate -disu"
@@ -90,7 +82,6 @@ main() {
   echo "Startup script started at: $(date)"
   echo "========================================="
 
-  update_homebrew
   if [[ "${DOTFILES_CONTEXT:-}" == ista ]]; then
     start_caffeinate
     keep_1password_alive

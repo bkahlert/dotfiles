@@ -1,2 +1,155 @@
-#!/bin/bash
-curl -LfsS https://raw.githubusercontent.com/bkahlert/-/master/ansi-test.ansi
+#!/usr/bin/env bash
+# Purpose: Visual terminal capability reference card (SGR, color, underline styles, OSC 8, Unicode, Nerd Fonts).
+# Usage:   ansi-test
+
+set -u
+
+esc=$'\e'
+rst="${esc}[0m"
+
+hdr() { printf '\n%s[1;38;5;39m= %s =%s\n' "$esc" "$1" "$rst"; }
+
+cols=$(tput cols 2>/dev/null) || cols=80
+[ -z "${cols:-}" ] && cols=80
+[ "$cols" -lt 40 ] && cols=80
+
+hdr "1. SGR attributes x 16 colors (bold-vs-bright check)"
+# Rows: 8 standard fg (30..37) + 8 bright fg (90..97).
+# Cols: plain, bold(1), dim(2), italic(3), fraktur(20), underline(4), double-undr(21),
+#       blink(5), rapid-blink(6), reverse(7), strikethrough(9), overline(53).
+# Side-by-side: compare bold(31) vs 91 directly to detect bold==bright remapping.
+attr_codes=(0 1 2 3 20 4 21 5 6 7 9 53)
+attr_names=(plain bold dim ital frak undr d-un blnk rblk revr strk ovln)
+
+# Foreground block
+printf '  foreground:\n'
+printf '    %-6s' 'fg'
+for n in "${attr_names[@]}"; do printf ' %-6s' "$n"; done
+printf '\n'
+for c in 30 31 32 33 34 35 36 37 90 91 92 93 94 95 96 97; do
+  printf '    %-6s' "$c"
+  for ac in "${attr_codes[@]}"; do
+    if [ "$ac" = 0 ]; then
+      printf ' %s[%sm Abc  %s' "$esc" "$c" "$rst"
+    else
+      printf ' %s[%s;%sm Abc  %s' "$esc" "$ac" "$c" "$rst"
+    fi
+  done
+  printf '\n'
+done
+
+# Background block (bg colors with same attribute combos; fg forced to a readable tone via 38;5;15/16)
+printf '  background:\n'
+printf '    %-6s' 'bg'
+for n in "${attr_names[@]}"; do printf ' %-6s' "$n"; done
+printf '\n'
+for c in 40 41 42 43 44 45 46 47 100 101 102 103 104 105 106 107; do
+  printf '    %-6s' "$c"
+  for ac in "${attr_codes[@]}"; do
+    if [ "$ac" = 0 ]; then
+      printf ' %s[%sm Abc  %s' "$esc" "$c" "$rst"
+    else
+      printf ' %s[%s;%sm Abc  %s' "$esc" "$ac" "$c" "$rst"
+    fi
+  done
+  printf '\n'
+done
+
+hdr "2. 256-color palette"
+printf '  system (0-15):  '
+for i in $(seq 0 15); do
+  printf '%s[48;5;%sm %3d %s' "$esc" "$i" "$i" "$rst"
+  [ "$i" -eq 7 ] && printf '\n                  '
+done
+printf '\n\n  6x6x6 cube (16-231), 6 cells per row (r,g varying; one row per b-slice within each g):\n'
+for r in 0 1 2 3 4 5; do
+  for g in 0 1 2 3 4 5; do
+    printf '  '
+    for b in 0 1 2 3 4 5; do
+      idx=$((16 + r*36 + g*6 + b))
+      printf '%s[48;5;%sm %3d %s' "$esc" "$idx" "$idx" "$rst"
+    done
+    printf '\n'
+  done
+done
+printf '\n  grayscale (232-255):\n  '
+for i in $(seq 232 255); do
+  printf '%s[48;5;%sm %3d %s' "$esc" "$i" "$i" "$rst"
+done
+printf '\n'
+
+hdr "3. 24-bit truecolor gradient"
+inner=$((cols - 8))
+[ "$inner" -gt 120 ] && inner=120
+[ "$inner" -lt 32 ] && inner=32
+printf '  hue:  '
+for ((i=0; i<inner; i++)); do
+  h=$(( i * 360 / inner ))
+  seg=$(( h / 60 ))
+  f=$(( (h % 60) * 255 / 60 ))
+  q=$(( 255 - f ))
+  case $seg in
+    0) r=255; g=$f;  b=0   ;;
+    1) r=$q;  g=255; b=0   ;;
+    2) r=0;   g=255; b=$f  ;;
+    3) r=0;   g=$q;  b=255 ;;
+    4) r=$f;  g=0;   b=255 ;;
+    *) r=255; g=0;   b=$q  ;;
+  esac
+  printf '%s[48;2;%s;%s;%sm ' "$esc" "$r" "$g" "$b"
+done
+printf '%s\n  gray: ' "$rst"
+for ((i=0; i<inner; i++)); do
+  v=$(( i * 255 / (inner - 1) ))
+  printf '%s[48;2;%s;%s;%sm ' "$esc" "$v" "$v" "$v"
+done
+printf '%s\n' "$rst"
+
+hdr "4. Underline styles & colors"
+printf '  %s[4:1msingle%s    %s[4:2mdouble%s    %s[4:3mcurly%s    %s[4:4mdotted%s    %s[4:5mdashed%s\n' \
+  "$esc" "$rst" "$esc" "$rst" "$esc" "$rst" "$esc" "$rst" "$esc" "$rst"
+printf '  colored: '
+printf '%s[4:3m%s[58:2::255:0:0mred-curly%s  ' "$esc" "$esc" "$rst"
+printf '%s[4:3m%s[58:2::0:255:0mgreen-curly%s  ' "$esc" "$esc" "$rst"
+printf '%s[4:3m%s[58:2::64:160:255mblue-curly%s  ' "$esc" "$esc" "$rst"
+printf '%s[4:1m%s[58:5:208morange-256%s\n' "$esc" "$esc" "$rst"
+
+hdr "5. OSC 8 hyperlinks"
+printf '  %s]8;;https://example.com%s\\click here%s]8;;%s\\ -> https://example.com\n' \
+  "$esc" "$esc" "$esc" "$esc"
+printf '  (if not clickable, your terminal does not implement OSC 8)\n'
+
+hdr "6. Box-drawing & Unicode"
+printf '  %s\n' '┌─────────┬─────────┐'
+printf '  %s\n' '│  cell A │  cell B │'
+printf '  %s\n' '├─────────┼─────────┤'
+printf '  %s\n' '│  cell C │  cell D │'
+printf '  %s\n' '└─────────┴─────────┘'
+printf '  arrows:    ← → ↑ ↓ ↔ ⇐ ⇒ ⇔ ⟶ ⟸\n'
+printf '  math:      ∀ ∃ ∈ ∉ ∑ ∏ ∫ √ ≈ ≠ ≤ ≥ ∞ π λ\n'
+printf '  cjk:       你好世界 こんにちは 안녕하세요\n'
+printf '  emoji:     😀 🚀 🔥 ✨ 🦀 🐙 🌍\n'
+printf '  combining: é ä õ ñ  (e+acute, a+diaeresis, o+tilde, n+tilde)\n'
+printf '  zwj:       👨‍👩‍👧  👩‍💻  🏳️‍🌈   (each should render as one glyph)\n'
+
+hdr "7. Nerd Font glyph ranges (tofu = range not covered)"
+# Each row labels the icon-font range so the user can see which ranges are missing.
+printf '  Powerline:          \n'
+printf '  Devicons:           \n'
+printf '  FontAwesome:        \n'
+printf '  Material:     \U000F0001 \U000F02DC \U000F0493 \U000F0297 \U000F0156\n'
+printf '  Octicons:           \n'
+printf '  Weather:           \n'
+printf '  Pomicons:         \n'
+printf '  Codicons:          \n'
+
+hdr "8. Reported terminal info"
+tcolors=$(tput colors 2>/dev/null) || tcolors='?'
+tlines=$(tput lines 2>/dev/null) || tlines='?'
+printf '  TERM         = %s\n' "${TERM:-(unset)}"
+printf '  COLORTERM    = %s\n' "${COLORTERM:-(unset)}"
+printf '  TERM_PROGRAM = %s\n' "${TERM_PROGRAM:-(unset)}"
+printf '  tput colors  = %s\n' "${tcolors:-?}"
+printf '  size         = %s cols x %s rows\n' "$cols" "${tlines:-?}"
+
+printf '%s\n' "$rst"

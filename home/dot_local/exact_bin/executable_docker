@@ -1,2 +1,27 @@
-#!/bin/sh
-exec podman "$@"
+#!/usr/bin/env bash
+# Purpose: Prefer the real Docker CLI if installed; fall back to podman; error otherwise.
+# Usage:   docker [<docker-cli-args>...]
+
+set -euo pipefail
+
+self_dir="$(cd "$(dirname "$0")" && pwd)"
+
+# Strip this script's directory from PATH so `command -v` resolves to the
+# next candidate, not back to this wrapper.
+clean_path=""
+IFS=:
+for dir in $PATH; do
+  [[ "$dir" == "$self_dir" ]] && continue
+  clean_path="${clean_path:+$clean_path:}$dir"
+done
+unset IFS
+PATH="$clean_path"
+
+if real=$(command -v docker); then
+  exec "$real" "$@"
+elif real=$(command -v podman); then
+  exec "$real" "$@"
+fi
+
+printf 'docker: neither docker nor podman found on PATH\n' >&2
+exit 127

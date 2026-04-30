@@ -1,19 +1,31 @@
-# Kills the process listening on a given port
-# Usage: killport <port_number>
+# Kills all processes listening on the given TCP port.
+# Sends SIGTERM, waits briefly, then SIGKILL any survivors.
+# Usage: killport <port>
 
 if [[ -z "$1" ]]; then
-  printf_error "Usage: killport <port_number>"
+  printf_error "Usage: killport <port>"
   return 1
 fi
 
-local pid
-pid=$(lsof -t -i:"$1")
+local port=$1
+local -a pids
+pids=(${(f)"$(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null)"})
 
-if [[ -z "$pid" ]]; then
-  printf_error "No process found listening on port $1."
+if (( ${#pids} == 0 )); then
+  printf_error "No process listening on port $port."
   return 1
 fi
 
-echo "Found process with PID ${pid} on port $1. Killing it now..."
-kill "${pid}"
-echo "Process killed."
+printf_info "Killing ${#pids} process(es) on port $port: ${pids[*]}"
+kill "${pids[@]}" 2>/dev/null
+
+local i
+for i in 1 2 3 4; do
+  sleep 0.5
+  pids=(${(f)"$(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null)"})
+  (( ${#pids} == 0 )) && { printf_success "Port $port freed."; return 0 }
+done
+
+printf_warning "Forcing SIGKILL on: ${pids[*]}"
+kill -9 "${pids[@]}" 2>/dev/null
+printf_success "Port $port freed."

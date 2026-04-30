@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Purpose: Run a command (or interactive shell) in a throwaway container.
+# Usage:   box [--here] [--image <image>[:<tag>]] [--] [<command>...]
+#
+# --here          Mount the current working directory at the same path inside
+#                 the container and set it as the container's cwd.
+# --image <ref>   Container image to use (default: $BOX_IMAGE or alpine).
+#
+# Examples:
+#   box                              # interactive sh in alpine:latest
+#   box --here                       # alpine:latest with cwd mounted
+#   box --image ubuntu               # interactive bash in ubuntu:latest
+#   box --image ubuntu sh -c 'foo'   # one-shot command in ubuntu
+#   box sh -c 'uname -a'             # one-shot command in default image
+
+set -euo pipefail
+
+here=false
+image=${BOX_IMAGE:-alpine}
+
+while (( $# )); do
+  case $1 in
+    --here) here=true; shift ;;
+    --image) image=${2?--image: missing value} && shift 2 ;;
+    --image=*) image=${1#*=} && shift ;;
+    --) shift; break ;;
+    *) break ;;
+  esac
+done
+
+# Pick a sensible default shell when no command is given.
+default_shell=sh
+case "${image%%:*}" in
+  ubuntu|debian|fedora|rockylinux|almalinux) default_shell=bash ;;
+esac
+
+cmd=(docker run --rm -e "LANG=C.UTF-8" -e "TERM=$TERM")
+$here && cmd+=(-v "$PWD:$PWD" -w "$PWD")
+
+if (( $# == 0 )); then
+  exec "${cmd[@]}" -it "$image" "$default_shell"
+else
+  exec "${cmd[@]}" "$image" "$@"
+fi
