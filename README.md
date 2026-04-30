@@ -7,7 +7,8 @@ Personal dotfiles managed with [chezmoi](https://www.chezmoi.io/).
 **Fresh machine (one-liner):**
 
 ```sh
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply bkahlert --source ~/.local/share/chezmoi
+sh -c "$(curl -fsLS get.chezmoi.io)" -- \
+  init --apply bkahlert --source ~/.local/share/chezmoi
 ```
 
 **Existing machine:**
@@ -107,58 +108,19 @@ Live reload: press **Cmd+Shift+,** (macOS) or **Ctrl+Shift+,** (Linux).
 
 See [Ghostty configuration reference](https://ghostty.org/docs/config/reference).
 
-## File layout
-
-```
-dotfiles/
-├── .chezmoiroot                  # points chezmoi to home/
-├── Containerfile                 # test container (Fedora + Ghostty + VNC)
-├── Makefile                      # build/run/validate targets
-│
-└── home/                         # chezmoi source state
-    ├── .chezmoi.toml.tmpl        # machine config (prompted on init)
-    ├── .chezmoiscripts/          # install + setup scripts (homebrew, packages,
-    │                             #   sheldon, nanorc, LaunchAgent, MCP, skills, .osx)
-    ├── dot_zshenv                # sets ZDOTDIR → only file kept in $HOME
-    ├── executable_dot_startup    # login script run via LaunchAgent (macOS)
-    ├── Library/                  # LaunchAgents (macOS)
-    │
-    ├── dot_local/exact_bin/      # mirrors ~/.local/bin exactly (upgrade-all,
-    │                             #   cleanup, cert-get, apply-macos-defaults, ...)
-    │
-    ├── private_dot_config/
-    │   ├── zsh/
-    │   │   ├── dot_zshrc         # thin loader
-    │   │   ├── exact_conf.d/     # numbered zsh modules
-    │   │   └── functions/        # autoloaded functions (zsh-specific only)
-    │   ├── sheldon/              # plugin definitions
-    │   ├── starship.toml         # prompt config
-    │   ├── ghostty/              # terminal config
-    │   └── exact_agents/         # shared AI agent rules (AGENTS.md)
-    │
-    ├── private_dot_claude/       # Claude Code config + skills
-    ├── private_dot_gemini/       # Gemini CLI config
-    ├── private_dot_ssh/          # SSH config (1Password agent on macOS)
-    ├── dot_gitconfig.tmpl        # git (templated for name/email)
-    ├── dot_npmrc.tmpl            # npm (templated for GitLab registry on business)
-    ├── dot_curlrc                # curl defaults
-    └── dot_tmux.conf             # tmux
-```
-
 ## Zsh load order
 
 ```
-~/.zshenv                          → sets ZDOTDIR=~/.config/zsh
-~/.config/zsh/.zprofile            → Homebrew shellenv
-~/.config/zsh/.zshrc               → autoloads functions, sources conf.d/*
-  00-context.zsh.tmpl              → stamps $DOTFILES_CONTEXT (e.g. "ista" or empty)
-  01–07                            → core: options, history, completions,
-                                       keybindings, prompt, aliases, plugins
-  08-print.zsh                     → printf_error/info/success/warning, die
-  10-*.zsh                         → tool modules (homebrew, nvm, fzf, java, go,
-                                       gradle, kubernetes, gcloud, glab, aws, …)
-  20-claude.zsh                    → Claude CLI auto-install + completion
-  conf.d/$DOTFILES_CONTEXT/*.zsh   → company-specific modules (sourced last)
+~/.zshenv                       → sets ZDOTDIR
+~/.config/zsh/.zprofile         → Homebrew shellenv
+~/.config/zsh/.zshrc            → autoloads functions, sources conf.d/*
+  00-context.zsh.tmpl           → stamps $DOTFILES_CONTEXT
+  01–07                         → core (options, history, completions,
+                                  keybindings, prompt, aliases, plugins)
+  08-print.zsh                  → printf helpers
+  10-*.zsh                      → tool modules
+  20-claude.zsh                 → Claude CLI
+  conf.d/$DOTFILES_CONTEXT/     → context-specific overrides (sourced last)
 ```
 
 ## Testing in a container
@@ -173,19 +135,6 @@ make vnc        # open VNC viewer
 make stop       # stop the container
 make clean      # remove the image
 ```
-
-## Secrets
-
-Secrets (GitLab tokens, npm auth tokens) are stored in [1Password](https://1password.com/) and fetched at `chezmoi apply` time via `onepasswordRead` in `.tmpl` files. Tokens never appear in the repo.
-
-**Prerequisites:**
-- 1Password desktop app installed and signed in
-- 1Password CLI (`op`) installed (included in the Brewfile)
-- CLI integration enabled in 1Password settings
-
-**Required 1Password items** (business machines only):
-- `op://Employee/GitLab Token/credential` — GitLab private token
-- `op://Employee/GitLab NPM Token/credential` — npm registry auth token
 
 ## Repairing the startup LaunchAgent
 
@@ -204,14 +153,3 @@ chezmoi state delete-bucket --bucket=scriptState
 chezmoi apply
 ```
 
-## Design decisions
-
-| Decision             | Choice                                    | Why                                                                          |
-|----------------------|-------------------------------------------|------------------------------------------------------------------------------|
-| Dotfiles manager     | chezmoi                                   | Real files (not symlinks), templating, multi-machine, can stop using anytime |
-| Zsh layout           | ZDOTDIR                                   | Keeps `$HOME` clean — only `~/.zshenv`                                       |
-| Plugin manager       | Sheldon                                   | TOML config, fast (Rust), actively maintained                                |
-| Prompt               | Starship                                  | Actively maintained (p10k is on life support), cross-shell                   |
-| Functions vs scripts | Scripts for POSIX, functions for zsh-only | Scripts work in any shell and from cron/other tools                          |
-| exact_ on conf.d/    | yes                                       | Removing a module from the repo removes it from the target                   |
-| exact_ on .config/   | no                                        | Other apps create dirs in .config/ freely                                    |
