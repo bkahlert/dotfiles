@@ -1,3 +1,5 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
 # Starship prompt configuration
 # Reference: https://starship.rs/config/
 
@@ -5,8 +7,8 @@ add_newline = false
 command_timeout = 5000
 
 [character]
-success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
+success_symbol = "[](bold green)"
+error_symbol = "[](bold red)"
 
 [cmd_duration]
 format = " took [$duration]($style) "
@@ -16,26 +18,39 @@ format = "[$path]($style)[$read_only]($read_only_style) "
 truncation_length = 1
 truncate_to_repo = false
 
+[aws]
+format = 'on [$symbol$profile]($style) [$region]($style dimmed) [$duration]($style dimmed)'
+symbol = '  '
+
 [direnv]
 disabled = false
 
 [gcloud]
 format = 'on [$symbol$account]($style) [$project]($style dimmed)'
-symbol = '☁️ '
-project_aliases = { "ista-express-development" = "ies-dev", "ista-express-stage" = "ies-stage", "ista-express-prod" = "ies-prod" }
+symbol = ' '
+[gcloud.project_aliases]
+ista-express-development = 'ies-dev'
+ista-express-stage = 'ies-stage'
+ista-express-prod = 'ies-prod'
 
 [git_branch]
-disabled = true
+disabled = false
+
+[git_status]
+modified = '!'
+format = '([\[$all_status$ahead_behind\]]($style dimmed) )'
 
 [gradle]
 disabled = true
-symbol = '󰟆 '
+symbol = ' '
 
 [java]
 disabled = true
+symbol = ' '
 
 [kotlin]
 disabled = true
+symbol = ' '
 
 [localip]
 disabled = false
