@@ -14,6 +14,9 @@ github = "zsh-users/zsh-completions"
 dir = "src"
 apply = ["fpath"]
 
+[plugins.zsh-history-substring-search]
+github = "zsh-users/zsh-history-substring-search"
+
 [plugins.alias-tips]
 github = "djui/alias-tips"
 
