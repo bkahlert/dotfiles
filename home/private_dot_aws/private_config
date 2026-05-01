@@ -1,6 +1,6 @@
 # Sign in with:  aws sso login --profile prod
 # Or use either: assume
-             or: assume dev
+#            or: assume dev
 
 [sso-session bkahlert]
 sso_start_url = https://choam.awsapps.com/start
