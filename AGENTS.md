@@ -175,7 +175,24 @@ Edit [run_once_before_01-install-packages.sh.tmpl](home/.chezmoiscripts/run_once
 
 ## Shipping Changes
 
-This repo is solo-maintained and uses GitHub PRs as the merge mechanism (not as a review gate). Once a change is committed on a topic branch and the user has confirmed it's ready, **proactively offer the full ship flow in one step**:
+This repo is solo-maintained and uses GitHub PRs as the merge mechanism (not as a review gate). The ship flow comes in **two offers**, in order: first apply the change locally so the user can test it, then ship it. Don't bundle both into one prompt — the user needs a chance to verify between them.
+
+### Offer 1 — Apply locally
+
+Once a change is committed on a topic branch and the user has confirmed it's ready, **proactively offer to apply and verify**:
+
+> "Want me to run `chezmoi apply` (dry run first) so you can test it?"
+
+Default flow when accepted:
+1. `chezmoi diff` — show the pending changes.
+2. `chezmoi apply -n` — dry run.
+3. **Resolve target-side conflicts semantically when easy.** If the dry run shows drift in files outside the current change (e.g. unrelated reordering in `~/.claude/settings.json`), reason about whether the live state is meaningful or stale; if the resolution is obvious and low-risk, apply it (e.g. re-add the live value to source state, or accept the source overwrite). If the conflict is non-trivial, ambiguous, or touches secrets / `.chezmoi.toml.tmpl` / `run_once_*` scripts, stop and surface it to the user.
+4. `chezmoi apply` — apply to `$HOME`.
+5. Hand back to the user to test.
+
+### Offer 2 — Ship it
+
+After the user confirms the applied change works, **then** offer the GitHub ship flow:
 
 > "Want me to push, open a PR, squash-merge it, and delete the branch?"
 
@@ -185,12 +202,13 @@ Default flow when accepted:
 3. `gh pr merge <n> --squash --delete-branch`
 4. `git checkout main && git pull --ff-only`
 
-**When *not* to offer this:**
-- Change is incomplete or under active iteration.
-- User has signaled they want to review the diff on GitHub first ("let me look at the PR").
-- Change touches secrets, `.chezmoi.toml.tmpl`, or `run_once_*` install scripts that warrant a manual `chezmoi diff` / container test before merging — in those cases, stop after the PR and let the user decide.
+### When *not* to offer
 
-Don't stack the offer on follow-up turns; ask once, then drop it.
+- Change is incomplete or under active iteration → skip both offers.
+- User has signaled they want to review on GitHub first ("let me look at the PR") → skip Offer 2; still safe to make Offer 1.
+- Change touches secrets, `.chezmoi.toml.tmpl`, or `run_once_*` install scripts that warrant a container test (`make build && make validate`) before applying to `$HOME` → mention this with Offer 1 so the user can pick container-test instead.
+
+Don't stack offers on follow-up turns; ask each one once, then drop it.
 
 ## Testing
 
