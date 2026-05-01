@@ -16,3 +16,14 @@ bindkey '^[[A' up-line-or-beginning-search
 bindkey '^[[B' down-line-or-beginning-search
 bindkey "${terminfo[kcuu1]}" up-line-or-beginning-search
 bindkey "${terminfo[kcud1]}" down-line-or-beginning-search
+
+# Home/End: beginning/end of line. Bind common sequences plus terminfo so this
+# works across Ghostty, Terminal.app, iTerm2, tmux, and Linux ttys.
+bindkey '^[[H'  beginning-of-line   # xterm
+bindkey '^[[F'  end-of-line
+bindkey '^[OH'  beginning-of-line   # application keypad mode
+bindkey '^[OF'  end-of-line
+bindkey '^[[1~' beginning-of-line   # legacy / linux console
+bindkey '^[[4~' end-of-line
+bindkey "${terminfo[khome]}" beginning-of-line
+bindkey "${terminfo[kend]}"  end-of-line
