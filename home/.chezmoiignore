@@ -11,3 +11,8 @@ docs/
 # Anthropic Claude CLI symlink — managed by https://claude.ai/install.sh,
 # not chezmoi. Without this, exact_bin/ would remove it on apply.
 .local/bin/claude
+
+# AWS — only config is managed; credentials and SSO token cache are never committed.
+.aws/credentials
+.aws/sso/
+.aws/cli/cache/
