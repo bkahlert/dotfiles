@@ -1,12 +1,6 @@
-# Static AWS access keys removed 2026-05-01 in favor of SSO via Authentik passkey.
-# Profiles are configured in ~/.aws/config (sso-session bkahlert + profiles prod/dev).
-# Sign in with: aws sso login --profile prod
-
-[default]
-region = eu-central-1
-output = json
-
-# --- SSO via Authentik passkey (primary) ---
+# Sign in with:  aws sso login --profile prod
+# Or use either: assume
+             or: assume dev
 
 [sso-session bkahlert]
 sso_start_url = https://choam.awsapps.com/start
