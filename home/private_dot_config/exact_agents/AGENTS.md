@@ -16,6 +16,7 @@ your defaults and are not optional. Skipping the read is a failure mode.
 | TypeScript / Kotlin / Java type design (any new type or signature) | [rules/typing.md](rules/typing.md) |
 | Writing or modifying tests in any framework (Kotest, Jest, RSpec, JUnit, Mocha) | [rules/testing.md](rules/testing.md) |
 | Shell or Bash scripts (`*.sh`, `*.bash`, shebang `#!/usr/bin/env bash`) | [rules/bash.md](rules/bash.md) |
+| Authoring or editing a `Dockerfile` / `Containerfile` / OCI image build | [rules/docker.md](rules/docker.md) |
 | SVG files or inline SVG markup | [rules/svg.md](rules/svg.md) |
 | Writing or editing regular expressions in any language | [rules/regex.md](rules/regex.md) |
 | Writing Markdown, especially when referencing files | [rules/markdown.md](rules/markdown.md) |
