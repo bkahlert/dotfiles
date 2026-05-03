@@ -1,6 +1,6 @@
 # granted: AWS IAM Identity Center profile switcher (https://docs.commonfate.io/granted)
 # Install: brew install common-fate/granted/granted
-# Usage:   assume prod          # switch to profile "prod" (prompts SSO login if token expired)
+# Usage:   assume org           # switch to profile "org" (prompts SSO login if token expired)
 #          assume                # fuzzy-pick from all configured profiles
 #
 # `assume` must be sourced (not executed) so it can export AWS_* vars into the current shell.

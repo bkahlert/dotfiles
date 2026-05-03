@@ -1,22 +1,25 @@
-# Sign in with:  aws sso login --profile prod
+# Default profile is set via AWS_DEFAULT_PROFILE in ~/.config/zsh/conf.d/10-aws.zsh
+# Sign in with:  aws sso login --profile dev
 # Or use either: assume
-#            or: assume dev
+#            or: assume org
 
 [sso-session bkahlert]
 sso_start_url = https://choam.awsapps.com/start
 sso_region = eu-central-1
 sso_registration_scopes = sso:account:access
 
-[profile prod]
-sso_session = bkahlert
-sso_account_id = 709387325224
-sso_role_name = AdministratorAccess
-region = eu-central-1
-output = json
-
+# Default account for day-to-day work
 [profile dev]
 sso_session = bkahlert
 sso_account_id = 382728805609
 sso_role_name = AdministratorAccess
 region = us-east-1
+output = json
+
+# Org management and IIC only
+[profile org]
+sso_session = bkahlert
+sso_account_id = 709387325224
+sso_role_name = AdministratorAccess
+region = eu-central-1
 output = json

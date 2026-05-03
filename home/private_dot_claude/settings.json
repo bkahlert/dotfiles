@@ -49,8 +49,7 @@
       }
     }
   },
-  "effortLevel": "medium",
+  "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
-  "theme": "auto",
-  "model": "opus[1m]"
+  "theme": "auto"
 }
