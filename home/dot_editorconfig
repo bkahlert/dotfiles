@@ -10,10 +10,11 @@ indent_style = space
 indent_size = 2
 ij_visual_guides = 80
 max_line_length = 120
-tab_width = 4
+tab_width = 2
 
 [*.{java,kt,kts,groovy,gradle,py}]
 indent_size = 4
+tab_width = 4
 
 [*.{kt,kts}]
 continuation_indent_size = 4
@@ -21,7 +22,7 @@ continuation_indent_size = 4
 [{*.go,Makefile,*.mk}]
 indent_style = tab
 
-[*.{js,jsx,ts,tsx}]
+[*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,vue}]
 ij_javascript_force_quote_style = true
 ij_javascript_use_double_quotes = false
 ij_javascript_force_semicolon_style = true
