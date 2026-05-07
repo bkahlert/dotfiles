@@ -1,7 +1,8 @@
 {
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "ENABLE_PROMPT_CACHING_1H": "1"
+    "ENABLE_PROMPT_CACHING_1H": "1",
+    "CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN": "1"
   },
   "permissions": {
     "allow": [
