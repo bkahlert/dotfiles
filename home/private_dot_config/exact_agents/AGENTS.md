@@ -23,6 +23,7 @@ your defaults and are not optional. Skipping the read is a failure mode.
 | Adding/removing a build dependency, BOM, or platform import (Gradle / Maven) — or looking for a dependency's source | [rules/dependencies.md](rules/dependencies.md) |
 | Editing source files in an IntelliJ/WebStorm-managed project | [rules/ide-inspections.md](rules/ide-inspections.md) |
 | Editing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, or any AI guidance file | [rules/guidance-editing.md](rules/guidance-editing.md) |
+| Constructing talks, slide decks, or public-speaking content | [rules/presentations.md](rules/presentations.md) |
 
 # Tone & Communication
 
