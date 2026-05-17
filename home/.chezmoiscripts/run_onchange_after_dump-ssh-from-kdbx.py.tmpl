@@ -1,0 +1,113 @@
+#!/opt/homebrew/bin/python3
+"""Materialize ~/.ssh/conf.d/*.{conf,pub} from the choam.kdbx vault.
+
+Re-runs only when the kdbx hash (embedded below) changes — chezmoi
+detects the rendered script content changed and re-executes.
+
+For each kdbx entry with both `ssh-config-file` and `ssh-config-content`
+custom fields set:
+  - Concatenate `ssh-config-content` blocks by `ssh-config-file` path
+    (multiple entries can share the same output file — e.g. id_rsa20
+    contributes 4 Pi blocks to a shared `berries.conf`).
+  - For each `IdentityFile <path>` line found in `ssh-config-content`,
+    locate the matching `.pub` attachment on the entry and write it to
+    `<path>`.
+
+Empty `ssh-config-content` = key-only entry; skipped (the private key
+still gets pushed to ssh-agent by KeePassXC's KeeAgent integration on
+DB unlock, just no Host block contribution).
+"""
+# kdbx-hash: {{ output "shasum" "-a" "256" (joinPath .chezmoi.homeDir "Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx") }}
+
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+from pykeepass import PyKeePass
+
+KDBX = Path.home() / "Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx"
+PROMPT = (
+    'display dialog "KeePassXC master password (for SSH config dump)" '
+    'default answer "" with hidden answer with title "ssh-config-dump" '
+    'buttons {"Cancel","OK"} default button "OK"'
+)
+
+
+def prompt_password() -> str:
+    r = subprocess.run(
+        ["osascript", "-e", PROMPT, "-e", "text returned of result"],
+        capture_output=True, text=True, check=False,
+    )
+    if r.returncode != 0:
+        sys.exit("cancelled by user")
+    return r.stdout.rstrip("\n")
+
+
+def main() -> int:
+    if not KDBX.exists():
+        sys.exit(f"kdbx not found at {KDBX} (iCloud not synced? open KeePassXC to trigger download)")
+
+    pw = prompt_password()
+    kp = PyKeePass(str(KDBX), password=pw)
+
+    by_file: dict[Path, list[tuple[str, str]]] = {}  # path -> [(entry-title, block)]
+    pub_targets: dict[Path, bytes] = {}              # path -> bytes
+
+    for entry in kp.entries:
+        cf = entry.custom_properties or {}
+        ssh_file = (cf.get("ssh-config-file") or "").strip()
+        ssh_content = (cf.get("ssh-config-content") or "").strip()
+        if not ssh_file or not ssh_content:
+            continue
+        ssh_file_path = Path(ssh_file).expanduser()
+        by_file.setdefault(ssh_file_path, []).append((entry.title or "", ssh_content))
+
+        # Extract IdentityFile paths from content; match each to an attachment.
+        for m in re.finditer(r"^\s*IdentityFile\s+(\S+)", ssh_content, re.MULTILINE):
+            pub_path = Path(m.group(1)).expanduser()
+            wanted = pub_path.name
+            match = next(
+                (a for a in (entry.attachments or []) if a.filename == wanted),
+                None,
+            )
+            if match is None:
+                sys.exit(
+                    f"entry {entry.title!r}: ssh-config-content references "
+                    f"IdentityFile {pub_path} but no attachment named {wanted!r} "
+                    f"on the entry. Aborting before any write."
+                )
+            pub_targets[pub_path] = match.binary or b""
+
+    # Write Host-block files (sorted by entry title for stable diffs across runs).
+    written_conf: list[Path] = []
+    for path, blocks in by_file.items():
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        body = "\n\n".join(content for _, content in sorted(blocks)) + "\n"
+        path.write_text(body)
+        path.chmod(0o600)
+        written_conf.append(path)
+
+    # Write public-key files. The kdbx attachments are bytes-as-imported and
+    # often lack a trailing newline (1Password's export shape); some OpenSSH
+    # parsers (notably for the .pub-only IdentityFile hint) reject the format
+    # without it. Normalize to exactly one trailing newline.
+    written_pub: list[Path] = []
+    for path, data in pub_targets.items():
+        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if data and not data.endswith(b"\n"):
+            data = data + b"\n"
+        path.write_bytes(data)
+        path.chmod(0o600)
+        written_pub.append(path)
+
+    print(f"dump-ssh-from-kdbx: {len(written_conf)} conf file(s), {len(written_pub)} pub key(s)")
+    for p in sorted(written_conf):
+        print(f"  conf  {p}")
+    for p in sorted(written_pub):
+        print(f"  pub   {p}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

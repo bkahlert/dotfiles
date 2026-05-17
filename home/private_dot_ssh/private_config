@@ -1,0 +1,40 @@
+# Per-host config materialized from KeePassXC entries by
+# .chezmoiscripts/run_onchange_after_dump-ssh-from-kdbx.py.tmpl.
+# These per-host blocks must come BEFORE any Host directive in this file:
+# an Include placed after a `Host` line is scoped to that Host (per
+# ssh_config(5)), which would silently disable per-host config matching.
+Include conf.d/*.conf
+
+# Opt out of canonicalization before the catch-all enables it.
+# First-match wins — these blocks must stay above "Host *".
+
+# localhost is never a DNS name; ControlMaster disabled (would self-loop).
+Host localhost
+  CanonicalizeHostname no  # never append a search domain to "localhost"
+  ControlMaster no         # don't multiplex; avoids socket path collisions
+
+# *.local are mDNS names — already fully qualified, nothing to append.
+Host *.local
+  CanonicalizeHostname no  # already resolved via mDNS, no domain to append
+
+# Catch-all: resolve short names by appending domains in order.
+# e.g. "bellonda" → "bellonda.local"         (LAN mDNS hit),
+#                 → "bellonda.home.choam.de" (wildcard DNS hit off-LAN),
+#      "caladan"  → "caladan.choam.de"       (public DNS hit).
+Host *
+  CanonicalizeHostname yes                       # resolve short names to FQDNs
+  CanonicalDomains local home.choam.de choam.de  # search order
+
+# Auto-accept new host keys for *.choam.de; verify IP on reconnect.
+Host *.choam.de
+  CheckHostIP yes                   # warn if IP changes (detects DNS hijack / IP change)
+  StrictHostKeyChecking accept-new  # trust on first connect, reject on mismatch
+
+# Connection defaults for all hosts.
+Host *
+  ControlPath ~/.ssh/.control-%C  # multiplexing socket; %C = hash of host+port+user
+  ControlMaster auto              # reuse existing socket, or become master if none
+  ControlPersist no               # close socket when the first session exits
+  IdentityAgent SSH_AUTH_SOCK     # macOS launchd ssh-agent; KeePassXC pushes keys on DB unlock
+  TCPKeepAlive yes                # OS-level keepalive; detects dead connections
+  ServerAliveInterval 120         # SSH-level keepalive every 120 s; survives NAT timeouts
