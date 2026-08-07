@@ -3,7 +3,7 @@
 
 readonly DEV_CHAPTER_REPO="$HOME/Development/istaexpress/dev-chapter"
 readonly DEV_CHAPTER_TOOLS="$DEV_CHAPTER_REPO/tools"
-readonly _DC_GIT_REMOTE="https://gitlab.com/ista-se/cas/ista-express/shared/dev-chapter-time/dev-chapter.git"
+readonly _DC_GIT_REMOTE="git@gitlab.com:ista-se/cas/ista-express/shared/dev-chapter-time/dev-chapter.git"
 readonly _DC_CACHE_DIR="$HOME/.cache/dev-chapter"
 readonly _DC_LAST_PULL_FILE="$_DC_CACHE_DIR/last_pull"
 readonly _DC_PULL_INTERVAL=$((7 * 24 * 60 * 60))
@@ -45,7 +45,7 @@ if [[ -d "$DEV_CHAPTER_REPO/.git" ]]; then
   fi
 
   if [[ "$should_pull" == "true" ]]; then
-    if git -C "$DEV_CHAPTER_REPO" pull --quiet --autostash 2>/dev/null; then
+    if git -C "$DEV_CHAPTER_REPO" pull --autostash 2>/dev/null; then
       mkdir -p "$_DC_CACHE_DIR"
       date +%s > "$_DC_LAST_PULL_FILE"
     else
