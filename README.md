@@ -123,6 +123,26 @@ See [Ghostty configuration reference](https://ghostty.org/docs/config/reference)
   conf.d/$DOTFILES_CONTEXT/     → context-specific overrides (sourced last)
 ```
 
+## SSH keys (KeePassXC)
+
+Personal SSH keys (github, etc.) live in iCloud Drive's Vault directory.
+On `chezmoi apply`, `.chezmoiscripts/run_onchange_after_dump-ssh-from-kdbx.tmpl`
+reads the vault (prompting for the master password via a macOS dialog) and
+materializes `~/.ssh/conf.d/*.conf` + `*.pub` files; the actual private keys are
+pushed live into the launchd ssh-agent (`SSH_AUTH_SOCK`) by KeePassXC's own SSH
+Agent integration when the database is unlocked.
+
+KeePassXC is installed via the Brewfile, but its SSH Agent integration is an
+app preference chezmoi can't manage — set it up once per machine:
+
+1. Open KeePassXC and unlock your `kdbx` file(s).
+2. **Settings → SSH Agent → check "Enable SSH Agent integration"**, then fully
+   quit and reopen KeePassXC (the per-entry tab below only appears after a
+   restart).
+3. For each key entry, edit it → **SSH Agent** tab → check **"Add key to agent
+   when database is opened/unlocked"** (usually already set from the kdbx
+   template).
+
 ## Testing in a container
 
 Build and test with Podman:
