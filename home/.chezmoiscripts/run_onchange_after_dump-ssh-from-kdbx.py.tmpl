@@ -1,4 +1,7 @@
-#!/opt/homebrew/bin/python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["pykeepass"]
+# ///
 """Materialize ~/.ssh/conf.d/*.{conf,pub} from the choam.kdbx vault.
 
 Re-runs only when the kdbx hash (embedded below) changes — chezmoi
