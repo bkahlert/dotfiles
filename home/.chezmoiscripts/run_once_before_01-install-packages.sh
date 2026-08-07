@@ -14,6 +14,7 @@ brew "bat"                         # cat replacement with syntax highlighting an
 brew "jq"                          # Command-line JSON processor; used by scripts and aliases
 brew "btop"                        # Terminal resource monitor (CPU, memory, disk, network)
 cask "1password-cli"               # 1Password CLI (op); required by chezmoi to read secrets at apply time
+cask "keepassxc"                   # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent
 cask "font-jetbrains-mono-nerd-font" # Nerd Font variant of JetBrains Mono; required by Starship glyphs
 EOF
 
