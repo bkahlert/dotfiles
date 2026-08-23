@@ -8,12 +8,9 @@ claude() {
   command claude "$@"
 }
 
-if (( $+commands[claude] )); then
-  if (( $+functions[zsh-defer] )); then
-    zsh-defer source <(command claude completion --shell zsh)
-  else
-    source <(command claude completion --shell zsh)
-  fi
-fi
+# No shell completion here on purpose: the CLI has no `completion` subcommand
+# (`claude --help` lists none), so `claude completion --shell zsh` was parsed as
+# a *prompt* plus an unknown option, printing "error: unknown option '--shell'"
+# on every shell start. Re-add only if a completion subcommand ships.
 
 alias clauded="claude --dangerously-skip-permissions"
