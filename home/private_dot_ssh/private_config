@@ -21,8 +21,14 @@ Host *.local
 # e.g. "bellonda" → "bellonda.local"         (LAN mDNS hit),
 #                 → "bellonda.home.choam.de" (wildcard DNS hit off-LAN),
 #      "caladan"  → "caladan.choam.de"       (public DNS hit).
+#
+# MaxDots 0 restricts this to dotless names — the only kind we mean to expand.
+# The default (1) would also rewrite one-dot public hosts: "gitlab.com" became
+# "gitlab.com.home.choam.de", which the *.home.choam.de wildcard resolves, so
+# ssh committed to the wrong host and blocked until the TCP connect timed out.
 Host *
   CanonicalizeHostname yes                       # resolve short names to FQDNs
+  CanonicalizeMaxDots 0                          # dotless names only; never "gitlab.com"
   CanonicalDomains local home.choam.de choam.de  # search order
 
 # Auto-accept new host keys for *.choam.de; verify IP on reconnect.
