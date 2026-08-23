@@ -5,7 +5,7 @@ readonly DEV_CHAPTER_REPO="$HOME/Development/istaexpress/dev-chapter"
 readonly DEV_CHAPTER_TOOLS="$DEV_CHAPTER_REPO/tools"
 readonly _DC_GIT_REMOTE="git@gitlab.com:ista-se/cas/ista-express/shared/dev-chapter-time/dev-chapter.git"
 readonly _DC_CACHE_DIR="$HOME/.cache/dev-chapter"
-readonly _DC_LAST_PULL_FILE="$_DC_CACHE_DIR/last_pull"
+readonly _DC_LAST_ATTEMPT_FILE="$_DC_CACHE_DIR/last_attempt"
 readonly _DC_PULL_INTERVAL=$((7 * 24 * 60 * 60))
 
 # Hard bounds for every network call below. This file runs on the interactive
@@ -31,7 +31,7 @@ if [[ ! -d "$DEV_CHAPTER_REPO" ]]; then
     git clone "$_DC_GIT_REMOTE" "$DEV_CHAPTER_REPO" 2>&1); then
     printf_success "Repository cloned successfully"
     mkdir -p "$_DC_CACHE_DIR"
-    date +%s > "$_DC_LAST_PULL_FILE"
+    date +%s > "$_DC_LAST_ATTEMPT_FILE"
   else
     # Surface the whole reason — a silent failure here is indistinguishable
     # from a hang, and git puts the actual cause on its *first* line.
@@ -45,12 +45,12 @@ fi
 if [[ -d "$DEV_CHAPTER_REPO/.git" ]]; then
   local should_pull=false
 
-  if [[ ! -f "$_DC_LAST_PULL_FILE" ]]; then
+  if [[ ! -f "$_DC_LAST_ATTEMPT_FILE" ]]; then
     should_pull=true
   else
-    local last_pull=$(cat "$_DC_LAST_PULL_FILE")
+    local last_attempt=$(cat "$_DC_LAST_ATTEMPT_FILE")
     local now=$(date +%s)
-    local age=$((now - last_pull))
+    local age=$((now - last_attempt))
 
     if [[ $age -gt $_DC_PULL_INTERVAL ]]; then
       should_pull=true
@@ -58,11 +58,10 @@ if [[ -d "$DEV_CHAPTER_REPO/.git" ]]; then
   fi
 
   if [[ "$should_pull" == "true" ]]; then
-    # Stamp the marker *before* pulling, so it records the last attempt rather
-    # than the last success. Otherwise a remote we cannot reach is retried by
-    # every new terminal, paying the full timeout each time.
+    # Stamp before pulling, not after. This is what stops every new terminal
+    # from retrying an unreachable remote and paying the full timeout again.
     mkdir -p "$_DC_CACHE_DIR"
-    date +%s > "$_DC_LAST_PULL_FILE"
+    date +%s > "$_DC_LAST_ATTEMPT_FILE"
 
     local _dc_out
     if ! _dc_out=$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_DC_GIT_SSH" \
