@@ -8,6 +8,14 @@ readonly _DC_CACHE_DIR="$HOME/.cache/dev-chapter"
 readonly _DC_LAST_PULL_FILE="$_DC_CACHE_DIR/last_pull"
 readonly _DC_PULL_INTERVAL=$((7 * 24 * 60 * 60))
 
+# Hard bounds for every network call below. This file runs on the interactive
+# startup path, so a git operation that blocks blocks the terminal itself:
+#   BatchMode        never prompt — a locked agent or unknown host key fails
+#                    instead of silently waiting on the tty (which reads as a hang)
+#   ConnectTimeout   cap the TCP connect to an unreachable host
+#   ServerAlive*     cap a connection that stalls mid-transfer (~10 s)
+readonly _DC_GIT_SSH='ssh -o BatchMode=yes -o ConnectTimeout=5 -o ServerAliveInterval=5 -o ServerAliveCountMax=2'
+
 # Early exit if tools already in PATH
 if [[ ":$PATH:" == *":$DEV_CHAPTER_TOOLS:"* ]]; then
   return 0
@@ -18,12 +26,17 @@ if [[ ! -d "$DEV_CHAPTER_REPO" ]]; then
   echo "Cloning dev-chapter repository to $DEV_CHAPTER_REPO..."
   mkdir -p "$(dirname "$DEV_CHAPTER_REPO")"
 
-  if git clone "$_DC_GIT_REMOTE" "$DEV_CHAPTER_REPO" 2>/dev/null; then
+  local _dc_out
+  if _dc_out=$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_DC_GIT_SSH" \
+    git clone "$_DC_GIT_REMOTE" "$DEV_CHAPTER_REPO" 2>&1); then
     printf_success "Repository cloned successfully"
     mkdir -p "$_DC_CACHE_DIR"
     date +%s > "$_DC_LAST_PULL_FILE"
   else
-    printf_error "Failed to clone dev-chapter repository"
+    # Surface the whole reason — a silent failure here is indistinguishable
+    # from a hang, and git puts the actual cause on its *first* line.
+    printf_error "Failed to clone dev-chapter repository:"
+    printf_error "$_dc_out"
     return 1
   fi
 fi
@@ -45,11 +58,17 @@ if [[ -d "$DEV_CHAPTER_REPO/.git" ]]; then
   fi
 
   if [[ "$should_pull" == "true" ]]; then
-    if git -C "$DEV_CHAPTER_REPO" pull --autostash 2>/dev/null; then
-      mkdir -p "$_DC_CACHE_DIR"
-      date +%s > "$_DC_LAST_PULL_FILE"
-    else
-      printf_warning "Failed to update dev-chapter repository"
+    # Stamp the marker *before* pulling, so it records the last attempt rather
+    # than the last success. Otherwise a remote we cannot reach is retried by
+    # every new terminal, paying the full timeout each time.
+    mkdir -p "$_DC_CACHE_DIR"
+    date +%s > "$_DC_LAST_PULL_FILE"
+
+    local _dc_out
+    if ! _dc_out=$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_DC_GIT_SSH" \
+      git -C "$DEV_CHAPTER_REPO" pull --autostash 2>&1); then
+      printf_warning "Failed to update dev-chapter repository:"
+      printf_warning "$_dc_out"
     fi
   fi
 fi
