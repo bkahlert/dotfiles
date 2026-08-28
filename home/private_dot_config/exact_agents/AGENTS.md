@@ -20,6 +20,7 @@ your defaults and are not optional. Skipping the read is a failure mode.
 | SVG files or inline SVG markup | [rules/svg.md](rules/svg.md) |
 | Writing or editing regular expressions in any language | [rules/regex.md](rules/regex.md) |
 | Writing Markdown, especially when referencing files | [rules/markdown.md](rules/markdown.md) |
+| Writing or editing comments, KDoc/JSDoc/docstrings, or any code documentation | [rules/comments.md](rules/comments.md) |
 | Adding/removing a build dependency, BOM, or platform import (Gradle / Maven) — or looking for a dependency's source | [rules/dependencies.md](rules/dependencies.md) |
 | Editing source files in an IntelliJ/WebStorm-managed project | [rules/ide-inspections.md](rules/ide-inspections.md) |
 | Editing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, or any AI guidance file | [rules/guidance-editing.md](rules/guidance-editing.md) |
