@@ -5,6 +5,10 @@ alias -s {kt,java,gradle,bat,txt,md,json,yaml,yml}=ideaw
 alias alias-print='declare -f'
 alias git+x='git update-index --chmod=+x'
 
+# Edit / reload the scratch zsh config (see conf.d/90-scratch.zsh)
+alias ec=zsh-scratch
+alias sc='source "$ZDOTDIR/.zshrc"'
+
 # ls sorted by ctime: lsl = newest first, lsr = oldest first
 alias lsl='ls -1lAFhct'
 alias lsr='ls -1lAFhcrt'
