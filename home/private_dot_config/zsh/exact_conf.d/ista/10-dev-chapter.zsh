@@ -1,6 +1,11 @@
 # Manages dev-chapter repository and adds tools to PATH
 # Automatically clones repo if missing and keeps it updated (weekly)
 
+# Guards the readonly declarations below against re-sourcing (e.g. `sc`),
+# which would otherwise fail with "read-only variable".
+[[ -n "$_DC_LOADED" ]] && return 0
+typeset -g _DC_LOADED=1
+
 readonly DEV_CHAPTER_REPO="$HOME/Development/istaexpress/dev-chapter"
 readonly DEV_CHAPTER_TOOLS="$DEV_CHAPTER_REPO/tools"
 readonly _DC_GIT_REMOTE="git@gitlab.com:ista-se/cas/ista-express/shared/dev-chapter-time/dev-chapter.git"

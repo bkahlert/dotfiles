@@ -1,0 +1,5 @@
+local target="$HOME/.config/zsh/conf.d/90-scratch.zsh"
+local src
+src=$(chezmoi source-path "$target") || return 1
+"${EDITOR:-vim}" "$src"
+chezmoi apply "$target"

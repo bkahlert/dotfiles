@@ -1,9 +1,13 @@
-# Open file types with IDE (suffix aliases — ideaw works cross-platform)
-alias -s {kt,java,gradle,bat,txt,md,json,yaml,yml}=ideaw
+# Open file types with IDE (suffix aliases — idea works cross-platform)
+alias -s {kt,java,gradle,bat,txt,md,json,yaml,yml}=idea
 
 # Git shortcuts
 alias alias-print='declare -f'
 alias git+x='git update-index --chmod=+x'
+
+# Edit / reload the scratch zsh config (see conf.d/90-scratch.zsh)
+alias ec=zsh-scratch
+alias sc='source "$ZDOTDIR/.zshrc"'
 
 # ls sorted by ctime: lsl = newest first, lsr = oldest first
 alias lsl='ls -1lAFhct'

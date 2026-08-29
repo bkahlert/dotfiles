@@ -1,18 +1,14 @@
 #!/usr/bin/env bash
 # Purpose: Wrapper for the IntelliJ IDEA CLI that locates the 'idea' binary
-#          from common installation paths (JetBrains Toolbox, app bundle, PATH)
+#          from common installation paths (JetBrains Toolbox, app bundle)
 #          and delegates all arguments to it.
-# Usage:   ideaw [<idea-cli-args>...]
+# Usage:   idea [<idea-cli-args>...]
 
 set -euo pipefail
 
 _find_idea() {
-  # Already on PATH (e.g. manually linked or Toolbox shell integration)
-  if command -v idea &>/dev/null; then
-    command -v idea
-    return 0
-  fi
-
+  # No PATH lookup here: this script is itself named 'idea' and lives on
+  # PATH, so `command -v idea` would just find and re-exec itself forever.
   local candidates=(
     # JetBrains Toolbox — macOS
     "${HOME}/Library/Application Support/JetBrains/Toolbox/scripts/idea"
@@ -35,13 +31,12 @@ _find_idea() {
 }
 
 idea_bin="$(_find_idea)" || {
-  printf '%s: idea CLI binary not found — falling back to nano\n' "$(basename "$0")" >&2
+  printf '%s: command not found\n' "$(basename "$0")" >&2
   printf '\n' >&2
   printf 'To set up the IntelliJ IDEA CLI, choose one of:\n' >&2
   printf '  Toolbox:   Settings → Configuration → Shell scripts location\n' >&2
   printf '  IntelliJ:  Tools → Create Command-line Launcher\n' >&2
-  printf '\n' >&2
-  exec nano "$@"
+  exit 127
 }
 
 exec "${idea_bin}" "$@"
