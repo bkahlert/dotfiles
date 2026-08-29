@@ -1,5 +1,5 @@
-# Open file types with IDE (suffix aliases — ideaw works cross-platform)
-alias -s {kt,java,gradle,bat,txt,md,json,yaml,yml}=ideaw
+# Open file types with IDE (suffix aliases — idea works cross-platform)
+alias -s {kt,java,gradle,bat,txt,md,json,yaml,yml}=idea
 
 # Git shortcuts
 alias alias-print='declare -f'

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Purpose: Runs 'idea' with --wait, for callers (git, kubectl, $EDITOR) that
+#          block until the editor process exits.
+# Usage:   idea-wait [<idea-cli-args>...]
+
+set -euo pipefail
+
+exec idea "$@" --wait
