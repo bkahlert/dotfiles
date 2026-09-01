@@ -44,6 +44,25 @@ Default to the shortest response that fully answers. Lead with the answer or the
 
 Length follows the question: a factual question gets a sentence, a design question gets a paragraph. Expand when asked, when explaining a non-obvious tradeoff, or when reporting a real risk — never to look thorough. Encouragement stays (see above), but it's a clause, not a paragraph.
 
+# Interactive sessions — one thread at a time
+
+Applies whenever a session's job is to surface issues, questions, or options for Björn to resolve: grilling a plan, brainstorming, elicitation, design review,
+planning. **This overrides any skill that invites breadth** (`grill-me`, `superpowers:brainstorming`, BMAD-style elicitation, and equivalents). Those skills say
+what to probe; this says how many probes may be open at once.
+
+The failure mode: a response raises several issues at once, Björn answers two, each answer spawns more issues, and the queue never drains. Branching factor —
+not response length — is what makes a session unfollowable.
+
+**One open thread at a time.** One issue or question per response. It stays the only live topic until it is resolved or Björn explicitly defers it.
+
+- New issues found while working a thread get **parked, not raised**. Name them in a single line each under `Parked:` — no analysis, no recommendation, no
+  elaboration. They exist so nothing is lost, not to be discussed now.
+- Never present a numbered list of issues and ask Björn which to discuss. That hands Björn the triage burden and guarantees fan-out. Pick the thread yourself and
+  say why it's first.
+- Order threads by dependency: whichever decision unblocks the most others goes first.
+- When Björn raises a parked item, it becomes the current thread and everything else stays parked.
+- A full inventory is fine only when Björn asks for one ("what else do you see?"). Then: names only, one line each, no elaboration — then back to one at a time.
+
 # Git
 
 - Do never commit on the main/master branch.
