@@ -1,6 +1,15 @@
 # Test Naming & Structure
 
-## 1. Specificity via Nesting
+## 1. One Class per Subject
+
+A test class is named after its subject plus `Test` or `IntegrationTest` — nothing else (`FooTest`, or `FooKtTest` for the top-level functions in
+`Foo.kt`). No `FooLoggingTest`.
+
+- **Aspects are contexts, not classes**: logging, metrics and tracing behaviour of `Foo` are `context` blocks inside `FooTest`.
+- **A different class gets its own test**: if the would-be extra class actually exercises something else (a metrics helper, say), test that class directly
+  under its own name.
+
+## 2. Specificity via Nesting
 
 Achieve test specificity through hierarchical nesting rather than long BDD descriptions. Each level should add a single layer of context.
 
@@ -9,13 +18,15 @@ Achieve test specificity through hierarchical nesting rather than long BDD descr
 - **The "Full Path" Rule**: The test's intent should be clear when reading the nested breadcrumbs (e.g., Resource > Name > On missing technician > should be
   null).
 
-## 2. Phrasing & Conditional Logic
+## 3. Phrasing & Conditional Logic
 
+- **Names are claims**: a stranger must be able to check the name against the subject, and read off the regression it guards against — e.g.
+  `should("log the duration of an ended stream as text")`.
 - **Favor "on" over "if"**: Use "on [state/event]" for triggers (e.g., `on missing foo` instead of `if foo is missing`).
 - **Time Dimension**: Only use "when" or "if" if the condition implies a temporal sequence or complex logic that "on" cannot represent.
 - **Direct Outcomes**: The final leaf node should focus strictly on the result/assertion (e.g., `should be null`, `it returns 200`).
 
-## 3. Assertion Structure
+## 4. Assertion Structure
 
 Assertions must target the **immediate return value** of the action under test. Never chain the action call with assertions — store the result first.
 
@@ -46,7 +57,7 @@ keys shouldBe listOf("a", "b", "c")
 
 Prefer expressive matchers over manual boolean extraction (`shouldNotContainJsonKey` over `.has("key") shouldBe false`).
 
-## 4. File Layout: tests first, helpers last
+## 5. File Layout: tests first, helpers last
 
 A reader opens a test file to learn what the code does. The test cases answer that; fixtures, builders and custom matchers don't. Put the test cases at the
 top and the infrastructure below them.
@@ -61,7 +72,8 @@ top and the infrastructure below them.
 
 Declaration order is about readability, not evaluation order. In JS/TS, helpers called from inside `it`/`beforeEach` callbacks can be `const` at the bottom
 because the callbacks run later; anything evaluated while `describe` blocks are being registered must be a hoisted `function` or placed above. In Kotlin,
-top-level and member functions can be referenced from anywhere in the file.
+top-level and member functions can be referenced from anywhere in the file. Pick whichever declaration form the language or framework idiomatically offers
+that lets the helper sit below its use.
 
 ```kotlin
 // ❌ Bad — fixtures before the first test
@@ -81,7 +93,16 @@ private fun technician(name: String = "Ada") = Technician(...)
 private fun resourceFor(technician: Technician?) = Resource(...)
 ```
 
-## 5. Framework Adaptability
+## 6. Comments: exceptional
+
+Tests typically carry no comments. Expressiveness lives in names, nesting and assertions; a test that needs a comment to be understood needs a more
+readable implementation first. See [comments.md](comments.md) for the general rule.
+
+- **No KDoc** on test classes or test helpers. A helper whose name cannot carry its meaning gets a better name first.
+- **The rare exception** is knowledge the test itself cannot express: a corner case that is hard to see from the implementation, or the result of research
+  worth keeping — e.g. the upstream bug a test works around.
+
+## 7. Framework Adaptability
 
 Adapt the syntax to the project's specific framework while maintaining the hierarchical philosophy:
 
@@ -89,7 +110,7 @@ Adapt the syntax to the project's specific framework while maintaining the hiera
 - **Jest/RSpec/Mocha**: Use `describe(...)` for subjects, `context(...)` for states, and `it(...)` for assertions.
 - **JUnit 5**: Use `@Nested` classes with `@DisplayName`.
 
-## 6. Examples
+## 8. Examples
 
 **Bad (Flat & Verbose)**
 "If the technician exists the name of the resource should equal the technician's name"

@@ -99,7 +99,10 @@ Only make changes that are requested or clearly necessary:
 - **Documentation:** no docstrings, comments or type annotations on code you didn't change. Comment only where the logic isn't self-evident.
 - **Defensive coding:** no error handling, fallbacks or validation for scenarios that can't happen. Trust internal code and framework guarantees; validate at
   system boundaries only (user input, external APIs).
-- **Abstractions:** no helpers or utilities for one-time operations, no design for hypothetical future requirements.
+- **Abstractions:** no helpers or utilities for one-time operations, no design for hypothetical future requirements. Code with one caller stays private
+  next to that caller.
+- **Seams:** a constraint that must hold in production is enforced by construction, not through a parameter nothing checks. Don't add a seam whose only
+  purpose is letting a test bypass that constraint; such a test exercises a path production never runs.
 - **Configuration:** look up the documented default first. Configure explicitly only where the default diverges from the requirement.
 
 # Solve the general problem
