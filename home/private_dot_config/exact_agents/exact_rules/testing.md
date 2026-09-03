@@ -46,7 +46,42 @@ keys shouldBe listOf("a", "b", "c")
 
 Prefer expressive matchers over manual boolean extraction (`shouldNotContainJsonKey` over `.has("key") shouldBe false`).
 
-## 4. Framework Adaptability
+## 4. File Layout: tests first, helpers last
+
+A reader opens a test file to learn what the code does. The test cases answer that; fixtures, builders and custom matchers don't. Put the test cases at the
+top and the infrastructure below them.
+
+- **Tests first**: the top-level spec/class/`describe` starts right after imports and whatever declarations the language requires (package line, class
+  header). No helper definitions above it.
+- **Helpers last**: private helper functions, test data builders, fakes, custom matchers and constants go after the last test — at the bottom of the file, or
+  as private members at the bottom of the test class.
+- **Same rule inside a block**: a helper that only one `context`/`describe` needs lives at the end of that block, after its tests.
+- **Extract when helpers dominate**: if the infrastructure grows larger than the tests, move it to a sibling fixtures file (e.g. `FooTestFixtures.kt`,
+  `__fixtures__/foo.ts`) instead of letting it push the tests down.
+
+Declaration order is about readability, not evaluation order. In JS/TS, helpers called from inside `it`/`beforeEach` callbacks can be `const` at the bottom
+because the callbacks run later; anything evaluated while `describe` blocks are being registered must be a hoisted `function` or placed above. In Kotlin,
+top-level and member functions can be referenced from anywhere in the file.
+
+```kotlin
+// ❌ Bad — fixtures before the first test
+private fun technician(name: String = "Ada") = Technician(...)
+private fun resourceFor(technician: Technician?) = Resource(...)
+
+class ResourceTest : ShouldSpec({
+    context("name") { ... }
+})
+
+// ✅ Good — tests first, fixtures below
+class ResourceTest : ShouldSpec({
+    context("name") { ... }
+})
+
+private fun technician(name: String = "Ada") = Technician(...)
+private fun resourceFor(technician: Technician?) = Resource(...)
+```
+
+## 5. Framework Adaptability
 
 Adapt the syntax to the project's specific framework while maintaining the hierarchical philosophy:
 
@@ -54,7 +89,7 @@ Adapt the syntax to the project's specific framework while maintaining the hiera
 - **Jest/RSpec/Mocha**: Use `describe(...)` for subjects, `context(...)` for states, and `it(...)` for assertions.
 - **JUnit 5**: Use `@Nested` classes with `@DisplayName`.
 
-## 5. Examples
+## 6. Examples
 
 **Bad (Flat & Verbose)**
 "If the technician exists the name of the resource should equal the technician's name"
