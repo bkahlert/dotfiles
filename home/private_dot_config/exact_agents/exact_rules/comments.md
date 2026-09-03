@@ -2,7 +2,8 @@
 
 Code says *what*. A comment earns its place only by saying what the code cannot: why this way, what breaks otherwise.
 
-Default to fewer, shorter comments. Verbosity is the common failure, not terseness.
+Default to fewer, shorter comments. Verbosity is the common failure, not terseness. A private helper whose name says what it does gets no doc comment
+at all.
 
 ## Delete rather than write
 
