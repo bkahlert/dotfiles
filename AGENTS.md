@@ -131,7 +131,7 @@ Example: `brew "1password-cli" # 1Password CLI (op); required by chezmoi to read
 | `~/.gitconfig` | [dot_gitconfig.tmpl](home/dot_gitconfig.tmpl) | Templated name/email |
 | `~/.ssh/config` | [private_config.tmpl](home/private_dot_ssh/private_config.tmpl) | 1Password SSH agent (macOS) |
 | `~/.claude/CLAUDE.md` | [CLAUDE.md](home/private_dot_claude/CLAUDE.md) | AI coding conventions |
-| `~/.claude/settings.json` | [settings.json](home/private_dot_claude/settings.json) | Claude Code settings |
+| `~/.claude/settings.json` | [claude-settings.json](home/.chezmoitemplates/claude-settings.json) via [modify_settings.json](home/private_dot_claude/modify_settings.json) | Claude Code settings; `model` and `effortLevel` stay as set on the machine |
 | `~/.npmrc` | [dot_npmrc.tmpl](home/dot_npmrc.tmpl) | Business: GitLab registry |
 | `~/.startup` | [executable_dot_startup](home/executable_dot_startup) | Login script (macOS, run via LaunchAgent) |
 

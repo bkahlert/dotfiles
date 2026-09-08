@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Purpose: Write Claude Code's settings.json from source state, keeping the keys Claude Code
+#          changes on its own (model, effort level) as they are on this machine.
+# Usage:   Run by chezmoi on apply; receives the current file on stdin and prints the new content.
+
+set -euo pipefail
+
+current=$(cat)
+[[ -n "$current" ]] || current='{}'
+
+# Keys are emitted in the live file's order so an unchanged file yields no diff.
+jq --indent 2 --argjson live "$current" '
+  reduce ("model", "effortLevel") as $k (.;
+    if $live | has($k) then .[$k] = $live[$k] else del(.[$k]) end)
+  | . as $merged
+  | reduce (($live | keys_unsorted) + ($merged | keys_unsorted))[] as $k ({};
+      if ($merged | has($k)) and (has($k) | not) then .[$k] = $merged[$k] else . end)
+' "$CHEZMOI_SOURCE_DIR/.chezmoitemplates/claude-settings.json"

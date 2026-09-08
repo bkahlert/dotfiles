@@ -50,7 +50,6 @@
       }
     }
   },
-  "effortLevel": "high",
   "skipDangerousModePermissionPrompt": true,
   "theme": "auto"
 }
