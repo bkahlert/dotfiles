@@ -8,9 +8,11 @@ set -euo pipefail
 claude mcp remove --scope user context7 2>/dev/null || true
 #claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
 
-# jetbrains — codebase intelligence via IntelliJ IDE (SSE); uses currently active project
+# jetbrains — IntelliJ MCP server over HTTP; uses the currently active project.
+# IntelliJ's own "auto-configure" writes the same server as "idea"; drop it to avoid duplicate tools.
+claude mcp remove --scope user idea 2>/dev/null || true
 claude mcp remove --scope user jetbrains 2>/dev/null || true
-#claude mcp add --scope user --transport sse jetbrains http://localhost:64342/sse
+claude mcp add --scope user --transport http jetbrains http://127.0.0.1:64342/stream
 
 # serena — codebase intelligence fallback when IntelliJ is not running
 claude mcp remove --scope user serena 2>/dev/null || true

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Purpose: Mirror the MCP servers from Claude Code's user config into Claude Desktop's config.
+#          Servers only defined in Desktop and every other app-owned key stay untouched.
+# Usage:   Run by chezmoi on apply; receives the current file on stdin and prints the new content.
+
+set -euo pipefail
+
+current=$(cat)
+[[ -n "$current" ]] || current='{}'
+
+cli_config="$HOME/.claude.json"
+if [[ ! -f "$cli_config" ]]; then
+  printf '%s\n' "$current"
+  exit 0
+fi
+
+# Desktop only launches stdio servers, so HTTP/SSE servers are bridged through mcp-remote.
+jq --indent 2 --slurpfile cli "$cli_config" '
+  def bridge:
+    { command: "npx",
+      args: (["-y", "mcp-remote", .url] + (if (.url | startswith("http:")) then ["--allow-http"] else [] end)) };
+  def to_desktop:
+    if .type == "http" or .type == "sse" then bridge
+    else { command, args, env } | with_entries(select(.value != null))
+    end;
+  .mcpServers = ((.mcpServers // {}) + (($cli[0].mcpServers // {}) | map_values(to_desktop)))
+' <<<"$current"

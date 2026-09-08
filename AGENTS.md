@@ -17,6 +17,7 @@ Source files in `home/` use chezmoi prefixes that control target name, permissio
 | `run_once_before_` | Script runs once before file changes | install scripts |
 | `run_once_after_` | Script runs once after file changes | setup scripts |
 | `run_onchange_after_` | Script runs when its content hash changes | plugin lock |
+| `modify_` | Script receives the current target on stdin and prints the new content; use to own a few keys in an app-managed file | `modify_private_claude_desktop_config.json` |
 
 ## Template Data
 
