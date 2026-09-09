@@ -1,1 +1,13 @@
 export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
+
+# Put nvm's default node on PATH for every shell, including non-interactive
+# ones (MCP servers, GUI apps) that never source .zshrc and so never hit
+# conf.d/10-nvm.zsh's lazy-loaded node/npm/npx functions. Resolves the alias
+# via directory listing instead of sourcing nvm.sh, to skip its startup cost.
+if [[ -s "$HOME/.nvm/alias/default" ]]; then
+  _nvm_default="$(<"$HOME/.nvm/alias/default")"
+  _nvm_bin="$HOME/.nvm/versions/node/$_nvm_default/bin"
+  [[ -d "$_nvm_bin" ]] || _nvm_bin="$(ls -d "$HOME"/.nvm/versions/node/v"$_nvm_default".* 2>/dev/null | sort -V | tail -1)/bin"
+  [[ -d "$_nvm_bin" && ":$PATH:" != *":$_nvm_bin:"* ]] && export PATH="$_nvm_bin:$PATH"
+  unset _nvm_default _nvm_bin
+fi
