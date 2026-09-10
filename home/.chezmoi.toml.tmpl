@@ -10,4 +10,7 @@ sourceDir = "{{ .chezmoi.homeDir }}/Development/com.bkahlert/dotfiles/home"
 
 [env]
     OP_ACCOUNT = {{ promptStringOnce . "op_account" "1Password account UUID" | quote }}
+
+[onepassword]
+    prompt = false # skip `op signin` before each read; the app integration authorizes per terminal anyway, so this halves the op processes (and prompts) per apply
 {{ end -}}
