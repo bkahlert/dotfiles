@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Purpose: Kill every process listening on the given TCP port.
+#          Sends SIGTERM, waits up to 2s, then SIGKILL to any survivor.
+# Usage:   killport <port>
+#
+# Completion for this command lives in ~/.config/zsh/completions/_killport.
+
+set -uo pipefail
+
+err()  { printf '\033[31m%s\033[0m\n' "$*" >&2; }
+info() { printf '\033[34m%s\033[0m\n' "$*"; }
+warn() { printf '\033[33m%s\033[0m\n' "$*"; }
+ok()   { printf '\033[32m%s\033[0m\n' "$*"; }
+
+port=${1-}
+if [[ -z $port ]]; then
+  err "Usage: killport <port>"
+  exit 1
+fi
+
+# Positional params hold the pids: lsof -t prints one per line, and this stays
+# bash 3.2 compatible (no mapfile), which is what macOS ships.
+# shellcheck disable=SC2046
+set -- $(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null)
+
+if [[ $# -eq 0 ]]; then
+  err "No process listening on port $port."
+  exit 1
+fi
+
+info "Killing $# process(es) on port $port: $*"
+kill "$@" 2>/dev/null
+
+for _ in 1 2 3 4; do
+  sleep 0.5
+  # shellcheck disable=SC2046
+  set -- $(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null)
+  if [[ $# -eq 0 ]]; then
+    ok "Port $port freed."
+    exit 0
+  fi
+done
+
+warn "Forcing SIGKILL on: $*"
+kill -9 "$@" 2>/dev/null
+ok "Port $port freed."
