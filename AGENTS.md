@@ -27,18 +27,18 @@ Defined in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), prompted on `chezmoi i
 |---|---|---|
 | `.email` | string | Git config email |
 | `.name` | string | Git config name |
-| `.company` | string | Company name (empty on personal machines, e.g. `"ista"` on business) |
+| `.company` | string | Context name — `"bkahlert"` personal, `"ista"` business, empty for none (the test container). An identifier, not a business flag. |
 | `.chezmoi.os` | string | `"darwin"` or `"linux"` (built-in) |
 
 **Never use `.is_personal`** — it has been replaced by `.company`.
 
 ### Runtime context: `$DOTFILES_CONTEXT`
 
-`conf.d/00-context.zsh.tmpl` stamps `$DOTFILES_CONTEXT` at apply time (e.g. `ista`). On personal machines the file renders empty. All runtime code should branch on `$DOTFILES_CONTEXT` instead of template conditionals:
+`conf.d/00-context.zsh.tmpl` stamps `$DOTFILES_CONTEXT` at apply time (`bkahlert`, `ista`). All runtime code should branch on `$DOTFILES_CONTEXT` instead of template conditionals:
 
 ```zsh
-[[ -n "$DOTFILES_CONTEXT" ]] && ...   # any business machine
-[[ "$DOTFILES_CONTEXT" == ista ]] && ... # ista specifically
+[[ -n "$DOTFILES_CONTEXT" ]] && ...   # any known context, personal included
+[[ "$DOTFILES_CONTEXT" == ista ]] && ... # business only — use this for work-only behaviour
 ```
 
 In shell scripts use the env var with a default:

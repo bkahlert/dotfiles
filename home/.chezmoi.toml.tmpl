@@ -3,14 +3,12 @@ sourceDir = "{{ .chezmoi.homeDir }}/Development/com.bkahlert/dotfiles/home"
 [data]
     email = {{ promptStringOnce . "email" "Email address" | quote }}
     name = {{ promptStringOnce . "name" "Full name" | quote }}
-    {{ $company := promptStringOnce . "company" "Company name (empty for personal)" -}}
+{{- $company := promptStringOnce . "company" "Context name (bkahlert, ista, or empty for none)" }}
     company = {{ $company | quote }}
-{{ if $company -}}
-    op_account = {{ promptStringOnce . "op_account" "1Password account UUID (from `op account list`)" | quote }}
-
-[env]
-    OP_ACCOUNT = {{ promptStringOnce . "op_account" "1Password account UUID" | quote }}
+{{- /* 1Password is the ista secret store; bkahlert is a company too, so gate
+       on the context rather than on company being set. */}}
+{{- if eq $company "ista" }}
 
 [onepassword]
     prompt = false # skip `op signin` before each read; the app integration authorizes per terminal anyway, so this halves the op processes (and prompts) per apply
-{{ end -}}
+{{- end }}

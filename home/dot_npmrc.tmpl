@@ -1,4 +1,5 @@
 {{ if eq .company "ista" -}}
+{{/* No account is passed: op has one. Give onepasswordRead the account as a second argument if that stops being true. */ -}}
 @express-service:registry=https://gitlab.com/api/v4/packages/npm/
 //gitlab.com/api/v4/packages/npm/:_authToken={{ onepasswordRead "op://Employee/GitLab NPM Token/credential" }}
 {{ end -}}
