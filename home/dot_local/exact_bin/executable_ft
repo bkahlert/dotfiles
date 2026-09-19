@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Purpose: Recursive full-text search with 5 lines of context, skipping VCS
+#          directories, devices and binary files.
+# Usage:   ft [<grep-option>...] <pattern> [<path>...]
+#
+# Options are passed straight through. The alias this replaced ended in -e,
+# which pinned the pattern to the first argument: `ft -i foo` searched for
+# the literal "-i" and treated foo as a filename. Pass -e explicitly for a
+# pattern that starts with a dash.
+#
+# -I skips binary files. ugrep already does that by default, BSD and GNU grep
+# report "Binary file ... matches" instead.
+
+exec grep -rn -H -C 5 -I --exclude-dir={.git,.svn,CVS} --devices=skip "$@"

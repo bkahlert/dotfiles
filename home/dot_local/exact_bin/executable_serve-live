@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Purpose: Serve the current directory over HTTP with live reload.
+# Usage:   serve-live [<live-server-option>...]
+
+set -euo pipefail
+
+port=$(pick-port) || { printf 'serve-live: no port available\n' >&2; exit 1; }
+printf 'serve-live: http://localhost:%s\n' "$port" >&2
+exec npx live-server --port="$port" --no-browser "$@"

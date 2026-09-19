@@ -1,4 +1,6 @@
-# Autoload functions
+# Autoload functions. fpath is deduplicated because `brew shellenv` exports
+# FPATH, so a nested shell inherits these entries and would list each twice.
+typeset -U fpath
 fpath=($ZDOTDIR/functions $ZDOTDIR/completions $fpath)
 autoload -Uz $ZDOTDIR/functions/*(N.:t)
 

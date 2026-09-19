@@ -1,0 +1,24 @@
+#compdef killport
+# Offers the TCP ports currently being listened on, each described by the
+# process holding it. `killport` takes exactly one port, so this replaces
+# a "run lsof, read the port, type it back" round trip.
+#
+# Worked example for ~/.config/zsh/completions — see quick-access/README.md
+# for how to verify it.
+
+local -a ports
+ports=(${(f)"$(lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | awk 'NR > 1 {
+  n = split($9, addr, ":")
+  port = addr[n]
+  if (port ~ /^[0-9]+$/ && !(port in seen)) {
+    seen[port] = 1
+    printf "%s:%s (pid %s)\n", port, $1, $2
+  }
+}' | sort -n)"})
+
+if (( $#ports == 0 )); then
+  _message 'no process is listening on a TCP port'
+  return 1
+fi
+
+_describe -t ports 'listening port' ports

@@ -14,6 +14,7 @@ chezmoi source root (`.chezmoiroot`), so chezmoi never sees them.
 |---|---|---|
 | `quick-access/bin` | [home/dot_local/exact_bin/](../home/dot_local/exact_bin) | Shell-agnostic executables, mirrored to `~/.local/bin` |
 | `quick-access/functions` | [home/private_dot_config/zsh/exact_functions/](../home/private_dot_config/zsh/exact_functions) | Autoloaded zsh functions, one file per function |
+| `quick-access/completions` | [home/private_dot_config/zsh/exact_completions/](../home/private_dot_config/zsh/exact_completions) | Hand-written completions, for tools that ship none |
 | `quick-access/conf.d` | [home/private_dot_config/zsh/exact_conf.d/](../home/private_dot_config/zsh/exact_conf.d) | Zsh modules — env setup, tool init, **and inline functions** |
 | `quick-access/conf.d/exact_ista` | [.../exact_conf.d/exact_ista/](../home/private_dot_config/zsh/exact_conf.d/exact_ista) | Same, but only loaded when `$DOTFILES_CONTEXT` is set |
 | `quick-access/aliases.zsh` | [.../06-aliases.zsh](../home/private_dot_config/zsh/exact_conf.d/06-aliases.zsh) | Most aliases, incl. suffix aliases (`alias -s md=idea`) |
@@ -81,8 +82,34 @@ chezmoi source-path "$(whence -p foo)"   # map a script back to its source file
   is still required. For `.tmpl` files use `chezmoi edit` instead.
 - `conf.d` sources `*.zsh` only, so non-zsh files can be colocated safely
   (e.g. `gradle-versions-plugin.init.gradle.kts`).
-- `$ZDOTDIR/completions` is on `fpath` but does not exist yet — create it in
-  source state if you add completion functions.
+
+## Completions
+
+Most completions are **not** here. Homebrew formulae install theirs into
+`$HOMEBREW_PREFIX/share/zsh/site-functions` (`_git`, `_kubectl`, `_op`, …),
+plugins bring their own, and some tools generate one at startup — gcloud
+sources `completion.zsh.inc` from [10-gcloud-sdk.zsh](../home/private_dot_config/zsh/exact_conf.d/10-gcloud-sdk.zsh).
+
+`completions/` is for the rest: a tool with no formula, or one of the scripts
+in `bin/`. One file per command, named `_<command>`, starting with `#compdef
+<command>`.
+
+[`_killport`](../home/private_dot_config/zsh/exact_completions/_killport) is the
+worked example — it offers the ports currently being listened on, described by
+the process holding each. To check that the whole path works end to end:
+
+```sh
+python3 -m http.server 8765 >/dev/null 2>&1 &   # occupy a port
+killport <TAB>                                  # → 8765  Python (pid 12345)
+                                                # TAB again to walk the menu
+killport 8765                                   # complete it, then free it
+```
+
+If a new completion doesn't show up, the dump is the usual suspect —
+[03-completions.zsh](../home/private_dot_config/zsh/exact_conf.d/03-completions.zsh)
+rebuilds `.zcompdump` when a file here is newer than it, so the file's mtime
+has to be later than the dump's. `rm -f $ZDOTDIR/.zcompdump && exec zsh`
+forces it.
 
 ## Load order
 
