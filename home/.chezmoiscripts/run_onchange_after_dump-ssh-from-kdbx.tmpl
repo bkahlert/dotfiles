@@ -1,3 +1,4 @@
+{{ if eq .chezmoi.os "darwin" -}}
 #!/usr/bin/env -S uv run --script
 # /// script
 # dependencies = ["pykeepass"]
@@ -114,3 +115,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+{{ end -}}
