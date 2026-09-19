@@ -24,8 +24,7 @@ chezmoi init --apply bkahlert
 - **[ZDOTDIR](https://zsh.sourceforge.io/Doc/Release/Files.html)** — zsh config lives in `~/.config/zsh/`, only `~/.zshenv` remains in `$HOME`.
 - **[Sheldon](https://sheldon.cli.rs/)** — zsh plugin manager (TOML config, Rust-based).
 - **[Starship](https://starship.rs/)** — cross-shell prompt (TOML config, Rust-based).
-- **Autoloaded functions** — zsh-specific functions are files in `functions/`, loaded on first call.
-- **Standalone scripts** — shell-agnostic utilities under `home/dot_local/exact_bin/` mirror `~/.local/bin` exactly: removing a script from the repo removes it from the target.
+- **Shell features** — scripts, functions, aliases and keybindings are spread over several prefixed source paths. [quick-access/](quick-access/README.md) maps them with prefix-free symlinks and explains where a new one belongs.
 - **AI assistant configs** — `~/.claude/`, `~/.gemini/`, and `~/.config/agents/` are tracked so prompt rules and slash commands stay in sync across machines.
 
 ## Making changes
@@ -41,25 +40,10 @@ chezmoi add ~/.config/foo/config  # start managing a new file
 
 See [chezmoi daily operations](https://www.chezmoi.io/user-guide/daily-operations/).
 
-### Zsh modules
+### Shell features (scripts, functions, aliases)
 
-Add a new module — create a numbered `.zsh` file in `conf.d/`:
-
-```sh
-chezmoi edit ~/.config/zsh/conf.d/10-mytool.zsh
-```
-
-Add a new function — create a file in `functions/` named after the function.
-The file contains only the function body (no `funcname() {` wrapper):
-
-```sh
-chezmoi edit ~/.config/zsh/functions/myfunction
-```
-
-```zsh
-# Example: functions/greet
-echo "Hello, ${1:-world}!"
-```
+See [quick-access/README.md](quick-access/README.md) — location map, which place a new
+command belongs in, resolution order, and zsh load order.
 
 ### Plugins (Sheldon)
 
@@ -107,21 +91,6 @@ chezmoi edit ~/.config/ghostty/config
 Live reload: press **Cmd+Shift+,** (macOS) or **Ctrl+Shift+,** (Linux).
 
 See [Ghostty configuration reference](https://ghostty.org/docs/config/reference).
-
-## Zsh load order
-
-```
-~/.zshenv                       → sets ZDOTDIR
-~/.config/zsh/.zprofile         → Homebrew shellenv
-~/.config/zsh/.zshrc            → autoloads functions, sources conf.d/*
-  00-context.zsh.tmpl           → stamps $DOTFILES_CONTEXT
-  01–07                         → core (options, history, completions,
-                                  keybindings, prompt, aliases, plugins)
-  08-print.zsh                  → printf helpers
-  10-*.zsh                      → tool modules
-  20-claude.zsh                 → Claude CLI
-  conf.d/$DOTFILES_CONTEXT/     → context-specific overrides (sourced last)
-```
 
 ## SSH keys (KeePassXC)
 
