@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Purpose: Wrapper for the oMLX CLI that locates the real binary from common
+#          installation paths and, if oMLX is missing, offers to install it.
+# Usage:   omlx [<omlx-cli-args>...]
+
+set -euo pipefail
+
+readonly _BREW_TAP="jundot/omlx"
+readonly _BREW_TAP_URL="https://github.com/jundot/omlx"
+readonly _RELEASES_URL="https://github.com/jundot/omlx/releases"
+
+_find_omlx() {
+  # No PATH lookup here: this script is itself named 'omlx' and lives on
+  # PATH, so `command -v omlx` would just find and re-exec itself forever.
+  local candidates=(
+    # App-managed shim. Preferred over the bundle binary below because it
+    # exports OMLX_BASE_PATH from the app's base-path file first; calling
+    # omlx-cli directly skips that and the CLI loses the configured base path.
+    "${HOME}/.omlx/bin/omlx"
+    # Homebrew tap
+    /opt/homebrew/bin/omlx
+    /usr/local/bin/omlx
+    # macOS app bundle
+    "/Applications/oMLX.app/Contents/MacOS/omlx-cli"
+  )
+
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    if [[ -x "${candidate}" ]]; then
+      printf '%s' "${candidate}"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+omlx_bin="$(_find_omlx)" || {
+  printf '%s: oMLX not installed\n' "${0##*/}" >&2
+
+  if [[ -t 0 ]] && command -v brew &>/dev/null; then
+    read -r -p "Install oMLX via Homebrew (${_BREW_TAP})? [y/N] " reply
+    if [[ "${reply}" == [Yy]* ]]; then
+      brew tap "${_BREW_TAP}" "${_BREW_TAP_URL}" >&2
+      brew install "${_BREW_TAP}/omlx" >&2
+      omlx_bin="$(_find_omlx)" || {
+        printf '%s: install finished but no omlx binary found\n' "${0##*/}" >&2
+        exit 127
+      }
+      exec "${omlx_bin}" "$@"
+    fi
+  fi
+
+  printf '\n' >&2
+  printf 'To install oMLX, choose one of:\n' >&2
+  printf '  Homebrew:  brew tap %s %s && brew install %s/omlx\n' \
+    "${_BREW_TAP}" "${_BREW_TAP_URL}" "${_BREW_TAP}" >&2
+  printf '  App (dmg): %s\n' "${_RELEASES_URL}" >&2
+  exit 127
+}
+
+exec "${omlx_bin}" "$@"
