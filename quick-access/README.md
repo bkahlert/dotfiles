@@ -120,9 +120,9 @@ forces it.
   00-context.zsh                → stamps $DOTFILES_CONTEXT
   01–07                         → core (options, history, completions,
                                   keybindings, prompt, aliases, plugins)
-                                  08 = infrastructure, 10-* = one per tool
   08-print.zsh                  → printf_* helpers and die
-  10-*.zsh                      → tool modules
+  09-path.zsh                   → $PATH, before anything resolves a command
+  10-*.zsh                      → tool modules, one per tool
   20-claude.zsh                 → Claude CLI
   conf.d/$DOTFILES_CONTEXT/     → context-specific modules (sourced last)
   .zshrc.local                  → machine-local, unmanaged
