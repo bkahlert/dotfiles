@@ -3,12 +3,8 @@
 #          directories, devices and binary files.
 # Usage:   ft [<grep-option>...] <pattern> [<path>...]
 #
-# Options are passed straight through. The alias this replaced ended in -e,
-# which pinned the pattern to the first argument: `ft -i foo` searched for
-# the literal "-i" and treated foo as a filename. Pass -e explicitly for a
-# pattern that starts with a dash.
-#
-# -I skips binary files. ugrep already does that by default, BSD and GNU grep
-# report "Binary file ... matches" instead.
+# Options pass straight through, so a pattern starting with a dash needs an
+# explicit -e. -I skips binary files, which ugrep already does by default but
+# BSD and GNU grep do not.
 
 exec grep -rn -H -C 5 -I --exclude-dir={.git,.svn,CVS} --devices=skip "$@"
