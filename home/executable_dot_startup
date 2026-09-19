@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Purpose: Login startup script — on ista machines, keeps caffeinate and
-#          1Password active. (Package upgrades are handled manually via
-#          the `upgrade-all` script, not on every login.)
+# Purpose: Login startup script — starts the container machine, and on ista
+#          machines keeps caffeinate active. (Package upgrades are handled
+#          manually via the `upgrade-all` script, not on every login.)
 # Usage: ~/.startup (invoked automatically by the startup LaunchAgent at login)
 
 set -euo pipefail
@@ -21,60 +21,31 @@ start_caffeinate() {
   echo "Caffeinate started with PID: $!"
 }
 
-# Keep 1Password app unlocked by simulating activity.
-keep_1password_alive() {
-  # TODO: AppleScript interaction is broken — fix separately
-  local pidfile="$HOME/.1password-keeper.pid"
+# Bring up the container VM. Podman is the only runtime that needs this:
+# Docker Desktop starts its own VM with the app, and the `docker` wrapper in
+# ~/.local/bin falls back to podman anyway, so this backs both names.
+# `podman machine start` exits non-zero on an already-running machine, which
+# under `set -e` would abort this script — hence the state check.
+start_container_machine() {
+  command -v podman >/dev/null || return 0
 
-  # Kill any existing 1Password keeper process
-  if [[ -f "$pidfile" ]]; then
-    local old_pid
-    old_pid=$(cat "$pidfile")
-    if kill -0 "$old_pid" 2>/dev/null; then
-      kill "$old_pid" 2>/dev/null && echo "Killed existing 1Password keeper process (PID: $old_pid)"
-    fi
-    rm -f "$pidfile"
+  local state
+  if ! state=$(podman machine inspect --format '{{.State}}' 2>/dev/null); then
+    echo "No podman machine to start (create one with: podman machine init)"
+    return 0
   fi
 
-  echo "Starting 1Password activity simulator..."
-  (
-    while true; do
-      # Use AppleScript to interact with 1Password and restore focus
-      osascript <<'EOF' 2>/dev/null || true
-          tell application "System Events"
-              -- Check if 1Password is running
-              if exists (process "1Password") then
-                  -- Save the currently frontmost application
-                  set frontApp to name of first application process whose frontmost is true
+  if [[ "$state" == running ]]; then
+    echo "Podman machine already running"
+    return 0
+  fi
 
-                  -- Interact with 1Password
-                  tell process "1Password"
-                      set frontmost to true
-                      delay 0.05
-
-                      -- Try to click the search field or any UI element to simulate activity
-                      try
-                          -- Click on the first window if it exists
-                          if (count of windows) > 0 then
-                              click window 1
-                          end if
-                      end try
-                  end tell
-
-                  -- Immediately restore focus to the original application
-                  delay 0.05
-                  try
-                      set frontmost of process frontApp to true
-                  end try
-              end if
-          end tell
-EOF
-      sleep 240  # Every 4 minutes
-    done
-  ) &
-  local keeper_pid=$!
-  echo "$keeper_pid" > "$pidfile"
-  echo "1Password keeper started with PID: $keeper_pid"
+  echo "Starting podman machine (state: $state)..."
+  if podman machine start; then
+    echo "Podman machine started"
+  else
+    echo "Failed to start podman machine"
+  fi
 }
 
 main() {
@@ -82,9 +53,10 @@ main() {
   echo "Startup script started at: $(date)"
   echo "========================================="
 
+  start_container_machine
+
   if [[ "${DOTFILES_CONTEXT:-}" == ista ]]; then
     start_caffeinate
-    keep_1password_alive
   fi
 
   echo "========================================="
