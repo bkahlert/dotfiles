@@ -25,8 +25,8 @@ claude mcp remove --scope user serena 2>/dev/null || true
 #  --project-from-cwd \
 #  --enable-web-dashboard false
 
-if [[ -n "${DOTFILES_CONTEXT:-}" ]]; then
-  # gcloud-observability — GCP logs/traces (work machines only)
-  claude mcp remove --scope user gcloud-observability 2>/dev/null || true
-  #claude mcp add --scope user gcloud-observability -- npx -y @google-cloud/observability-mcp
-fi
+# gcloud-observability — GCP logs/traces. The server is work-only, so
+# re-enabling the add needs a `[[ "$DOTFILES_CONTEXT" == ista ]]` guard; the
+# removal runs everywhere, like the others above.
+claude mcp remove --scope user gcloud-observability 2>/dev/null || true
+#claude mcp add --scope user gcloud-observability -- npx -y @google-cloud/observability-mcp
