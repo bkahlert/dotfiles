@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Purpose: Print the first bindable TCP port, preferring 80, then 8080, then
+#          any free one.
+# Usage:   pick-port
+#
+# The bind test runs in python so EACCES (port 80 without sudo) is caught as
+# well, not just "address already in use".
+
+exec python3 -c '
+import socket
+for p in [80, 8080, 0]:
+    s = socket.socket()
+    try:
+        s.bind(("0.0.0.0", p))
+        print(s.getsockname()[1])
+        s.close()
+        break
+    except OSError:
+        pass
+'

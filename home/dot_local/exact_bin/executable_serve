@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Purpose: Serve the current directory over HTTP, caching disabled.
+# Usage:   serve [<http-server-option>...]
+
+set -euo pipefail
+
+port=$(pick-port) || { printf 'serve: no port available\n' >&2; exit 1; }
+printf 'serve: http://localhost:%s\n' "$port" >&2
+exec npx http-server -c-1 -p "$port" "$@"
