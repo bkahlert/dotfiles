@@ -9,7 +9,7 @@ if [ -d /dotfiles/home ]; then
 [data]
     email = "test@example.com"
     name = "Test User"
-    is_personal = true
+    company = ""
 TOML
   chezmoi init --apply --source /dotfiles/home
 fi
@@ -21,5 +21,5 @@ if [ "${1:-}" = "vnc" ]; then
   echo "VNC server started on port 5901"
   exec tail -f /root/.vnc/*:1.log
 else
-  exec zsh -li
+  exec zsh -li "$@"
 fi
