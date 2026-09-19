@@ -2,16 +2,31 @@
 # Purpose: Upgrade the typical developer tooling on this machine.
 # Usage:   upgrade-all
 #
-# Each step is skipped if the tool isn't installed. A failure in one step
-# does not abort the remaining steps.
+# Each step is skipped if the tool isn't installed. A failure in one step does
+# not abort the remaining steps; failures are listed at the end and make the
+# script exit non-zero.
 
 set -uo pipefail
 
-step() { printf '\n\033[1;33m⚙ %s\033[0m\n' "$1"; }
+if [ -t 1 ]; then
+  c_reset=$(tput sgr0); c_yellow=$(tput setaf 3); c_green=$(tput setaf 2)
+  c_red=$(tput setaf 1); c_blue=$(tput setaf 4); c_gray=$(tput setaf 8)
+  c_bold=$(tput bold)
+else
+  c_reset=''; c_yellow=''; c_green=''; c_red=''; c_blue=''; c_gray=''; c_bold=''
+fi
 
+failures=()
+
+step() { printf '\n%s⚙ %s%s\n' "$c_yellow" "$1" "$c_reset"; }
+info() { printf '  %sℹ%s %s\n' "$c_blue" "$c_reset" "$1"; }
+ok()   { printf '  %s✔%s %s\n' "$c_green" "$c_reset" "$1"; }
+warn() { printf '  %s!%s %s\n' "$c_yellow" "$c_reset" "$1"; }
+skip() { printf '  %s▪%s %s\n' "$c_gray" "$c_reset" "$1"; }
+fail() { printf '  %s%sϟ%s %s\n' "$c_bold" "$c_red" "$c_reset" "$1"; failures+=("$1"); }
+
+step "Homebrew formulae & casks"
 if command -v brew &>/dev/null; then
-  step "Homebrew formulae & casks"
-
   # Drop taps that have been merged upstream and would otherwise fail `brew update`.
   # Add new entries here as Homebrew retires more taps over time.
   deprecated_taps=(
@@ -20,13 +35,13 @@ if command -v brew &>/dev/null; then
   )
   for tap in "${deprecated_taps[@]}"; do
     if brew tap | grep -qx "$tap"; then
-      printf '  ↗ untapping deprecated %s\n' "$tap"
+      info "untapping deprecated $tap"
       brew untap "$tap" || true
     fi
   done
 
-  brew update
-  brew upgrade
+  brew update || fail 'brew update'
+  brew upgrade || fail 'brew upgrade'
 
   # `brew upgrade` skips formulas without bottles to avoid slow source builds
   # in the middle of a batch. Anything still listed in `brew outdated` after
@@ -34,36 +49,100 @@ if command -v brew &>/dev/null; then
   # don't accumulate stale versions indefinitely.
   unbottled=$(brew outdated --formula --quiet)
   if [ -n "$unbottled" ]; then
-    printf '  ⚙ rebuilding unbottled formulae from source: %s\n' "$(echo "$unbottled" | tr '\n' ' ')"
+    info "rebuilding unbottled formulae from source: $(echo "$unbottled" | tr '\n' ' ')"
     # shellcheck disable=SC2086 # intentional word splitting
-    brew upgrade --build-from-source $unbottled || true
+    brew upgrade --build-from-source $unbottled || fail 'brew upgrade --build-from-source'
   fi
 
-  brew cleanup
+  brew cleanup || fail 'brew cleanup'
+else
+  skip "brew not installed"
 fi
 
+# Homebrew upgrades the podman *client*; the Linux VM it talks to keeps the
+# podman version it was created with, so the two drift apart silently — and a
+# host/machine version mismatch is an unsupported configuration. Rebase the VM
+# onto the machine-os image matching the client's X.Y version to close the gap.
+# (Podman Desktop and its extensions update themselves in-app; nothing to do here.)
+step "Podman machine"
+if ! command -v podman &>/dev/null; then
+  skip "podman not installed"
+else
+  machine_state=$(podman machine inspect --format '{{.State}}' 2>/dev/null)
+  if [ -z "$machine_state" ]; then
+    skip "no podman machine (create one with: podman machine init)"
+  elif [ "$machine_state" != running ]; then
+    skip "podman machine not running (state: $machine_state)"
+  else
+    client_version=$(podman version --format '{{.Client.Version}}')
+    server_version=$(podman version --format '{{.Server.Version}}')
+    client_xy=${client_version%.*}
+    server_xy=${server_version%.*}
+
+    if [ "$client_xy" = "$server_xy" ]; then
+      ok "machine already on podman $server_version (client $client_version)"
+    elif [ "$(printf '%s\n%s\n' "$client_xy" "$server_xy" | sort -V | tail -1)" = "$server_xy" ]; then
+      # Podman refuses to downgrade a machine, and the client is the easier half to fix.
+      warn "machine ($server_version) is ahead of the client ($client_version) — upgrade the client first"
+    else
+      info "machine on podman $server_version, client on $client_version — rebasing"
+      info "the machine restarts, so running containers stop"
+      if podman machine os apply "quay.io/podman/machine-os:$client_xy" --restart; then
+        ok "machine rebased to podman $client_xy"
+      else
+        fail 'podman machine os apply'
+        warn "the rebase runs 'bootc switch' inside the VM; machine images older than"
+        warn "bootc support cannot be rebased and have to be recreated by hand:"
+        info "podman machine stop && podman machine rm && podman machine init && podman machine start"
+        warn "recreating destroys the images, containers and volumes inside the VM"
+      fi
+    fi
+  fi
+fi
+
+step "Mac App Store"
 if command -v mas &>/dev/null; then
-  step "Mac App Store"
-  mas upgrade
+  mas upgrade || fail 'mas upgrade'
+else
+  skip "mas not installed"
 fi
 
+step "Global npm packages"
 if command -v npm &>/dev/null; then
-  step "Global npm packages"
-  npm update -g
+  npm update -g || fail 'npm update -g'
+else
+  skip "npm not installed"
 fi
 
-# Skip Apple's frozen system Ruby (/usr/bin/gem) — its 2.6.x is too old for
-# modern gems and `gem update` just churns failures. If a real Ruby (brew,
-# rbenv, asdf, ...) gets installed, `gem` resolves elsewhere and this runs.
-if command -v gem &>/dev/null && [ "$(command -v gem)" != /usr/bin/gem ]; then
-  step "Ruby gems"
-  gem update --user-install
+step "Ruby gems"
+if ! command -v gem &>/dev/null; then
+  skip "gem not installed"
+elif [ "$(command -v gem)" = /usr/bin/gem ]; then
+  # Apple's frozen system Ruby is a 2.6.x that modern gems no longer support,
+  # so `gem update` just churns failures. If a real Ruby (brew, rbenv, asdf,
+  # ...) gets installed, `gem` resolves elsewhere and this runs.
+  skip "only Apple's system Ruby (/usr/bin/gem) — too old to update"
+else
+  gem update --user-install || fail 'gem update'
 fi
 
+step "gh extensions"
 if command -v gh &>/dev/null; then
-  step "gh extensions"
-  gh extension upgrade --all
+  gh extension upgrade --all || fail 'gh extension upgrade'
+else
+  skip "gh not installed"
 fi
 
 step "macOS system updates (listing only)"
 softwareupdate -l
+
+step "Summary"
+if [ ${#failures[@]} -eq 0 ]; then
+  ok "all steps succeeded"
+else
+  for failure in "${failures[@]}"; do
+    printf '  %s✘%s %s\n' "$c_red" "$c_reset" "$failure"
+  done
+  warn "${#failures[@]} step(s) failed"
+  exit 1
+fi
