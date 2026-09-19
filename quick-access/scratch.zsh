@@ -1,0 +1,1 @@
+../home/private_dot_config/zsh/exact_conf.d/90-scratch.zsh
