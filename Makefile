@@ -9,6 +9,7 @@ build:
 
 validate:
 	podman run --rm \
+		-e TERM=xterm-256color \
 		-v $(CURDIR):/dotfiles:ro \
 		$(IMAGE_NAME) \
 		-c "echo 'zsh started successfully'"
