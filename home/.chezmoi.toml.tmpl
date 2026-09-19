@@ -3,7 +3,7 @@ sourceDir = "{{ .chezmoi.homeDir }}/Development/com.bkahlert/dotfiles/home"
 [data]
     email = {{ promptStringOnce . "email" "Email address" | quote }}
     name = {{ promptStringOnce . "name" "Full name" | quote }}
-{{- $company := promptStringOnce . "company" "Company name (empty for personal)" }}
+{{- $company := promptStringOnce . "company" "Context name (bkahlert, ista, or empty for none)" }}
     company = {{ $company | quote }}
 {{- /* 1Password is the ista secret store; bkahlert is a company too, so gate
        on the context rather than on company being set. */}}

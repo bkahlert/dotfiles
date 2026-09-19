@@ -61,7 +61,7 @@ Zsh resolves a word in this order, first match wins:
 alias → function → command on $PATH
 ```
 
-`~/.local/bin` is prepended to `$PATH` ([10-path.zsh](../home/private_dot_config/zsh/exact_conf.d/10-path.zsh)),
+`~/.local/bin` is prepended to `$PATH` ([09-path.zsh](../home/private_dot_config/zsh/exact_conf.d/09-path.zsh)),
 so scripts here shadow Homebrew and system binaries of the same name — that is
 deliberate for wrappers, and a trap otherwise.
 

@@ -27,7 +27,7 @@ Defined in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), prompted on `chezmoi i
 |---|---|---|
 | `.email` | string | Git config email |
 | `.name` | string | Git config name |
-| `.company` | string | Context name — `"bkahlert"` on personal machines, `"ista"` on business. Rarely empty: treat it as an identifier, not a business flag. |
+| `.company` | string | Context name — `"bkahlert"` personal, `"ista"` business, empty for none (the test container). An identifier, not a business flag. |
 | `.chezmoi.os` | string | `"darwin"` or `"linux"` (built-in) |
 
 **Never use `.is_personal`** — it has been replaced by `.company`.
