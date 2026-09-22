@@ -17,3 +17,11 @@ tests/
 .aws/credentials
 .aws/sso/
 .aws/cli/cache/
+
+{{- if ne .company "ista" }}
+# gcloud-login skills describe the ista Google accounts only.
+.agents/skills/gcloud-auth
+.agents/skills/gcloud-login-automation
+.claude/skills/gcloud-auth
+.claude/skills/gcloud-login-automation
+{{- end }}
