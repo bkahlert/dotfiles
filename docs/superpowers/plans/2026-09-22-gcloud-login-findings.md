@@ -34,6 +34,12 @@ Everything below was observed on the user's Jamf-managed Mac with Chrome 153 and
 26. **Launch flags**: `--no-startup-window` avoids the leftover about:blank tab; `Target.createTarget` then opens the window on demand. The driver should `Target.closeTarget` its tab when done; the orchestrator quits the browser afterwards.
 27. **Chrome Sync side effect, resolution**: the dedicated Google Chrome profile (`~/Library/Application Support/gcloud-login/normal`) and the Chrome for Testing profile (`…/cft-normal`) are managed/synced and must be signed out of sync before deletion; both are obsolete.
 
+28. **Admin credential lifetime is longer than remembered.** After the 17:47 admin login, `gcloud auth print-access-token --quiet` still succeeded at 18:45 (58 min later) with no browser opened. The "10–15 minutes" from memory does not match; treat the expiry as "well before the normal account" until measured. `--quiet` on `print-access-token` never opens a browser.
+29. **OAuth interstitial `/signin/oauth/id`** ("Sign in to Google Auth Library", buttons Cancel / Continue) appears before the consent page when consent is granted afresh after `gcloud auth application-default revoke`. Not seen for the CLI client after `gcloud auth revoke`. The driver needs an `oauthid` state (click Continue / Weiter); the consent button after it was "Allow".
+30. **`op-agent` verified against real 1Password**: first read 34 s (one Authorize click), second read from a new process tree 0 s. The desktop app does answer a daemon that was started from Claude's Bash tool with `setsid` + pty; when it did not answer earlier (18:05–18:40) the user was away and the app was locked.
+31. **End-to-end with the installed scripts (Task 8)**: `gcloud-login` idempotent ("still valid") · CLI after revoke 11 s · ADC after revoke blocked only by fact 29 · `gcloud-login --admin` after revoke 17 s including the key tap · `--status` exit 0 with both valid.
+32. **peekaboo** occasionally loses its capture daemon ("ScreenCaptureKit owner PID … does not serve selected socket"); not part of the design any more, noted for debugging sessions only.
+
 ## Page sequences
 
 ### Google Chrome (managed), fresh profile, normal account, CLI login
