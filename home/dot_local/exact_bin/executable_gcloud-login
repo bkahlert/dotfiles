@@ -1,0 +1,200 @@
+#!/usr/bin/env bash
+# Purpose: Log the gcloud CLI, or Application Default Credentials, into one of
+#          the ista Google accounts without manual interaction. gcloud's OAuth
+#          URL is opened in a plain Chromium (per-account profile, DevTools
+#          enabled) and gcloud-login-driver walks the Google pages. The admin
+#          account's password comes from 1Password via op-agent; its security
+#          key must be tapped once per login (Workspace policy).
+# Usage:   gcloud-login [--admin | --adc] [--status] [--timeout <seconds>]
+#          --admin    log the CLI into the admin account
+#          --adc      refresh Application Default Credentials (always the normal account)
+#          --status   report CLI account, ADC identity and token validity; exit 0 if all valid
+#          --timeout  seconds to wait for the browser flow (default 120; use 300 on a
+#                     fresh browser profile, where the Microsoft sign-in is manual)
+# Exit:    0 success · 1 precondition or credential failure · 2 browser flow timed out
+#
+# First run per account: the browser profile is empty, so the normal account
+# goes through the Microsoft sign-in (ista account, Authenticator code, "Stay
+# signed in" = Yes) and the security key by hand; afterwards it is silent.
+# See docs/superpowers/plans/2026-09-22-gcloud-login-findings.md in the
+# dotfiles repo for every observed page.
+
+set -euo pipefail
+
+readonly NORMAL_EMAIL="bjoern.kahlert@ista-express.de"
+readonly ADMIN_EMAIL="bjoern.kahlert.admin@ista-express.de"
+# Referenced by ID: the item title "Google (Admin)" has parentheses, which
+# op:// references reject.
+readonly ADMIN_OP_REF="op://Employee/p44thhnd5ylh6zrm6etwozs63a/password"
+readonly CHROMIUM_BUILD=1702741   # Chromium 156.0.8070.0, tested 2026-09-22
+readonly CACHE_DIR="$HOME/.cache/gcloud-login"
+readonly PROFILE_ROOT="$HOME/Library/Application Support/gcloud-login"
+readonly TOKENINFO_URL="https://oauth2.googleapis.com/tokeninfo"
+
+if [ -t 2 ]; then
+  c_reset=$(tput sgr0); c_red=$(tput setaf 1); c_green=$(tput setaf 2)
+  c_yellow=$(tput setaf 3); c_blue=$(tput setaf 4)
+else
+  c_reset=''; c_red=''; c_green=''; c_yellow=''; c_blue=''
+fi
+info() { printf '%sℹ%s %s\n' "$c_blue" "$c_reset" "$1" >&2; }
+ok()   { printf '%s✔%s %s\n' "$c_green" "$c_reset" "$1" >&2; }
+warn() { printf '%s!%s %s\n' "$c_yellow" "$c_reset" "$1" >&2; }
+err()  { printf '%s✘%s %s\n' "$c_red" "$c_reset" "$1" >&2; }
+die()  { err "$1"; exit "${2:-1}"; }
+
+mode=cli
+status=false
+timeout=120
+while [ $# -gt 0 ]; do
+  case $1 in
+    --admin) [[ $mode == adc ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode=admin && shift ;;
+    --adc) [[ $mode == admin ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode=adc && shift ;;
+    --status) status=true && shift ;;
+    --timeout) timeout=${2?$1: parameter value not set} && shift 2 ;;
+    --timeout=*) timeout=${1#*=} && shift ;;
+    *) die "gcloud-login: unknown option $1 (usage: gcloud-login [--admin | --adc] [--status] [--timeout <seconds>])" ;;
+  esac
+done
+
+[[ "${DOTFILES_CONTEXT:-}" == ista ]] || die "gcloud-login: only available in the ista context"
+for tool in gcloud jq curl node npx gcloud-login-driver gcloud-login-browser op-agent; do
+  command -v "$tool" >/dev/null || die "gcloud-login: $tool not found"
+done
+
+# --- status -------------------------------------------------------------------
+
+report_status() {
+  local all_valid=true cli_account cli_state adc_token adc_email adc_state
+  cli_account=$(gcloud config get-value account 2>/dev/null || true)
+  if gcloud auth print-access-token --quiet >/dev/null 2>&1; then
+    cli_state=valid
+  else
+    cli_state="needs login"; all_valid=false
+  fi
+  if adc_token=$(gcloud auth application-default print-access-token 2>/dev/null); then
+    adc_email=$(curl -fsS "${TOKENINFO_URL}?access_token=${adc_token}" | jq -r '.email // empty')
+    adc_state=valid
+  else
+    adc_email=""; adc_state="needs login"; all_valid=false
+  fi
+  printf 'CLI account:  %s (%s)\n' "${cli_account:-none}" "$cli_state"
+  printf 'ADC identity: %s (%s)\n' "${adc_email:-unknown}" "$adc_state"
+  [[ $all_valid == true ]]
+}
+
+if [[ $status == true ]]; then
+  report_status
+  exit
+fi
+
+# --- Chromium -----------------------------------------------------------------
+
+chromium_bin() {
+  ls -d "$CACHE_DIR"/chromium/*-"$CHROMIUM_BUILD"/chrome-mac/Chromium.app/Contents/MacOS/Chromium 2>/dev/null | head -1
+}
+
+ensure_chromium() {
+  [[ -n "$(chromium_bin)" ]] && return 0
+  info "Installing Chromium $CHROMIUM_BUILD (plain build, immune to the managed-profile interception)"
+  npx --yes @puppeteer/browsers install "chromium@$CHROMIUM_BUILD" --path "$CACHE_DIR" >/dev/null
+  [[ -n "$(chromium_bin)" ]] || die "gcloud-login: Chromium install failed"
+}
+
+chromium_pid=""
+start_chromium() {
+  local profile_dir=$1 port_file="$1/DevToolsActivePort" i
+  mkdir -p "$profile_dir"
+  # A leftover instance from an aborted run would swallow the new launch.
+  pkill -f -- "--user-data-dir=${profile_dir}" 2>/dev/null || true
+  for ((i = 0; i < 50; i++)); do
+    pgrep -f -- "--user-data-dir=${profile_dir}" >/dev/null || break
+    sleep 0.2
+  done
+  rm -f "$port_file"
+  "$(chromium_bin)" --user-data-dir="$profile_dir" --remote-debugging-port=0 \
+    --no-first-run --no-default-browser-check --no-startup-window >/dev/null 2>&1 &
+  chromium_pid=$!
+  for ((i = 0; i < 100; i++)); do
+    [[ -s "$port_file" ]] && return 0
+    sleep 0.2
+  done
+  die "gcloud-login: Chromium did not expose its DevTools port"
+}
+
+# --- lifecycle ----------------------------------------------------------------
+
+url_file=""
+gcloud_pid=""
+gcloud_log=""
+cleanup() {
+  [[ -n "$gcloud_pid" ]] && kill "$gcloud_pid" 2>/dev/null || true
+  [[ -n "$chromium_pid" ]] && kill "$chromium_pid" 2>/dev/null || true
+  [[ -n "$url_file" ]] && rm -f "$url_file"
+  [[ -n "$gcloud_log" ]] && rm -f "$gcloud_log"
+}
+trap cleanup EXIT
+
+case $mode in
+  admin) email=$ADMIN_EMAIL; profile=admin;  gcloud_cmd=(gcloud auth login "$email" --quiet) ;;
+  adc)   email=$NORMAL_EMAIL; profile=normal; gcloud_cmd=(gcloud auth application-default login "$email" --quiet) ;;
+  cli)   email=$NORMAL_EMAIL; profile=normal; gcloud_cmd=(gcloud auth login "$email" --quiet) ;;
+esac
+
+# 1. Start gcloud. With a valid stored credential it exits at once and never
+#    calls the browser hook; then there is nothing else to do.
+url_file=$(mktemp); rm -f "$url_file"
+gcloud_log=$(mktemp)
+export GCLOUD_LOGIN_URL_FILE="$url_file"
+info "Running: ${gcloud_cmd[*]}"
+BROWSER=gcloud-login-browser "${gcloud_cmd[@]}" >"$gcloud_log" 2>&1 &
+gcloud_pid=$!
+while [[ ! -s "$url_file" ]] && kill -0 "$gcloud_pid" 2>/dev/null; do sleep 0.2; done
+if [[ ! -s "$url_file" ]]; then
+  if wait "$gcloud_pid"; then
+    gcloud_pid=""
+    ok "Credentials for $email are still valid ($mode); nothing to do"
+    exit 0
+  fi
+  gcloud_pid=""
+  cat "$gcloud_log" >&2
+  die "gcloud-login: gcloud failed before opening a browser"
+fi
+
+# 2. Everything the browser flow needs, fetched only now that we know we need it.
+password=""
+if [[ $mode == admin ]]; then
+  op-agent status >/dev/null 2>&1 || info "First 1Password read of the day: authorize the prompt"
+  password=$(op-agent read "$ADMIN_OP_REF") || die "gcloud-login: could not read the admin password from 1Password"
+fi
+ensure_chromium
+start_chromium "$PROFILE_ROOT/$profile"
+
+# 3. Drive the pages.
+driver_status=0
+printf '%s' "$password" | gcloud-login-driver \
+  --port-file "$PROFILE_ROOT/$profile/DevToolsActivePort" --url-file "$url_file" \
+  --email "$email" --timeout "$timeout" || driver_status=$?
+unset password
+
+if (( driver_status != 0 )); then
+  # Leave the page visible so the user can finish what the driver does not
+  # handle, and give gcloud one more timeout window to receive the callback.
+  warn "gcloud-login: automation stopped (driver exit $driver_status); finish the login in the Chromium window or press Ctrl-C"
+  for ((i = 0; i < timeout; i++)); do
+    kill -0 "$gcloud_pid" 2>/dev/null || break
+    sleep 1
+  done
+fi
+
+if wait "$gcloud_pid"; then
+  gcloud_pid=""
+  ok "Logged in ($mode) as $email"
+  exit 0
+fi
+gcloud_pid=""
+cat "$gcloud_log" >&2
+if (( driver_status == 2 )); then
+  die "gcloud-login: browser flow timed out" 2
+fi
+die "gcloud-login: gcloud did not complete the login"
