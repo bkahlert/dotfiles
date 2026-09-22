@@ -68,11 +68,25 @@ start() {
   mkdir -p "$STATE_DIR"
   chmod 700 "$STATE_DIR"
   local i
+  # A lock older than 30s means its owner died without cleaning up (killed,
+  # crashed, Ctrl-C) rather than genuinely still starting the daemon (which
+  # takes well under 5s below) — reclaim it so start() doesn't wait forever.
+  if [[ -d "$STATE_DIR/start.lock" ]]; then
+    local age=$(( $(date +%s) - $(stat -f %m "$STATE_DIR/start.lock" 2>/dev/null || echo 0) ))
+    if (( age > 30 )); then
+      rmdir "$STATE_DIR/start.lock" 2>/dev/null || true
+    fi
+  fi
   # Concurrent callers (the orchestrator will do this) race here. `mkdir` on
   # the lock dir is atomic: exactly one caller wins and starts the daemon;
   # everyone else just waits for it to come up instead of also starting one
   # or aborting on a mkfifo collision.
   if mkdir "$STATE_DIR/start.lock" 2>/dev/null; then
+    # Also clear the lock on abrupt exit from inside this branch (e.g. the
+    # `die` below). $STATE_DIR is a global readonly, so — unlike a local
+    # variable — it stays valid even after this trap replaces (or is
+    # replaced by) another EXIT trap once start() returns.
+    trap 'rmdir "$STATE_DIR/start.lock" 2>/dev/null || true' EXIT
     local started=1
     if ! running; then
       [[ -p "$REQ" ]] || mkfifo -m 600 "$REQ"
