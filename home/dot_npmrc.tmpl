@@ -2,4 +2,7 @@
 {{/* No account is passed: op has one. Give onepasswordRead the account as a second argument if that stops being true. */ -}}
 @express-service:registry=https://gitlab.com/api/v4/packages/npm/
 //gitlab.com/api/v4/packages/npm/:_authToken={{ onepasswordRead "op://Employee/GitLab NPM Token/credential" }}
+{{/* Artifactory is the default registry for some frontend repos (e.g. ui-field-pro), whose
+     committed .npmrc sets always-auth but deliberately carries no token. */ -}}
+//ista.jfrog.io/artifactory/api/npm/npm/:_authToken={{ onepasswordRead "op://Employee/jFrog NPM Token/credential" }}
 {{ end -}}
