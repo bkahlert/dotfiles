@@ -40,17 +40,23 @@ serve() {
   # `pkill -g` reaches this process and any `op` children it spawns.
   printf '%s' "$$" >"$PID_FILE"
   exec 3<>"$REQ"  # read-write keeps the FIFO open even with no client
-  local line ref resp value
+  local line ref resp value w
   while :; do
     if read -r -t "$KEEPALIVE_SECONDS" -u 3 line; then
       ref=${line%%$'\t'*}
       resp=${line#*$'\t'}
       [[ -p "$resp" ]] || continue
+      # Bound the response write: if the client died between writing its
+      # request and here, opening $resp for write blocks forever (no reader
+      # left) and wedges every future request for up to 12 h. Give it 5 s in
+      # the background, then move on regardless.
       if value=$(op read --no-newline "$ref" 2>&1); then
-        printf 'OK\t%s\n' "$value" >"$resp"
+        ( printf 'OK\t%s\n' "$value" >"$resp" ) & w=$!
       else
-        printf 'ERR\t%s\n' "$value" >"$resp"
+        ( printf 'ERR\t%s\n' "$value" >"$resp" ) & w=$!
       fi
+      ( sleep 5; kill "$w" 2>/dev/null ) &
+      wait "$w" 2>/dev/null || true
     else
       op whoami >/dev/null 2>&1 || true
     fi
@@ -61,21 +67,39 @@ start() {
   running && return 0
   mkdir -p "$STATE_DIR"
   chmod 700 "$STATE_DIR"
-  [[ -p "$REQ" ]] || mkfifo -m 600 "$REQ"
-  # setsid + pty: 1Password identifies the terminal by tty and session, so the
-  # daemon must not share Claude's or the user's shell.
-  nohup python3 - "$0" <<'PY' >>"$LOG" 2>&1 &
+  local i
+  # Concurrent callers (the orchestrator will do this) race here. `mkdir` on
+  # the lock dir is atomic: exactly one caller wins and starts the daemon;
+  # everyone else just waits for it to come up instead of also starting one
+  # or aborting on a mkfifo collision.
+  if mkdir "$STATE_DIR/start.lock" 2>/dev/null; then
+    local started=1
+    if ! running; then
+      [[ -p "$REQ" ]] || mkfifo -m 600 "$REQ"
+      # setsid + pty: 1Password identifies the terminal by tty and session,
+      # so the daemon must not share Claude's or the user's shell.
+      nohup python3 - "$0" <<'PY' >>"$LOG" 2>&1 &
 import os, pty, sys
 script = sys.argv[1]
 os.setsid()
 pty.spawn([script, '__serve'])
 PY
-  local i
-  for ((i = 0; i < 50; i++)); do
-    running && return 0
-    sleep 0.1
-  done
-  die "daemon did not start (see $LOG)"
+      for ((i = 0; i < 50; i++)); do
+        running && { started=0; break; }
+        sleep 0.1
+      done
+    else
+      started=0
+    fi
+    rmdir "$STATE_DIR/start.lock" 2>/dev/null || true
+    [[ $started -eq 0 ]] || die "daemon did not start (see $LOG)"
+  else
+    for ((i = 0; i < 50; i++)); do
+      running && return 0
+      sleep 0.1
+    done
+    die "daemon did not start (see $LOG)"
+  fi
 }
 
 stop() {
@@ -101,17 +125,30 @@ status() {
 # --- client -------------------------------------------------------------------
 
 read_secret() {
-  local ref=$1 tmp resp line
+  local ref=$1 resp line
   start
+  # Not `local`: the EXIT trap below fires after this function has already
+  # returned (the normal-completion path), when a local var would be out of
+  # scope again and `set -u` would turn the trap itself into an error.
   tmp=$(mktemp -d)
   chmod 700 "$tmp"
   resp="$tmp/resp"
   mkfifo -m 600 "$resp"
-  trap 'rm -rf "$tmp"' RETURN
+  # `die` below calls `exit`, which a RETURN trap does not catch — use EXIT
+  # so the temp dir is cleaned up on every path, not just normal return.
+  trap 'rm -rf "$tmp"' EXIT
+  # Open read-write *before* sending the request: a read-write open on a
+  # FIFO never blocks (unlike a read-only open, which blocks until a writer
+  # exists). That keeps the daemon's own write from blocking too, and means
+  # our `-t` timeout below covers the whole wait, including the case where
+  # the daemon dies mid-request and never writes at all.
+  exec 4<>"$resp"
   printf '%s\t%s\n' "$ref" "$resp" >"$REQ"
-  if ! read -r -t "$READ_TIMEOUT" line <"$resp"; then
+  if ! read -r -t "$READ_TIMEOUT" -u 4 line; then
+    exec 4<&-
     die "no answer within ${READ_TIMEOUT}s — authorize the 1Password prompt and retry" 2
   fi
+  exec 4<&-
   case $line in
     OK$'\t'*) printf '%s' "${line#OK$'\t'}" ;;
     ERR$'\t'*) die "${line#ERR$'\t'}" ;;
