@@ -29,13 +29,17 @@ const SELECTORS = {
   done: [/\/sdk\/auth_success/, /^http:\/\/(localhost|127\.0\.0\.1):\d+\/\?.*\bcode=/],
 };
 const POLL_MS = 500;
+// Only throttles repeated actions on a page that did not change; a new page
+// is acted on at once (see the reset in the poll loop).
 const ACTION_COOLDOWN_MS = 5000;
+const SEND_TIMEOUT_MS = 10000;
 
 class Cdp {
   constructor(ws) {
     this.ws = ws;
     this.nextId = 0;
     this.pending = new Map();
+    this.closed = false;
     ws.onmessage = ev => {
       const msg = JSON.parse(ev.data);
       const p = this.pending.get(msg.id);
@@ -43,6 +47,15 @@ class Cdp {
       this.pending.delete(msg.id);
       msg.error ? p.reject(new Error(msg.error.message)) : p.resolve(msg.result);
     };
+    // Without this a request outlives the browser: if Chromium dies, no
+    // answer ever arrives and every pending promise hangs forever.
+    const fail = () => {
+      this.closed = true;
+      for (const p of this.pending.values()) p.reject(new Error('Chromium connection lost'));
+      this.pending.clear();
+    };
+    ws.onclose = fail;
+    ws.onerror = fail;
   }
 
   static connect(portFile) {
@@ -55,9 +68,15 @@ class Cdp {
   }
 
   send(method, params = {}, sessionId) {
+    if (this.closed) return Promise.reject(new Error('Chromium connection lost'));
     const id = ++this.nextId;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        this.pending.delete(id);
+        reject(new Error(`${method} did not answer within ${SEND_TIMEOUT_MS} ms`));
+      }, SEND_TIMEOUT_MS);
+      const settle = fn => value => { clearTimeout(timer); fn(value); };
+      this.pending.set(id, { resolve: settle(resolve), reject: settle(reject) });
       this.ws.send(JSON.stringify({ id, method, params, sessionId }));
     });
   }
@@ -146,10 +165,18 @@ async function drive({ portFile, urlFile, email, timeoutMs, password }) {
       try {
         ({ result } = await cdp.send('Runtime.evaluate', { expression: STATE_SCRIPT(email), returnByValue: true }, sessionId));
       } catch {
+        if (cdp.closed) {
+          process.stderr.write('gcloud-login-driver: Chromium connection lost\n');
+          return 1;
+        }
         await sleep(POLL_MS); // navigating between pages
         continue;
       }
+      const previous = last;
       last = result.value;
+      // A page we have not acted on yet gets its action immediately; the
+      // cooldown exists only to space out retries on an unchanged page.
+      if (last.state !== previous.state || last.url !== previous.url) lastAction = 0;
       if (last.state === 'done') {
         await cdp.send('Target.closeTarget', { targetId });
         return 0;

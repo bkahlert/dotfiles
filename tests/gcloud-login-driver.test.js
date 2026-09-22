@@ -38,10 +38,7 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
 
   describe('on identifier, chooser, password, oauth-signin-interstitial and consent pages', () => {
     test('reaches the callback, closes its tab and exits 0', async () => {
-      // 5 actions in this chain (identifier, chooser, password, oauthid,
-      // consent), each gated by the driver's 5s action cooldown — the
-      // default 20s timeout isn't enough headroom.
-      const result = await runDriver({ url: `${fixture.origin}/identifier`, password: 'hunter2', timeout: 30 });
+      const result = await runDriver({ url: `${fixture.origin}/identifier`, password: 'hunter2' });
       assert.equal(result.code, 0, result.stderr);
       assert.deepEqual(fixture.seen(), { identifier: EMAIL, password: 'hunter2', callback: true });
       const pages = await chromium.pages();
