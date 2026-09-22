@@ -76,7 +76,14 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gcloud-login-driver-test-'));
     const proc = spawn(CHROMIUM, [
       `--user-data-dir=${dir}`, '--remote-debugging-port=0', '--headless=new',
-      '--no-first-run', '--no-default-browser-check', 'about:blank',
+      '--no-first-run', '--no-default-browser-check',
+      // This throwaway profile stores nothing worth encrypting, and without
+      // these macOS pops a "Keychain Not Found" dialog on the user's screen.
+      // gcloud-login's real launch must NOT use them: the normal and admin
+      // profiles' cookies are tied to the existing Chromium Safe Storage
+      // keychain item.
+      '--use-mock-keychain', '--password-store=basic',
+      'about:blank',
     ], { stdio: 'ignore' });
     const portFile = path.join(dir, 'DevToolsActivePort');
     for (let i = 0; i < 100 && !fs.existsSync(portFile); i++) await sleep(100);
