@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Purpose: Browser hook for gcloud-login. gcloud opens the OAuth URL through
+#          $BROWSER and waits for that command to exit, so this hook only
+#          records the URL for gcloud-login-driver and returns at once.
+# Usage:   BROWSER=gcloud-login-browser gcloud auth login …
+#          Requires GCLOUD_LOGIN_URL_FILE to point at the file to write.
+
+set -euo pipefail
+
+url=${1?url not set}
+: "${GCLOUD_LOGIN_URL_FILE?GCLOUD_LOGIN_URL_FILE not set}"
+
+printf '%s' "$url" >"$GCLOUD_LOGIN_URL_FILE"
