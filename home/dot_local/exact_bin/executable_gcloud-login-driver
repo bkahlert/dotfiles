@@ -20,8 +20,10 @@ const SELECTORS = {
   chooser: email => `[data-identifier="${email}"]`,
   confirmPath: '/speedbump/samlconfirmaccount',
   confirmLabels: ['Continue', 'Weiter'],
+  oauthIdPath: '/signin/oauth/id',
+  oauthIdLabels: ['Continue', 'Weiter'],
   consentPath: '/signin/oauth/consent',
-  consentLabels: ['Allow', 'Zulassen'],
+  consentLabels: ['Allow', 'Zulassen', 'Continue', 'Weiter'],
   securityKeyPath: '/challenge/sk/',
   microsoftHost: 'login.microsoftonline.com',
   done: [/\/sdk\/auth_success/, /^http:\/\/(localhost|127\.0\.0\.1):\d+\/\?.*\bcode=/],
@@ -78,6 +80,7 @@ const STATE_SCRIPT = email => `(() => {
   else if (visible(document.querySelector(S.identifier))) state = 'identifier';
   else if (document.querySelector(S.chooser)) state = 'chooser';
   else if (path.startsWith(S.confirmPath) && has(S.confirmLabels)) state = 'confirm';
+  else if (path.startsWith(S.oauthIdPath) && has(S.oauthIdLabels)) state = 'oauthid';
   else if (path.startsWith(S.consentPath) && has(S.consentLabels)) state = 'consent';
   return { url, title, state };
 })()`;
@@ -169,6 +172,8 @@ async function drive({ portFile, urlFile, email, timeoutMs, password }) {
             await typeInto(cdp, sessionId, SELECTORS.password, password); lastAction = Date.now(); break;
           case 'confirm':
             await cdp.send('Runtime.evaluate', { expression: clickButtonScript(SELECTORS.confirmLabels) }, sessionId); lastAction = Date.now(); break;
+          case 'oauthid':
+            await cdp.send('Runtime.evaluate', { expression: clickButtonScript(SELECTORS.oauthIdLabels) }, sessionId); lastAction = Date.now(); break;
           case 'consent':
             await cdp.send('Runtime.evaluate', { expression: clickButtonScript(SELECTORS.consentLabels) }, sessionId); lastAction = Date.now(); break;
         }

@@ -36,9 +36,12 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     fixture.server.close();
   });
 
-  describe('on identifier, chooser, password and consent pages', () => {
+  describe('on identifier, chooser, password, oauth-signin-interstitial and consent pages', () => {
     test('reaches the callback, closes its tab and exits 0', async () => {
-      const result = await runDriver({ url: `${fixture.origin}/identifier`, password: 'hunter2' });
+      // 5 actions in this chain (identifier, chooser, password, oauthid,
+      // consent), each gated by the driver's 5s action cooldown — the
+      // default 20s timeout isn't enough headroom.
+      const result = await runDriver({ url: `${fixture.origin}/identifier`, password: 'hunter2', timeout: 30 });
       assert.equal(result.code, 0, result.stderr);
       assert.deepEqual(fixture.seen(), { identifier: EMAIL, password: 'hunter2', callback: true });
       const pages = await chromium.pages();
@@ -90,7 +93,8 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
   }
 
   // Fixture pages mirror the real navigation: identifier form (Enter) ->
-  // chooser (click) -> password form (Enter) -> consent (click) -> callback.
+  // chooser (click) -> password form (Enter) -> oauth/id interstitial
+  // (click Continue) -> consent (click) -> callback.
   async function startFixture() {
     const seen = { identifier: null, password: null, callback: false };
     const server = http.createServer((req, res) => {
@@ -103,9 +107,11 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
           seen.identifier = url.searchParams.get('identifier') ?? seen.identifier;
           return page(`<div role="link" data-identifier="${EMAIL}" onclick="location='/password'">${EMAIL}</div>`);
         case '/password':
-          return page(`<form action="/signin/oauth/consent" method="get"><input type="password" name="Passwd"></form>`);
-        case '/signin/oauth/consent':
+          return page(`<form action="/signin/oauth/id" method="get"><input type="password" name="Passwd"></form>`);
+        case '/signin/oauth/id':
           seen.password = url.searchParams.get('Passwd') ?? seen.password;
+          return page(`<button>Cancel</button><button onclick="location='/signin/oauth/consent'">Continue</button>`);
+        case '/signin/oauth/consent':
           return page(`<button onclick="location='/?state=s&code=c'">Allow</button>`);
         case '/':
           seen.callback = url.searchParams.get('code') === 'c';
