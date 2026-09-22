@@ -4,8 +4,8 @@
 #          process tree, so every new shell (e.g. each Claude Code Bash call)
 #          would otherwise show the "Access Requested" prompt again. The
 #          daemon runs in its own session and pseudo-terminal, pings op every
-#          5 minutes to stay inside the 10-minute inactivity window, and lives
-#          at most 12 hours (1Password's hard limit).
+#          5 minutes to stay inside the 10-minute inactivity window, and exits
+#          after 12 hours (1Password's hard authorization limit).
 # Usage:   op-agent start | stop | status
 #          op-agent read <op-ref>      # prints the secret, no trailing newline;
 #                                      # starts the daemon if needed
@@ -23,12 +23,35 @@ readonly PID_FILE="$STATE_DIR/pid"
 readonly LOG="$STATE_DIR/agent.log"
 readonly KEEPALIVE_SECONDS=300
 readonly READ_TIMEOUT=90   # op's own prompt times out after 60 s
+readonly MAX_LIFETIME_SECONDS=43200   # 12 h — 1Password's hard authorization limit
+readonly WRITE_TIMEOUT_DS=50          # 5 s, in 0.1 s steps
 
 err() { printf 'op-agent: %s\n' "$1" >&2; }
 die() { err "$1"; exit "${2:-1}"; }
 
 running() {
   [[ -f "$PID_FILE" ]] && kill -0 "$(<"$PID_FILE")" 2>/dev/null
+}
+
+# Writes $2 to the FIFO $1, bounded to WRITE_TIMEOUT_DS. Opening a FIFO for
+# writing blocks until a reader shows up, so a peer that died (or a pid file
+# whose owner is no longer the daemon) would otherwise block forever. Returns
+# 1 if the write had to be abandoned.
+write_fifo() {
+  local fifo=$1 data=$2 w i
+  printf '%s' "$data" >"$fifo" & w=$!
+  for ((i = 0; i < WRITE_TIMEOUT_DS; i++)); do
+    if ! kill -0 "$w" 2>/dev/null; then
+      wait "$w" 2>/dev/null || true
+      return 0
+    fi
+    sleep 0.1
+  done
+  # Kill only our own writer, and only while it is still alive (the residual
+  # pid-reuse race is accepted).
+  kill -0 "$w" 2>/dev/null && kill "$w" 2>/dev/null || true
+  wait "$w" 2>/dev/null || true
+  return 1
 }
 
 # --- daemon -------------------------------------------------------------------
@@ -40,23 +63,29 @@ serve() {
   # `pkill -g` reaches this process and any `op` children it spawns.
   printf '%s' "$$" >"$PID_FILE"
   exec 3<>"$REQ"  # read-write keeps the FIFO open even with no client
-  local line ref resp value w
-  while :; do
-    if read -r -t "$KEEPALIVE_SECONDS" -u 3 line; then
+  # Remove the pid file on the way out so a client sees "not running" and
+  # starts a fresh daemon instead of writing into a FIFO nobody reads.
+  trap 'rm -f "$PID_FILE"' EXIT
+  local line ref resp payload status remaining
+  while (( SECONDS < MAX_LIFETIME_SECONDS )); do
+    remaining=$(( MAX_LIFETIME_SECONDS - SECONDS ))
+    if (( remaining > KEEPALIVE_SECONDS )); then remaining=$KEEPALIVE_SECONDS; fi
+    if read -r -t "$remaining" -u 3 line; then
       ref=${line%%$'\t'*}
       resp=${line#*$'\t'}
       [[ -p "$resp" ]] || continue
+      # base64 so the answer is exactly one line with no whitespace of its
+      # own: a secret may contain newlines, tabs or leading/trailing spaces,
+      # all of which a line-based protocol would mangle. op's output is piped
+      # straight into base64 — a command substitution would strip a trailing
+      # newline before it could be encoded. PIPESTATUS[0] carries op's status
+      # out of the pipeline.
+      status=OK
+      payload=$(op read --no-newline "$ref" 2>&1 | base64 | tr -d '\n'; exit "${PIPESTATUS[0]}") || status=ERR
       # Bound the response write: if the client died between writing its
       # request and here, opening $resp for write blocks forever (no reader
-      # left) and wedges every future request for up to 12 h. Give it 5 s in
-      # the background, then move on regardless.
-      if value=$(op read --no-newline "$ref" 2>&1); then
-        ( printf 'OK\t%s\n' "$value" >"$resp" ) & w=$!
-      else
-        ( printf 'ERR\t%s\n' "$value" >"$resp" ) & w=$!
-      fi
-      ( sleep 5; kill "$w" 2>/dev/null ) &
-      wait "$w" 2>/dev/null || true
+      # left) and would wedge every future request.
+      write_fifo "$resp" "$status"$'\t'"$payload"$'\n' || true
     else
       op whoami >/dev/null 2>&1 || true
     fi
@@ -157,15 +186,25 @@ read_secret() {
   # our `-t` timeout below covers the whole wait, including the case where
   # the daemon dies mid-request and never writes at all.
   exec 4<>"$resp"
-  printf '%s\t%s\n' "$ref" "$resp" >"$REQ"
-  if ! read -r -t "$READ_TIMEOUT" -u 4 line; then
+  # Bound the request write too: `running` only proves *some* process owns
+  # that pid. If it is not the daemon (pid reuse, or a daemon that exited
+  # without cleaning up), nobody ever opens $REQ for reading and the write
+  # blocks forever. Drop the stale pid file so the next call starts fresh.
+  if ! write_fifo "$REQ" "$ref"$'\t'"$resp"$'\n'; then
+    exec 4<&-
+    rm -f "$PID_FILE"
+    die "daemon did not accept the request (stale pid file removed — retry)" 2
+  fi
+  # IFS= keeps leading and trailing whitespace of the (base64) payload; the
+  # payload itself is decoded below, so the secret survives byte-exact.
+  if ! IFS= read -r -t "$READ_TIMEOUT" -u 4 line; then
     exec 4<&-
     die "no answer within ${READ_TIMEOUT}s — authorize the 1Password prompt and retry" 2
   fi
   exec 4<&-
   case $line in
-    OK$'\t'*) printf '%s' "${line#OK$'\t'}" ;;
-    ERR$'\t'*) die "${line#ERR$'\t'}" ;;
+    OK$'\t'*) printf '%s' "${line#OK$'\t'}" | base64 --decode ;;
+    ERR$'\t'*) die "$(printf '%s' "${line#ERR$'\t'}" | base64 --decode)" ;;
     *) die "unexpected answer" ;;
   esac
 }

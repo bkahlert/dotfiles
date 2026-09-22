@@ -24,7 +24,7 @@ description: Use when `gcloud-login` or `op-agent` fails, hangs, or needs a chan
 
 ## op-agent
 
-`op-agent` keeps one 1Password CLI authorization alive: the desktop app authorizes `op` per process tree, so each new shell (every Claude Code Bash call) would prompt again. The daemon runs `setsid` in its own pty, serves `op read` over a FIFO in `~/Library/Application Support/op-agent/`, pings `op whoami` every 5 min (10-min inactivity limit) and dies with 1Password's 12-h hard limit. Commands: `start | stop | status | read <ref>`. First read of the day shows the "Access Requested" prompt once. The prompt window has no accessibility tree; do not try to click it with peekaboo.
+`op-agent` keeps one 1Password CLI authorization alive: the desktop app authorizes `op` per process tree, so each new shell (every Claude Code Bash call) would prompt again. The daemon runs `setsid` in its own pty, serves `op read` over a FIFO in `~/Library/Application Support/op-agent/`, pings `op whoami` every 5 min (10-min inactivity limit) and exits after 12 h, 1Password's hard authorization limit. A client whose request the daemon does not accept within 5 s removes the stale pid file and exits 2, so the next call starts a fresh daemon. Commands: `start | stop | status | read <ref>`. First read of the day shows the "Access Requested" prompt once. The prompt window has no accessibility tree; do not try to click it with peekaboo.
 
 ## Debugging a failed run
 
