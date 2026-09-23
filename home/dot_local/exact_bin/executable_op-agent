@@ -1,0 +1,219 @@
+#!/usr/bin/env bash
+# Purpose: Keep one 1Password CLI authorization alive and serve `op read`
+#          requests from other processes. The desktop app authorizes op per
+#          process tree, so every new shell (e.g. each Claude Code Bash call)
+#          would otherwise show the "Access Requested" prompt again. The
+#          daemon runs in its own session and pseudo-terminal, pings op every
+#          5 minutes to stay inside the 10-minute inactivity window, and exits
+#          after 12 hours (1Password's hard authorization limit).
+# Usage:   op-agent start | stop | status
+#          op-agent read <op-ref>      # prints the secret, no trailing newline;
+#                                      # starts the daemon if needed
+# Exit:    0 ok · 1 error · 2 timeout waiting for the daemon (prompt not authorized)
+#
+# Security: anyone able to write to the request FIFO (mode 0600, directory
+# 0700 — i.e. this user) can read any secret this account can. That equals
+# what an authorized terminal already allows.
+
+set -euo pipefail
+
+readonly STATE_DIR="$HOME/Library/Application Support/op-agent"
+readonly REQ="$STATE_DIR/req"
+readonly PID_FILE="$STATE_DIR/pid"
+readonly LOG="$STATE_DIR/agent.log"
+readonly KEEPALIVE_SECONDS=300
+readonly READ_TIMEOUT=90   # op's own prompt times out after 60 s
+readonly MAX_LIFETIME_SECONDS=43200   # 12 h — 1Password's hard authorization limit
+readonly WRITE_TIMEOUT_DS=50          # 5 s, in 0.1 s steps
+
+err() { printf 'op-agent: %s\n' "$1" >&2; }
+die() { err "$1"; exit "${2:-1}"; }
+
+running() {
+  [[ -f "$PID_FILE" ]] && kill -0 "$(<"$PID_FILE")" 2>/dev/null
+}
+
+# Writes $2 to the FIFO $1, bounded to WRITE_TIMEOUT_DS. Opening a FIFO for
+# writing blocks until a reader shows up, so a peer that died (or a pid file
+# whose owner is no longer the daemon) would otherwise block forever. Returns
+# 1 if the write had to be abandoned.
+write_fifo() {
+  local fifo=$1 data=$2 w i
+  printf '%s' "$data" >"$fifo" & w=$!
+  for ((i = 0; i < WRITE_TIMEOUT_DS; i++)); do
+    if ! kill -0 "$w" 2>/dev/null; then
+      wait "$w" 2>/dev/null || true
+      return 0
+    fi
+    sleep 0.1
+  done
+  # Kill only our own writer, and only while it is still alive (the residual
+  # pid-reuse race is accepted).
+  kill -0 "$w" 2>/dev/null && kill "$w" 2>/dev/null || true
+  wait "$w" 2>/dev/null || true
+  return 1
+}
+
+# --- daemon -------------------------------------------------------------------
+
+serve() {
+  # pty.fork() (used by start()) makes this process a session and
+  # process-group leader of its OWN new group, distinct from the python
+  # wrapper's pid recorded before the fork. Record that here so stop()'s
+  # `pkill -g` reaches this process and any `op` children it spawns.
+  printf '%s' "$$" >"$PID_FILE"
+  exec 3<>"$REQ"  # read-write keeps the FIFO open even with no client
+  # Remove the pid file on the way out so a client sees "not running" and
+  # starts a fresh daemon instead of writing into a FIFO nobody reads.
+  trap 'rm -f "$PID_FILE"' EXIT
+  local line ref resp payload status remaining
+  while (( SECONDS < MAX_LIFETIME_SECONDS )); do
+    remaining=$(( MAX_LIFETIME_SECONDS - SECONDS ))
+    if (( remaining > KEEPALIVE_SECONDS )); then remaining=$KEEPALIVE_SECONDS; fi
+    if read -r -t "$remaining" -u 3 line; then
+      ref=${line%%$'\t'*}
+      resp=${line#*$'\t'}
+      [[ -p "$resp" ]] || continue
+      # base64 so the answer is exactly one line with no whitespace of its
+      # own: a secret may contain newlines, tabs or leading/trailing spaces,
+      # all of which a line-based protocol would mangle. op's output is piped
+      # straight into base64 — a command substitution would strip a trailing
+      # newline before it could be encoded. PIPESTATUS[0] carries op's status
+      # out of the pipeline.
+      status=OK
+      payload=$(op read --no-newline "$ref" 2>&1 | base64 | tr -d '\n'; exit "${PIPESTATUS[0]}") || status=ERR
+      # Bound the response write: if the client died between writing its
+      # request and here, opening $resp for write blocks forever (no reader
+      # left) and would wedge every future request.
+      write_fifo "$resp" "$status"$'\t'"$payload"$'\n' || true
+    else
+      op whoami >/dev/null 2>&1 || true
+    fi
+  done
+}
+
+start() {
+  running && return 0
+  mkdir -p "$STATE_DIR"
+  chmod 700 "$STATE_DIR"
+  local i
+  # A lock older than 30s means its owner died without cleaning up (killed,
+  # crashed, Ctrl-C) rather than genuinely still starting the daemon (which
+  # takes well under 5s below) — reclaim it so start() doesn't wait forever.
+  if [[ -d "$STATE_DIR/start.lock" ]]; then
+    local age=$(( $(date +%s) - $(stat -f %m "$STATE_DIR/start.lock" 2>/dev/null || echo 0) ))
+    if (( age > 30 )); then
+      rmdir "$STATE_DIR/start.lock" 2>/dev/null || true
+    fi
+  fi
+  # Concurrent callers (the orchestrator will do this) race here. `mkdir` on
+  # the lock dir is atomic: exactly one caller wins and starts the daemon;
+  # everyone else just waits for it to come up instead of also starting one
+  # or aborting on a mkfifo collision.
+  if mkdir "$STATE_DIR/start.lock" 2>/dev/null; then
+    # Also clear the lock on abrupt exit from inside this branch (e.g. the
+    # `die` below). $STATE_DIR is a global readonly, so — unlike a local
+    # variable — it stays valid even after this trap replaces (or is
+    # replaced by) another EXIT trap once start() returns.
+    trap 'rmdir "$STATE_DIR/start.lock" 2>/dev/null || true' EXIT
+    local started=1
+    if ! running; then
+      [[ -p "$REQ" ]] || mkfifo -m 600 "$REQ"
+      # setsid + pty: 1Password identifies the terminal by tty and session,
+      # so the daemon must not share Claude's or the user's shell.
+      nohup python3 - "$0" <<'PY' >>"$LOG" 2>&1 &
+import os, pty, sys
+script = sys.argv[1]
+os.setsid()
+pty.spawn([script, '__serve'])
+PY
+      for ((i = 0; i < 50; i++)); do
+        running && { started=0; break; }
+        sleep 0.1
+      done
+    else
+      started=0
+    fi
+    rmdir "$STATE_DIR/start.lock" 2>/dev/null || true
+    [[ $started -eq 0 ]] || die "daemon did not start (see $LOG)"
+  else
+    for ((i = 0; i < 50; i++)); do
+      running && return 0
+      sleep 0.1
+    done
+    die "daemon did not start (see $LOG)"
+  fi
+}
+
+stop() {
+  running || return 0
+  # macOS's BSD pkill has no -s (session) option (only GNU pkill does), so it
+  # always errors here and silently falls through to plain kill, which never
+  # reaches the `op` child spawned via $(...). The serving process is its own
+  # process-group leader (pty.fork's internal setsid also makes it a pgroup
+  # leader), so target the whole group with -g, which macOS's pkill supports.
+  pkill -TERM -g "$(<"$PID_FILE")" 2>/dev/null || kill "$(<"$PID_FILE")" 2>/dev/null || true
+  rm -f "$PID_FILE"
+}
+
+status() {
+  if running; then
+    printf 'op-agent: running (pid %s)\n' "$(<"$PID_FILE")"
+  else
+    printf 'op-agent: not running\n'
+    return 1
+  fi
+}
+
+# --- client -------------------------------------------------------------------
+
+read_secret() {
+  local ref=$1 resp line
+  start
+  # Not `local`: the EXIT trap below fires after this function has already
+  # returned (the normal-completion path), when a local var would be out of
+  # scope again and `set -u` would turn the trap itself into an error.
+  tmp=$(mktemp -d)
+  chmod 700 "$tmp"
+  resp="$tmp/resp"
+  mkfifo -m 600 "$resp"
+  # `die` below calls `exit`, which a RETURN trap does not catch — use EXIT
+  # so the temp dir is cleaned up on every path, not just normal return.
+  trap 'rm -rf "$tmp"' EXIT
+  # Open read-write *before* sending the request: a read-write open on a
+  # FIFO never blocks (unlike a read-only open, which blocks until a writer
+  # exists). That keeps the daemon's own write from blocking too, and means
+  # our `-t` timeout below covers the whole wait, including the case where
+  # the daemon dies mid-request and never writes at all.
+  exec 4<>"$resp"
+  # Bound the request write too: `running` only proves *some* process owns
+  # that pid. If it is not the daemon (pid reuse, or a daemon that exited
+  # without cleaning up), nobody ever opens $REQ for reading and the write
+  # blocks forever. Drop the stale pid file so the next call starts fresh.
+  if ! write_fifo "$REQ" "$ref"$'\t'"$resp"$'\n'; then
+    exec 4<&-
+    rm -f "$PID_FILE"
+    die "daemon did not accept the request (stale pid file removed — retry)" 2
+  fi
+  # IFS= keeps leading and trailing whitespace of the (base64) payload; the
+  # payload itself is decoded below, so the secret survives byte-exact.
+  if ! IFS= read -r -t "$READ_TIMEOUT" -u 4 line; then
+    exec 4<&-
+    die "no answer within ${READ_TIMEOUT}s — authorize the 1Password prompt and retry" 2
+  fi
+  exec 4<&-
+  case $line in
+    OK$'\t'*) printf '%s' "${line#OK$'\t'}" | base64 --decode ;;
+    ERR$'\t'*) die "$(printf '%s' "${line#ERR$'\t'}" | base64 --decode)" ;;
+    *) die "unexpected answer" ;;
+  esac
+}
+
+case ${1:-} in
+  __serve) serve ;;
+  start) start ;;
+  stop) stop ;;
+  status) status ;;
+  read) read_secret "${2?op-agent read: reference not set}" ;;
+  *) die "usage: op-agent start | stop | status | read <op-ref>" ;;
+esac

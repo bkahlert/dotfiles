@@ -7,6 +7,7 @@ Containerfile
 Makefile
 entrypoint.sh
 docs/
+tests/
 
 # Anthropic Claude CLI symlink — managed by https://claude.ai/install.sh,
 # not chezmoi. Without this, exact_bin/ would remove it on apply.
@@ -16,3 +17,11 @@ docs/
 .aws/credentials
 .aws/sso/
 .aws/cli/cache/
+
+{{- if ne .company "ista" }}
+# gcloud-login skills describe the ista Google accounts only.
+.agents/skills/gcloud-auth
+.agents/skills/gcloud-login-automation
+.claude/skills/gcloud-auth
+.claude/skills/gcloud-login-automation
+{{- end }}
