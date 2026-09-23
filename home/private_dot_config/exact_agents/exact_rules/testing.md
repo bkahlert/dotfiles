@@ -129,3 +129,8 @@ context("resource") {
   }
 }
 ```
+
+## 9. Framework pitfalls
+
+- **mockk and Kotlin value classes**: arguments arrive erased at the call boundary, so `firstArg<MyValueClass>()` throws `ClassCastException`. Read the
+  underlying type and re-wrap: `MyValueClass(firstArg<UUID>())`.

@@ -21,9 +21,12 @@ optional. Skipping the read is a failure mode.
 | Writing Markdown, especially when referencing files | [rules/markdown.md](rules/markdown.md) |
 | Writing or editing comments, KDoc/JSDoc/docstrings, or any code documentation | [rules/comments.md](rules/comments.md) |
 | Adding/removing a build dependency, BOM, or platform import (Gradle / Maven) — or looking for a dependency's source | [rules/dependencies.md](rules/dependencies.md) |
+| Running Gradle builds or tests, or diagnosing a Gradle failure | [rules/gradle.md](rules/gradle.md) |
 | Editing source files in an IntelliJ/WebStorm-managed project | [rules/ide-inspections.md](rules/ide-inspections.md) |
 | Editing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, or any AI guidance file | [rules/guidance-editing.md](rules/guidance-editing.md) |
 | Constructing talks, slide decks, or public-speaking content | [rules/presentations.md](rules/presentations.md) |
+| Building, booting or driving the iOS Simulator | [rules/ios-simulator.md](rules/ios-simulator.md) |
+| Looking at or driving a web page in a browser (chrome-devtools MCP, peekaboo, Playwright) | [rules/browser-automation.md](rules/browser-automation.md) |
 
 # Tone & Communication
 
@@ -111,6 +114,11 @@ Implement the actual logic, correct for all valid inputs — not for the test ca
 pass. Tests verify correctness; they don't define the solution.
 
 If a task is unreasonable or infeasible, or a test is wrong, say so instead of working around it.
+
+# Scratch files
+
+Never name a scratch Python script after a stdlib module (`copy.py`, `types.py`, `json.py`, `test.py`, ...). Python puts the script's directory first on
+`sys.path`, so every import in that directory that transitively needs the module silently runs the script instead.
 
 # Minimizing hallucinations
 

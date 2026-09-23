@@ -16,3 +16,9 @@ Before proposing any new dependency, BOM, or platform import, verify what is alr
 - **Maven:** `mvn dependency:tree` or check the effective POM (`mvn help:effective-pom`).
 
 Only add a new BOM or version constraint if coverage is genuinely missing after this check.
+
+## JDK vendor
+
+When a file must name a JDK distribution (`.sdkmanrc`, setup-java, `toolchainVendor`), use Eclipse Temurin (`-tem`, `temurin`). It is the vendor-neutral
+build; naming a company's build signals a preference that does not belong in shared repos. Prefer mechanisms that need no vendor at all, such as
+`gradle/gradle-daemon-jvm.properties` with only `toolchainVersion`.
