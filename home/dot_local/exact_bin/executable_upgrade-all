@@ -123,7 +123,22 @@ elif [ "$(command -v gem)" = /usr/bin/gem ]; then
   # ...) gets installed, `gem` resolves elsewhere and this runs.
   skip "only Apple's system Ruby (/usr/bin/gem) — too old to update"
 else
-  gem update --user-install || fail 'gem update'
+  # A plain `gem update` also updates the gems Ruby ships with (rdoc, psych,
+  # json, ...) into ~/.gem, where the copies shadow the originals and every
+  # later gem command warns about redefined constants and ambiguous specs.
+  # Homebrew replaces the shipped gems with each Ruby upgrade anyway, so only
+  # gems installed on top of Ruby are updated: those whose name has no spec
+  # under Ruby's own install prefix.
+  user_gems=$(ruby -e '
+    shipped = Gem::Specification.select { |s| s.base_dir.start_with?(RbConfig::CONFIG["prefix"]) }.map(&:name)
+    puts (Gem::Specification.map(&:name) - shipped).uniq.sort
+  ')
+  if [ -z "$user_gems" ]; then
+    skip "no gems installed besides those shipped with Ruby"
+  else
+    # shellcheck disable=SC2086 # intentional word splitting
+    gem update --user-install $user_gems || fail 'gem update'
+  fi
 fi
 
 step "gh extensions"
