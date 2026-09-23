@@ -10,6 +10,9 @@ When writing or updating `AGENTS.md`, `CLAUDE.md`, or equivalent guidance files:
 - **Anchor exceptions to their assumptions.** If you must list exceptions (e.g., "these files must stay as templates"), state the condition that makes each
   exception necessary — so it's clear when that condition no longer holds and the exception should be removed.
 
+- **Keep shared guidance impersonal.** `~/.config/agents/AGENTS.md` and its `rules/*.md` are shared with others as-is, so refer to the human as
+  "the user" and never write a name or other personal identifier into them. Fix pre-existing occurrences you come across while editing.
+
 - **Review guidance after making code changes.** After any significant refactor, scan the guidance file for descriptions that no longer match the codebase.
   Stale guidance is worse than no guidance — it actively misleads future agents.
 

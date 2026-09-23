@@ -2,8 +2,8 @@
 
 ## Source location of dependencies
 
-- When you need to know the actual source of a build dependency, chances are they are located in a sibling directory as I tend to keep projects / repos
-  belonging together in the same parent directory.
+- When you need the actual source of a build dependency, look in a sibling directory first: related projects and repos are kept in the same parent
+  directory.
 
 - Reason about projects tightly coupled together (e.g. projects `technician-app-service` and `technician-app-web` are tightly coupled, with `-service` being a
   backend microservice and `-web` being its web (UI))
@@ -16,3 +16,9 @@ Before proposing any new dependency, BOM, or platform import, verify what is alr
 - **Maven:** `mvn dependency:tree` or check the effective POM (`mvn help:effective-pom`).
 
 Only add a new BOM or version constraint if coverage is genuinely missing after this check.
+
+## JDK vendor
+
+When a file must name a JDK distribution (`.sdkmanrc`, setup-java, `toolchainVendor`), use Eclipse Temurin (`-tem`, `temurin`). It is the vendor-neutral
+build; naming a company's build signals a preference that does not belong in shared repos. Prefer mechanisms that need no vendor at all, such as
+`gradle/gradle-daemon-jvm.properties` with only `toolchainVersion`.
