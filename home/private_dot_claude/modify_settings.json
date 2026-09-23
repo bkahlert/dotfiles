@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Purpose: Write Claude Code's settings.json from source state, keeping the keys Claude Code
-#          changes on its own (model, effort level) as they are on this machine, and keeping
+#          changes on its own (model, effort level, per-model settings) as they are on this machine, and keeping
 #          plugins/marketplaces installed only on this machine (this repo is public, so
 #          company-internal marketplaces cannot live in source state).
 # Usage:   Run by chezmoi on apply; receives the current file on stdin and prints the new content.
@@ -12,7 +12,7 @@ current=$(cat)
 
 # Keys are emitted in the live file's order so an unchanged file yields no diff.
 jq --indent 2 --argjson live "$current" '
-  reduce ("model", "effortLevel") as $k (.;
+  reduce ("model", "effortLevel", "modelSettings") as $k (.;
     if $live | has($k) then .[$k] = $live[$k] else del(.[$k]) end)
   # Source wins per entry, live-only entries survive: `claude plugin install` on this
   # machine is kept, while source state stays authoritative for what it does define.

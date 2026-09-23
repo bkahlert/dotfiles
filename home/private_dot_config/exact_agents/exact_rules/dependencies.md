@@ -2,8 +2,8 @@
 
 ## Source location of dependencies
 
-- When you need to know the actual source of a build dependency, chances are they are located in a sibling directory as I tend to keep projects / repos
-  belonging together in the same parent directory.
+- When you need the actual source of a build dependency, look in a sibling directory first: related projects and repos are kept in the same parent
+  directory.
 
 - Reason about projects tightly coupled together (e.g. projects `technician-app-service` and `technician-app-web` are tightly coupled, with `-service` being a
   backend microservice and `-web` being its web (UI))
