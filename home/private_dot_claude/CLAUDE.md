@@ -16,7 +16,7 @@ Project-level `AGENTS.md` / `CLAUDE.md` may strengthen these defaults; honor the
 
 # Context awareness
 
-Your context window auto-compacts near its limit, so don't stop early due to token budget concerns. As the budget tightens, save progress and open questions to a notes file in the scratchpad before refresh; auto memory is disabled. Stay persistent and autonomous; complete tasks fully.
+Your context window auto-compacts near its limit, so don't stop early due to token budget concerns. As the budget tightens, save progress and open questions to a notes file in the scratchpad, name that file in your reply so the compaction summary keeps the path, and re-read it after a refresh. Auto memory is disabled, so nothing else carries over. Stay persistent and autonomous; complete tasks fully.
 
 
 # Subagent orchestration
