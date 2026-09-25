@@ -25,3 +25,12 @@ tests/
 .claude/skills/gcloud-auth
 .claude/skills/gcloud-login-automation
 {{- end }}
+
+{{- if ne .company "ista" }}
+# The GitLab token only exists in the work vault.
+.local/share/secrets/gitlab_token
+{{- end }}
+{{- if not .company }}
+# No password manager without a context (the test container).
+.local/share/secrets/context7_api_key
+{{- end }}

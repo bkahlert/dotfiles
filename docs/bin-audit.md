@@ -54,7 +54,6 @@ what each script touches and why the removed ones went. Landed on branch
 | `pbpaste-dir` | Extract clipboard into cwd or `<dir>` | write:target dir (overwrites files) | no (re-extract overwrites) | read | 0 | Swallowed errors with `2>/dev/null`. | fixed: template, errors visible, optional `<dir>` |
 | `pick-port` | First bindable port: 80, 8080, else random | read (transient bind) | n/a | run ✔ | 0 | Dependency of `serve`, `serve-live`. | fixed: template |
 | `print-port` | No argument: every TCP listener; with ports: everything bound to them | read | n/a | run ✔ | 0 | Merge of `ports-print` (whose `netstat` printed nothing under Homebrew bash) and `whats-in-port`. Judges by output because `lsof` exits 1 when any one of several ports is unused. | fixed: merged, `lsof` on macOS, `ss`/`netstat` on Linux, template |
-| `secret-read` | Read a secret from 1Password (ista) or KeePassXC | read, may prompt | n/a | run ✔ | 0 | Called at shell startup by `10-context7.zsh` and `exact_ista/10-gitlab.zsh`. | fixed: template |
 | `serve` | `npx http-server` on `pick-port` | net, write:npx cache | yes | read | 0 | Added 2026-09-19. | kept |
 | `serve-live` | `npx live-server` on `pick-port` | net, write:npx cache | yes | read | 0 | Added 2026-09-19. | kept |
 | `upgrade-all` | brew, podman machine, mas, npm, gems, gh extensions | write:packages | yes | read (fixed in #50, #51 this week) | 2 | Actively maintained. `softwareupdate -l` always runs and is slow. | fixed: template, rejects arguments |
@@ -83,6 +82,7 @@ History keeps every one of these.
 | `iterm-integration` | iTerm2 ssh-integration hook | read, calls `notify` | read | 0 | Hard-coded to hosts `unicorn.local` / `netmon.local` and user `bkahlert`; usage text said `notify`; `port` unused (SC2034). The only other iTerm trace in the repo is a "not working yet" comment over generic tmux options in `dot_tmux.conf`. |
 | `kill-zscaler` | Unload Zscaler launch agents/daemons | write:launchctl, sudo | read | 0 | Zscaler is not installed on this machine and there are no launch items. |
 | `ports-print` | List every TCP listener | read | run ✘ | 0 | Under Homebrew bash 5.3 `netstat -anvp tcp` prints nothing, sandbox or not; `/bin/bash` and zsh are fine. Merged into `print-port`. |
+| `secret-read` | Read a secret from 1Password (ista) or KeePassXC | read, may prompt | run ✔ | 0 | Encoded vault, field and KeePassXC path in a script because two secrets were fetched at shell startup. Replaced by chezmoi-rendered files under `~/.local/share/secrets/` (follow-up PR); the templates now hold that information. |
 | `share-example` (+ `unshare-example` symlink) | Route domains through another host's Zscaler tunnel | write:routes, sudo, net; needs `nmap` | read | 0 | Needs `nmap` (not installed), a `192.168.206.x` LAN and a Zscaler host. |
 | `start-zscaler` | Start Zscaler app and load its daemons | write:launchctl, sudo | read | 0 | Zscaler not installed. |
 | `whats-in-port` | `lsof` on one TCP port | read | run ✔ | 0 | Merged into `print-port <port>...`. |
@@ -97,6 +97,8 @@ Taken one by one on 2026-09-25:
   (reversing an earlier "keep separate").
 - **Renamed** `ft` to `grepr`; folded the `cert-download` symlink into
   `cert-get --download`. No symlinked aliases remain in the directory.
+- **Replaced** `secret-read` by chezmoi templates (follow-up branch): the
+  secret files it used to fill are now rendered at apply time.
 - **Kept and fixed** `intellij-workspace-fix`, `pbcopy-dir` / `pbpaste-dir`,
   `ports-print` (as part of the merge) after weighing a drop.
 - **Template.** Every keeper that takes arguments follows
