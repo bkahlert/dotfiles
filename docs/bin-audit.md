@@ -72,7 +72,7 @@ decisions are made and fixes land, so a later session can pick up here.
 | `share-example` (+ `unshare-example` symlink) | Route domains through another host's Zscaler tunnel | write:routes, sudo, net; needs `nmap` | yes | read | 0 | Needs `nmap` (not installed), a `192.168.206.x` LAN and a Zscaler host. Upstream script still exists. Same fate as `kill-zscaler`. | drop | dropped |
 | `start-zscaler` | Start Zscaler app and load its daemons | write:launchctl, sudo | yes | read | 0 | Zscaler not installed. | drop | dropped |
 | `upgrade-all` | brew, podman machine, mas, npm, gems, gh extensions | write:packages | yes | read (fixed in #50, #51 this week) | 2 | Actively maintained. `softwareupdate -l` always runs and is slow. | fix: template | fixed |
-| `port-print` (was `ports-print` + `whats-in-port`) | No argument: every TCP listener; with ports: everything bound to them | read | n/a | run ✔ | 0 | Merged 2026-09-25. macOS/ports use `lsof`, Linux listing uses `ss`/`netstat`. Judges by output because `lsof` exits 1 when any one of several ports is unused. | merge | fixed |
+| `print-port` (was `ports-print` + `whats-in-port`) | No argument: every TCP listener; with ports: everything bound to them | read | n/a | run ✔ | 0 | Merged 2026-09-25. macOS/ports use `lsof`, Linux listing uses `ss`/`netstat`. Judges by output because `lsof` exits 1 when any one of several ports is unused. | merge | fixed |
 
 ## Decisions (2026-09-25)
 
@@ -83,7 +83,7 @@ Taken one by one in the first session:
   (the only other iTerm trace in the repo is a "not working yet" comment over
   generic tmux options in `dot_tmux.conf`).
 - Kept and fixed: `intellij-workspace-fix`, `pbcopy-dir` / `pbpaste-dir`.
-- `ports-print` and `whats-in-port` merged into `port-print [<port>...]`
+- `ports-print` and `whats-in-port` merged into `print-port [<port>...]`
   (decision 2026-09-25, reversing the earlier "keep separate").
 - Every keeper that takes arguments now follows the header/help/argument
   template from `rules/bash.md` (PR #52): `-h`/`--help` prints the file
