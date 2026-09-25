@@ -1,11 +1,49 @@
 #!/usr/bin/env bash
-declare domain=${1?domain missing} port=${2:-443}
+# Purpose: Fetch the leaf certificate a TLS server presents and print it as
+#          PEM, or save it to <domain>.pem in the current directory.
+# Usage:   cert-get [--download] <domain> [<port>]
+#
+# Options:
+#   -d, --download   Write the PEM to <domain>.pem instead of stdout and print
+#                    the file name.
+#   -h, --help       Show this help.
+#
+# Arguments:
+#   <domain>     Host to connect to; also sent as the SNI server name.
+#   <port>       TCP port (default: 443).
+#
+# Examples:
+#   cert-get example.com
+#   cert-get mail.example.com 993
+#   cert-get --download example.com     # writes example.com.pem
 
-cert-get() {
-  openssl s_client -showcerts -servername "$domain" -connect "$domain":"$port" </dev/null 2>/dev/null | openssl x509 -outform PEM
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+download=false; args=()
+while (( $# )); do
+  case $1 in
+    -h|--help)     usage; exit 0 ;;
+    -d|--download) download=true; shift ;;
+    --)            shift; args+=("$@"); break ;;
+    -?*)           die "unknown option: $1" ;;
+    *)             args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
+(( ${#args[@]} <= 2 )) || die "too many arguments"
+domain=${args[0]}
+port=${args[1]:-443}
+
+fetch() {
+  openssl s_client -showcerts -servername "$domain" -connect "$domain:$port" </dev/null 2>/dev/null \
+    | openssl x509 -outform PEM
 }
 
-case $0 in
-  */cert-download) cert-get > "$domain".pem ;;
-  *) cert-get ;;
-esac
+if $download; then
+  fetch >"$domain.pem" && printf '%s\n' "$domain.pem"
+else
+  fetch
+fi

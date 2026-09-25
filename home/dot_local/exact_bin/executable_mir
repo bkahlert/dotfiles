@@ -1,24 +1,43 @@
 #!/usr/bin/env bash
+# Purpose: Mirror a directory into another with rsync, deleting whatever the
+#          destination has that the source lacks. Both paths must share their
+#          base name, which guards against mirroring into the wrong parent.
+# Usage:   mir [--dry-run] <source-dir> <destination-dir>
+#
+# Options:
+#   -n, --dry-run   Show what would be transferred and deleted, change nothing.
+#   -h, --help      Show this help.
+#
+# Examples:
+#   mir ~/Pictures /Volumes/Backup/Pictures
+#   mir --dry-run ~/Pictures /Volumes/Backup/Pictures
 
-# mirror a directory
+set -euo pipefail
 
-declare src=${1?source missing}
-declare dst=${2?destination missing}
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
-# remove trailing slash
-src="${1%/}"
-dst="${2%/}"
+dry_run=false
+args=()
+while (( $# )); do
+  case $1 in
+    -h|--help)    usage; exit 0 ;;
+    -n|--dry-run) dry_run=true; shift ;;
+    --)           shift; args+=("$@"); break ;;
+    -?*)          die "unknown option: $1" ;;
+    *)            args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
+(( ${#args[@]} == 2 )) || die "expected <source-dir> and <destination-dir>"
+src=${args[0]%/}
+dst=${args[1]%/}
 
-[ -d "$src" ] || { printf "\e[31mERROR: The provided source \e[3m%s\e[23m is no directory.\e[0m\n" "$dst" >&2 && exit 1; }
-[ ! -f "$dst" ] || { printf "\e[31mERROR: The provided destination \e[3m%s\e[23m is an existing file.\e[0m\n" "$dst" >&2 && exit 1; }
+[[ -d $src ]] || die "source is not a directory: $src"
+[[ ! -f $dst ]] || die "destination is an existing file: $dst"
+[[ ${src##*/} == "${dst##*/}" ]] || die "base names differ: ${src##*/} vs ${dst##*/}"
 
-declare src_basename dst_basename
-src_basename="$(basename "$src")"
-dst_basename="$(basename "$dst")"
-[ "$src_basename" = "$dst_basename" ] || { printf "\e[31mERROR: The base names of the provided source \e[3m%s\e[23m and destination \e[3m%s\e[23m don't match.\e[0m\n" "$src_basename" "$dst_basename" >&2 && exit 1; }
+rsync_args=(-av --progress --delete --no-perms --no-owner --no-group)
+$dry_run && rsync_args+=(--dry-run)
 
-rsync -av \
-  --progress \
-  --delete \
-  --no-perms --no-owner --no-group \
-  "$src"/ "$dst"/
+rsync "${rsync_args[@]}" "$src/" "$dst/"

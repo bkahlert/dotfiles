@@ -1,65 +1,87 @@
 #!/usr/bin/env bash
-# Purpose: Enable "Format on Save" and "Optimize Imports on Save" in every
-#          IntelliJ workspace.xml found recursively from the current directory.
-#          Backs up each modified file with a timestamp suffix.
-# Usage:   cd <project-root> && intellij-workspace-fix
+# Purpose: Enable "Reformat code" and "Optimize imports" on save in every
+#          IntelliJ workspace.xml below the current directory. Each changed
+#          file is backed up next to it with a timestamp suffix.
+# Usage:   intellij-workspace-fix [--dry-run]
 #
-# Requires xmlstarlet (auto-installed via Homebrew if missing).
+# Skips .git, build, cache and node_modules directories. Requires xmlstarlet
+# (brew install xmlstarlet).
+#
+# Options:
+#   -n, --dry-run   Report which files would change, write nothing.
+#   -h, --help      Show this help.
+#
+# Examples:
+#   cd ~/Development/foo && intellij-workspace-fix --dry-run
 
-fixSaveOptions() {
-  local xml=${1?XML missing}
-  xml="$(fixOnSaveOption 'OptimizeOnSaveOptions' "$xml")"
-  xml="$(fixOnSaveOption 'FormatOnSaveOptions' "$xml")"
-  echo "$xml"
-}
+set -uo pipefail
 
-fixOnSaveOption() {
-  local name=${1?option name missing} xml=${2?XML missing}
-  match=$(echo "$xml" | xmlstarlet sel -t -v '/project/component[@name="'$name'"]')
-  if [ "$match" = "" ]; then
-    # create new component
-    xml=$(    echo "$xml" \
-        | xmlstarlet ed --subnode '/project' --type elem -n 'component' \
-        | xmlstarlet ed --insert '/project/component[position()=last()]' --type attr -n 'name' -v ''$name''
-        )
-  else
-    # deletes options of existing component
-    xml=$(    echo "$xml" \
-        | xmlstarlet ed --delete '/project/component[@name="'$name'"]/option'
-        )
-  fi
-  echo "$xml" \
-    | xmlstarlet ed --subnode '/project/component[@name="'$name'"]' --type elem -n 'option' \
-    | xmlstarlet ed --insert '/project/component[@name="'$name'"]/option[position()=last()]' --type attr -n 'name' -v 'myRunOnSave' \
-    | xmlstarlet ed --insert '/project/component[@name="'$name'"]/option[position()=last()]' --type attr -n 'value' -v 'true'
-}
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
-command -v xmlstarlet >/dev/null || brew install xmlstarlet
-
-declare timestamp backup dry_run
-timestamp=$(date +%s)
-
-declare -a excluded_directories=('.git' 'build' 'cache' 'node_modules') find_args
-for excluded_directory in "${excluded_directories[@]}"; do
-    find_args=("${find_args[@]}" -type d -path '*/'"$excluded_directory" -prune -o -not -name "$excluded_directory")
+dry_run=false
+while (( $# )); do
+  case $1 in
+    -h|--help)    usage; exit 0 ;;
+    -n|--dry-run) dry_run=true; shift ;;
+    *)            die "unknown argument: $1" ;;
+  esac
 done
 
-while IFS= read -r -d '' file; do
-  backup="${file%.*}.$timestamp.${file##*.}"
-  xml=$(<"$file")
-  fixed=$(fixSaveOptions "$xml" | sed 's, \{0\,\}/>$, />,g')
+command -v xmlstarlet >/dev/null || {
+  printf '%s: xmlstarlet not found (brew install xmlstarlet)\n' "${0##*/}" >&2
+  exit 1
+}
 
-  diff=$(diff --unified=3 <(printf %s "$xml") <(printf %s "$fixed"))
+if [ -t 1 ]; then
+  c_reset=$(tput sgr0); c_green=$(tput setaf 2); c_blue=$(tput setaf 4); c_gray=$(tput setaf 8)
+else
+  c_reset=''; c_green=''; c_blue=''; c_gray=''
+fi
+info() { printf '%sℹ%s %s\n' "$c_blue" "$c_reset" "$1"; }
+ok()   { printf '%s✔%s %s\n' "$c_green" "$c_reset" "$1"; }
+skip() { printf '%s▪%s %s\n' "$c_gray" "$c_reset" "$1"; }
 
-  if [ "$xml" = "$fixed" ]; then
-    echo "Already fixed $file. Skipping."
+# Prints the XML with <component name="$1"> holding exactly one
+# <option name="myRunOnSave" value="true" />.
+fix_on_save_option() {
+  local name=$1 xml=$2
+  if [[ $(printf '%s' "$xml" | xmlstarlet sel -t -v "count(/project/component[@name='$name'])") == 0 ]]; then
+    xml=$(printf '%s' "$xml" \
+      | xmlstarlet ed --subnode '/project' --type elem -n component \
+      | xmlstarlet ed --insert '/project/component[position()=last()]' --type attr -n name -v "$name")
   else
-    if [ ! "$dry_run" ]; then
-      cp "$file" "$backup"
-      # shellcheck disable=SC2001
-      printf %s "$fixed" >"$file"
-    fi
-
-    echo "Fixed $file (backup: ${backup##*/})"
+    xml=$(printf '%s' "$xml" | xmlstarlet ed --delete "/project/component[@name='$name']/option")
   fi
-done < <(find . "${find_args[@]}" -type f -name 'workspace.xml' -print0)
+  printf '%s' "$xml" \
+    | xmlstarlet ed --subnode "/project/component[@name='$name']" --type elem -n option \
+    | xmlstarlet ed --insert "/project/component[@name='$name']/option[position()=last()]" --type attr -n name -v myRunOnSave \
+    | xmlstarlet ed --insert "/project/component[@name='$name']/option[position()=last()]" --type attr -n value -v true
+}
+
+fix_save_options() {
+  local xml=$1
+  xml=$(fix_on_save_option OptimizeOnSaveOptions "$xml")
+  xml=$(fix_on_save_option FormatOnSaveOptions "$xml")
+  # IntelliJ writes self-closing tags as `<x />`; xmlstarlet as `<x/>`.
+  printf '%s\n' "$xml" | sed -E 's# */>$# />#'
+}
+
+timestamp=$(date +%s)
+while IFS= read -r -d '' file; do
+  xml=$(<"$file")
+  fixed=$(fix_save_options "$xml")
+  if [[ $xml == "$fixed" ]]; then
+    skip "already fixed: $file"
+    continue
+  fi
+  if $dry_run; then
+    info "would fix: $file"
+    continue
+  fi
+  backup="${file%.*}.$timestamp.${file##*.}"
+  cp "$file" "$backup"
+  printf '%s\n' "$fixed" >"$file"
+  ok "fixed: $file (backup: ${backup##*/})"
+done < <(find . \( -type d \( -name .git -o -name build -o -name cache -o -name node_modules \) -prune \) \
+              -o -type f -name workspace.xml -print0)

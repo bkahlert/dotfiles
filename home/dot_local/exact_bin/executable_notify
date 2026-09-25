@@ -1,58 +1,52 @@
 #!/usr/bin/env bash
 # Purpose: Send a macOS notification via osascript's `display notification`.
-# Usage:   notify <message> [--title <title>] [--subtitle <subtitle>] [--sound <sound>]
+# Usage:   notify [--title <title>] [--subtitle <subtitle>] [--sound <sound>] [--] <message>...
 #
-# Sounds are looked up in ~/Library/Sounds and /System/Library/Sounds.
-# Set DEBUG=1 to log invocations to ~/.notify.log.
+# Several <message> words are joined with spaces. Sounds are looked up in
+# ~/Library/Sounds and /System/Library/Sounds. Set DEBUG=1 to log invocations
+# to ~/.notify.log.
+#
+# Options:
+#   --title <title>         Notification title (default: Notification).
+#   --subtitle <subtitle>   Second line under the title.
+#   --sound <sound>         Sound name, e.g. Purr, Glass, Hero.
+#   -h, --help              Show this help.
+#
+# Examples:
+#   notify 'Build finished'
+#   notify 'You have just been notified' --title '🎉 Congratulations' --sound Purr
+
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
 if [ "${DEBUG-}" ]; then
   printf 'Invocation: %b\n' "$*" >>~/.notify.log
 fi
 
-# Joins remaining args with first arg.
-join_by() {
-  local d=${1-} f=${2-}
-  if shift 2; then
-    printf %s "$f" "${@/#/$d}"
-  fi
-}
-
-if [ $# -eq 0 ]; then
-  printf "\e[1mUsage:\e[0m %s \e[3mmessage\e[23m [--title \e[3mtitle\e[23m] [--subtitle \e[3msub-title\e[23m] [--sound \e[3msound\e[23m]\n" "${0##*/}" >&2
-  printf "\e[1mExample:\e[0m %s \e[3m'%s'\e[23m --title \e[3m'%s'\e[23m --sound \e[3m%s\e[23m\n" "${0##*/}" "You have just been notified" "🎉 Congratulations" purr >&2
-  exit 1
-fi
-
-declare -a args
-declare title subtitle sound
-while (($#)); do
+title=Notification
+subtitle=''
+sound=''
+args=()
+while (( $# )); do
   case $1 in
-  --title)
-    shift
-    [ $# -gt 0 ] || { printf "\e[31m\e[3m%s\e[23m set but the required argument is missing.\e[0m\n" --title >&2 && exit 1; }
-    title=$1 && shift
-    ;;
-  --subtitle)
-    shift
-    [ $# -gt 0 ] || { printf "\e[31m\e[3m%s\e[23m set but the required argument is missing.\e[0m\n" --subtitle >&2 && exit 1; }
-    subtitle=$1 && shift
-    ;;
-  --sound)
-    # ~/Library/Sounds, /System/Library/Sounds
-    shift
-    [ $# -gt 0 ] || { printf "\e[31m\e[3m%s\e[23m set but the required argument is missing.\e[0m\n" --sound >&2 && exit 1; }
-    sound=$1 && shift
-    ;;
-  *)
-    args+=("$1") && shift
-    ;;
+    -h|--help)    usage; exit 0 ;;
+    --title)      title=${2?--title: missing value}; shift 2 ;;
+    --title=*)    title=${1#*=}; shift ;;
+    --subtitle)   subtitle=${2?--subtitle: missing value}; shift 2 ;;
+    --subtitle=*) subtitle=${1#*=}; shift ;;
+    --sound)      sound=${2?--sound: missing value}; shift 2 ;;
+    --sound=*)    sound=${1#*=}; shift ;;
+    --)           shift; args+=("$@"); break ;;
+    -?*)          die "unknown option: $1" ;;
+    *)            args+=("$1"); shift ;;
   esac
 done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
+message=${args[*]}
 
-notification=$(join_by ' ' "${args[@]}")
-
-# AppleScript sucks
-osascript - "$notification" "${title:-Notification}" "$subtitle" "$sound" <<EOF
+osascript - "$message" "$title" "$subtitle" "$sound" <<'APPLESCRIPT'
   on run {theNotification, theTitle, theSubtitle, theSound}
     if theSound is "" then
       display notification theNotification with title theTitle subtitle theSubtitle
@@ -60,4 +54,4 @@ osascript - "$notification" "${title:-Notification}" "$subtitle" "$sound" <<EOF
       display notification theNotification with title theTitle subtitle theSubtitle sound name theSound
     end if
   end run
-EOF
+APPLESCRIPT

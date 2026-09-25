@@ -1,5 +1,28 @@
 #!/usr/bin/env bash
 # Purpose: Recursively delete .DS_Store files.
-# Usage:   dscleanup [<path>...]   (defaults to .)
+# Usage:   dscleanup [<path>...]
+#
+# Arguments:
+#   <path>       Directories to clean (default: the current one).
+#
+# Examples:
+#   dscleanup
+#   dscleanup ~/Downloads /Volumes/USB
 
-find "${@:-.}" -type f -name .DS_Store -delete
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+args=()
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; args+=("$@"); break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} )) || args=(.)
+
+find "${args[@]}" -type f -name .DS_Store -delete

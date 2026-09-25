@@ -1,2 +1,29 @@
-#!/bin/bash
-tar -cz "$@" | base64 | pbcopy
+#!/usr/bin/env bash
+# Purpose: Copy files or directories to the clipboard as a base64-encoded
+#          gzipped tar archive, to be unpacked elsewhere with pbpaste-dir.
+# Usage:   pbcopy-dir <path>...
+#
+# Examples:
+#   pbcopy-dir src/ README.md          # here …
+#   pbpaste-dir ~/tmp                  # … and on the other machine
+
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+args=()
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; args+=("$@"); break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
+for path in "${args[@]}"; do
+  [[ -e $path ]] || die "no such file or directory: $path"
+done
+
+tar -cz -- "${args[@]}" | base64 | pbcopy

@@ -1,3 +1,23 @@
 #!/usr/bin/env bash
+# Purpose: Flush the macOS DNS cache.
+# Usage:   flushdns
+#
+# Needs sudo: mDNSResponder runs as root, so an unprivileged HUP is refused
+# with "No matching processes belonging to you were found".
 
-killall -HUP mDNSResponder
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    *)         die "unknown argument: $1" ;;
+  esac
+done
+
+[[ $(uname) == Darwin ]] || { printf '%s: macOS only\n' "${0##*/}" >&2; exit 1; }
+
+sudo dscacheutil -flushcache
+sudo killall -HUP mDNSResponder

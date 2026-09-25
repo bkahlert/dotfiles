@@ -1,2 +1,31 @@
-#!/bin/bash
-pbpaste | base64 -d | tar zxvf - 2>/dev/null
+#!/usr/bin/env bash
+# Purpose: Unpack an archive put on the clipboard by pbcopy-dir into a
+#          directory. Existing files are overwritten.
+# Usage:   pbpaste-dir [<dir>]
+#
+# Arguments:
+#   <dir>        Target directory, created if missing (default: the current one).
+#
+# Examples:
+#   pbcopy-dir src/ README.md          # on the other machine …
+#   pbpaste-dir ~/tmp                  # … and here
+
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+args=()
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; args+=("$@"); break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} <= 1 )) || die "too many arguments"
+dir=${args[0]:-.}
+
+mkdir -p "$dir"
+pbpaste | base64 -d | tar -xzv -C "$dir"

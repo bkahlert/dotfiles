@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Purpose: Recursive full-text search with 5 lines of context, skipping VCS
 #          directories, devices and binary files.
-# Usage:   ft [<grep-option>...] <pattern> [<path>...]
+# Usage:   grepr [<grep-option>...] <pattern> [<path>...]
 #
 # Options pass straight through, so a pattern starting with a dash needs an
 # explicit -e. -I skips binary files, which ugrep already does by default but
