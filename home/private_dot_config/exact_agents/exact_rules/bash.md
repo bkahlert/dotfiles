@@ -59,7 +59,7 @@ Avoid adding dependencies and avoid shell expansion pitfalls (e.g. use `printf` 
 set -euo pipefail
 
 usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
-die()   { printf '%s: %s\nTry %s --help\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
 verbose=false; code=1; args=()
 while (( $# )); do

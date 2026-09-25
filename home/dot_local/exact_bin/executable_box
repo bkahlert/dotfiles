@@ -18,7 +18,7 @@
 set -euo pipefail
 
 usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
-die()   { printf '%s: %s\nTry %s --help\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
 here=false
 image=${BOX_IMAGE:-alpine}
