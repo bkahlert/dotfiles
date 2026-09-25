@@ -31,8 +31,8 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     fixture = await startFixture();
   });
 
-  after(() => {
-    chromium.kill();
+  after(async () => {
+    await chromium.kill();
     fixture.server.close();
   });
 
@@ -91,7 +91,12 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     const port = fs.readFileSync(portFile, 'utf8').split('\n')[0];
     return {
       portFile,
-      kill: () => proc.kill(),
+      // Remove the throwaway profile only after Chromium exited; it writes to
+      // the profile while shutting down and would recreate parts of it.
+      kill: () => new Promise(resolve => {
+        proc.once('exit', () => { fs.rmSync(dir, { recursive: true, force: true }); resolve(); });
+        proc.kill();
+      }),
       pages: async () => (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).filter(t => t.type === 'page'),
     };
   }
