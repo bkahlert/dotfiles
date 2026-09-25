@@ -41,11 +41,23 @@ Avoid adding dependencies and avoid shell expansion pitfalls (e.g. use `printf` 
 - parse with a `while`/`case` loop. Not `getopts` (short options only), not GNU `getopt` (macOS ships the BSD one without long options), not an
   argument-parsing library (a dependency for a dotfile script)
 - `-h`/`--help` prints the file header. The comment block right after the shebang is the single source of truth for usage, so keep it complete
-  and end it with a blank line
+  and end it with a blank line. It starts with `Purpose:` and `Usage:` lines, then an `Options:` section with one indented entry per option
+  (`Arguments:` and `Examples:` sections where they help)
 - unknown options exit with code 2, one line and a hint to `--help`. Do not dump the whole header on every typo
 - accept both `--name value` and `--name=value`
 
 ```bash
+#!/usr/bin/env bash
+# Purpose: Frobnicate files.
+# Usage:   frob [--verbose] [--code <n>] [--] <file>...
+#
+# Options:
+#   --verbose    Print every step.
+#   --code <n>   Exit code on failure (default: 1).
+#   -h, --help   Show this help.
+
+set -euo pipefail
+
 usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
 die()   { printf '%s: %s\nTry %s --help\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 

@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Purpose: Reclaim disk space by clearing caches, logs, and stale build artifacts on macOS.
-# Usage:   cleanup           # dry-run: shows what would be deleted (default, safe)
-#          cleanup --apply   # actually perform the deletions
-#          cleanup --yes     # auto-accept risky prompts (still needs --apply to delete)
+# Usage:   cleanup [--apply] [--yes]
+#
+# Options:
+#   --apply      Perform the deletions. Without it, only show what would be deleted.
+#   -y, --yes    Auto-accept risky prompts (still needs --apply to delete).
+#   -h, --help   Show this help.
 
 set -uo pipefail
 

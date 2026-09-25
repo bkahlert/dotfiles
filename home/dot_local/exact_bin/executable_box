@@ -2,9 +2,11 @@
 # Purpose: Run a command (or interactive shell) in a throwaway container.
 # Usage:   box [--here] [--image <image>[:<tag>]] [--] [<command>...]
 #
-# --here          Mount the current working directory at the same path inside
-#                 the container and set it as the container's cwd.
-# --image <ref>   Container image to use (default: $BOX_IMAGE or alpine).
+# Options:
+#   --here          Mount the current working directory at the same path inside
+#                   the container and set it as the container's cwd.
+#   --image <ref>   Container image to use (default: $BOX_IMAGE or alpine).
+#   -h, --help      Show this help.
 #
 # Examples:
 #   box                              # interactive sh in alpine:latest
