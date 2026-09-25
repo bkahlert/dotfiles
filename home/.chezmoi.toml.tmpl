@@ -11,4 +11,10 @@ sourceDir = "{{ .chezmoi.homeDir }}/Development/com.bkahlert/dotfiles/home"
 
 [onepassword]
     prompt = false # skip `op signin` before each read; the app integration authorizes per terminal anyway, so this halves the op processes (and prompts) per apply
+{{- else if $company }}
+
+[keepassxc]
+    # Personal secrets come from the iCloud-synced vault. chezmoi asks for the
+    # master password once per run, and only when a template reads from it.
+    database = "{{ .chezmoi.homeDir }}/Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx"
 {{- end }}

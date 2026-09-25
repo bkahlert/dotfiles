@@ -58,15 +58,14 @@ A template is justified when the value must be baked in at apply time and the ta
 
 ## Secrets
 
-Secrets are fetched from 1Password at apply time using `onepasswordRead` in `.tmpl` files:
+Secrets are baked in at apply time by `.tmpl` files. The template is the record of where a secret lives; there is no separate registry. The backend follows the context:
 
-```
-{{ onepasswordRead "op://vault/item/field" }}
-```
+- `ista`: 1Password — `{{ onepasswordRead "op://Employee/<item>/credential" }}`
+- otherwise: KeePassXC — `{{ (keepassxc "<item>").Password }}`, database set in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl). chezmoi asks for the master password once per run, and only when a template reads from it.
 
-**Never commit plain-text secrets.** Required 1Password items (business only):
-- `op://Employee/GitLab Token/credential`
-- `op://Employee/GitLab NPM Token/credential`
+An item needed in both contexts keeps the same title in both vaults, so one template can branch on `.company`. A secret file that makes no sense in a context is dropped via [.chezmoiignore](home/.chezmoiignore), not rendered empty. Secrets a shell needs land as files under `~/.local/share/secrets/` ([dot_local/share/private_secrets](home/dot_local/share/private_secrets)) and are exported by a `conf.d` module; `chezmoi apply` is the rotation step.
+
+**Never commit plain-text secrets.** Inventory: `grep -rn 'op://\|keepassxc "' home/`.
 
 ## Zsh Architecture
 
@@ -121,8 +120,8 @@ See [quick-access/README.md](quick-access/README.md) — it decides which of the
 ```
 
 **Add a secret:**
-1. Store in 1Password
-2. Reference with `{{ onepasswordRead "op://vault/item/field" }}` in a `.tmpl` file
+1. Store it in the vault of the context that needs it (1Password `Employee` on ista, KeePassXC otherwise); same title in both if both need it.
+2. Reference it from a `.tmpl` file as shown under [Secrets](#secrets). If a shell needs it, add a file under `dot_local/share/private_secrets/` and export it from a `conf.d` module.
 
 **Add a brew package:**
 Edit [run_once_before_01-install-packages.sh](home/.chezmoiscripts/run_once_before_01-install-packages.sh) and add to the Brewfile.
