@@ -141,7 +141,7 @@ if $apply; then
   fi
 fi
 
-old_avail=$(df / | tail -1 | awk '{print $4}')
+old_avail=$(df -k / | tail -1 | awk '{print $4}')
 
 # ---------- safe: paths ----------
 # ~/.Trash is TCC-protected: without Full Disk Access the shell sees an empty
@@ -459,11 +459,11 @@ else
   fi
 fi
 
-new_avail=$(df / | tail -1 | awk '{print $4}')
-delta_kb=$((old_avail - new_avail))
+new_avail=$(df -k / | tail -1 | awk '{print $4}')
+freed_kb=$((new_avail - old_avail))
 if $apply; then
-  freed=$((delta_kb < 0 ? 0 : delta_kb * 1024))
-  printf '\n%s✔ Reclaimed: %s%s\n' "$c_green" "$(bytes_to_human "$freed")" "$c_reset"
+  freed=$((freed_kb < 0 ? 0 : freed_kb * 1024))
+  printf '\n%s✔ Reclaimed: %s%s (APFS frees space lazily; the number may lag)\n' "$c_green" "$(bytes_to_human "$freed")" "$c_reset"
 else
   printf '\n%s↗ Would reclaim: ~%s without asking, plus ~%s behind confirmations (estimated)%s\n' \
     "$c_blue" "$(bytes_to_human "$reclaimable")" "$(bytes_to_human "$reclaimable_risky")" "$c_reset"
