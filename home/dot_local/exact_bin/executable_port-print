@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Purpose: Show what is bound to TCP ports: every listener when called without
+#          arguments, listeners and connections alike for the given ports.
+# Usage:   port-print [<port>...]
+#
+# Without sudo only your own processes show. Exits 1 if nothing is bound to
+# any of the given ports.
+#
+# Listing everything uses lsof on macOS and ss (fallback netstat, TCP and UDP)
+# on Linux; single ports always go through lsof.
+#
+# Examples:
+#   port-print                # every listener
+#   port-print 3000
+#   COMMAND   PID           USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
+#   node    25583 bjoern.kahlert   23u  IPv6  0x…        0t0  TCP *:3000 (LISTEN)
+#   port-print 3000 8080      # both ports in one table
+
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+ports=()
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; ports+=("$@"); break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         ports+=("$1"); shift ;;
+  esac
+done
+
+if (( ${#ports[@]} == 0 )); then
+  case $OSTYPE in
+    darwin*) exec lsof -nP -iTCP -sTCP:LISTEN ;;
+    linux*)
+      if command -v ss >/dev/null; then exec ss -tulnp; fi
+      exec netstat -tulpn
+      ;;
+    *) printf '%s: unsupported OS: %s\n' "${0##*/}" "$OSTYPE" >&2; exit 1 ;;
+  esac
+fi
+
+filters=()
+for port in "${ports[@]}"; do
+  [[ $port =~ ^[0-9]+$ ]] || die "not a port number: $port"
+  filters+=(-iTCP:"$port")
+done
+
+# lsof exits 1 as soon as one of several ports is unused, so judge by output.
+out=$(lsof -nP "${filters[@]}") || true
+[[ -n $out ]] || {
+  printf '%s: nothing bound to port %s\n' "${0##*/}" "${ports[*]}" >&2
+  exit 1
+}
+printf '%s\n' "$out"

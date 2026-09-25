@@ -66,14 +66,13 @@ decisions are made and fixes land, so a later session can pick up here.
 | `pbcopy-dir` | tar+gzip+base64 a directory into the clipboard | write:clipboard | yes | read | 0 | Pair with `pbpaste-dir`. | fix: template, path check | fixed |
 | `pbpaste-dir` | Extract clipboard into cwd | write:cwd (overwrites files), errors hidden by `2>/dev/null` | no (re-extract overwrites) | read | 0 | Silently swallows errors. | fix: template, errors visible, optional <dir> | fixed |
 | `pick-port` | First bindable port: 80, 8080, else random | read (transient bind) | n/a | run ✔ | 0 | Dependency of `serve`, `serve-live`. | fix: template | fixed |
-| `ports-print` | List listening TCP sockets via netstat | read | n/a | run ✘ (see note) | 0 | Confirmed: under Homebrew bash 5.3 (`/usr/bin/env bash`) `netstat -anvp tcp` prints nothing, sandbox or not; `/bin/bash` and zsh are fine. Replaced by `lsof`. Overlaps with `whats-in-port` and the `_killport` completion, which use `lsof`. | fix: lsof on macOS, ss/netstat on Linux, template | fixed |
 | `secret-read` | Read a secret from 1Password (ista) or KeePassXC | read, may prompt | n/a | run ✔ | 0 | Called at shell startup by `10-context7.zsh` and `exact_ista/10-gitlab.zsh`. | fix: template | fixed |
 | `serve` | `npx http-server` on `pick-port` | net, write:npx cache | yes | read | 0 | Added 2026-09-19. | keep | keep |
 | `serve-live` | `npx live-server` on `pick-port` | net, write:npx cache | yes | read | 0 | Added 2026-09-19. | keep | keep |
 | `share-example` (+ `unshare-example` symlink) | Route domains through another host's Zscaler tunnel | write:routes, sudo, net; needs `nmap` | yes | read | 0 | Needs `nmap` (not installed), a `192.168.206.x` LAN and a Zscaler host. Upstream script still exists. Same fate as `kill-zscaler`. | drop | dropped |
 | `start-zscaler` | Start Zscaler app and load its daemons | write:launchctl, sudo | yes | read | 0 | Zscaler not installed. | drop | dropped |
 | `upgrade-all` | brew, podman machine, mas, npm, gems, gh extensions | write:packages | yes | read (fixed in #50, #51 this week) | 2 | Actively maintained. `softwareupdate -l` always runs and is slow. | fix: template | fixed |
-| `whats-in-port` | `lsof` listeners on one port | read | n/a | run ✔ | 0 | Fine. Natural home for `ports-print`'s "list all" case. | fix: bash, template, exit 1 message | fixed |
+| `port-print` (was `ports-print` + `whats-in-port`) | No argument: every TCP listener; with ports: everything bound to them | read | n/a | run ✔ | 0 | Merged 2026-09-25. macOS/ports use `lsof`, Linux listing uses `ss`/`netstat`. Judges by output because `lsof` exits 1 when any one of several ports is unused. | merge | fixed |
 
 ## Decisions (2026-09-25)
 
@@ -83,8 +82,9 @@ Taken one by one in the first session:
   `docker-latest` / `docker-ip`; the four Zscaler entries; `iterm-integration`
   (the only other iTerm trace in the repo is a "not working yet" comment over
   generic tmux options in `dot_tmux.conf`).
-- Kept and fixed: `intellij-workspace-fix`, `pbcopy-dir` / `pbpaste-dir`,
-  `ports-print` (stays separate from `whats-in-port`).
+- Kept and fixed: `intellij-workspace-fix`, `pbcopy-dir` / `pbpaste-dir`.
+- `ports-print` and `whats-in-port` merged into `port-print [<port>...]`
+  (decision 2026-09-25, reversing the earlier "keep separate").
 - Every keeper that takes arguments now follows the header/help/argument
   template from `rules/bash.md` (PR #52): `-h`/`--help` prints the file
   header, unknown options exit 2 with a hint, a script that needs arguments
@@ -125,6 +125,5 @@ Taken one by one in the first session:
    the source file is enough; `exact_bin` removes the target on apply.
 2. Apply the three trivial fixes (`flushdns`, `mir`, `explain`).
 3. Fix `docker-latest` if `docker-ip` is kept; otherwise drop both.
-4. Merge `ports-print` into `whats-in-port` (no argument = list every listener).
-5. Update [quick-access/README.md](../quick-access/README.md) if any
+4. Update [quick-access/README.md](../quick-access/README.md) if any
    location or convention changes.
