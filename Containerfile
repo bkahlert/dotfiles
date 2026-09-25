@@ -6,9 +6,10 @@ RUN dnf install -y \
       tigervnc-server fluxbox xterm \
     && dnf clean all
 
-# Install Ghostty via COPR
+# Install Ghostty via the COPR the Ghostty docs recommend (https://ghostty.org/docs/install/binary#fedora);
+# the previously used pgdev/ghostty project was deleted upstream.
 RUN dnf install -y 'dnf-command(copr)' \
-    && dnf copr enable -y pgdev/ghostty \
+    && dnf copr enable -y scottames/ghostty \
     && dnf install -y ghostty \
     && dnf clean all
 
@@ -34,6 +35,11 @@ RUN mkdir -p /root/.vnc \
 RUN chsh -s /bin/zsh root
 
 EXPOSE 5901
+
+# One-shot image: `make validate` applies the dotfiles and exits, and the VNC mode
+# is a manual inspection aid, so there is no service contract to probe. Podman warns
+# that the OCI image format drops the directive; that is expected.
+HEALTHCHECK NONE
 
 # Entrypoint: apply dotfiles and start shell
 COPY entrypoint.sh /entrypoint.sh
