@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Purpose: GNU timeout for macOS, which ships none. Forwards everything to gtimeout from Homebrew coreutils.
+# Usage:   timeout [<gnu-timeout-args>...]
+#
+# Examples:
+#   timeout 30 npm test
+#   timeout -k 5 60 ./serve      # SIGTERM after 60s, SIGKILL 5s later
+#   timeout --help               # gtimeout's help, not this header
+#
+# Not applied on Linux (.chezmoiignore): the system timeout is the real one there.
+
+set -euo pipefail
+
+if real=$(command -v gtimeout); then
+  exec "$real" "$@"
+fi
+
+printf 'timeout: gtimeout not found; install it with: brew install coreutils\n' >&2
+exit 127
