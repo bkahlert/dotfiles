@@ -144,8 +144,30 @@ fi
 old_avail=$(df / | tail -1 | awk '{print $4}')
 
 # ---------- safe: paths ----------
-step 'Trash (all volumes + ~/.Trash)'
-clean 'Trash' false true /Volumes/*/.Trashes/* "$HOME/.Trash"/*
+# ~/.Trash is TCC-protected: without Full Disk Access the shell sees an empty
+# directory. Finder sees the real thing and empties the trash of every volume.
+step 'Trash (all volumes, via Finder)'
+trash_count=$(osascript -e 'tell application "Finder" to count items of trash' 2>/dev/null || printf 0)
+if (( trash_count == 0 )); then
+  skip 'Trash: empty'
+else
+  trash_bytes=$(size_of "$HOME/.Trash")
+  if (( trash_bytes )); then
+    info "Trash: $trash_count item(s), $(bytes_to_human "$trash_bytes")"
+    $apply || reclaimable=$((reclaimable + trash_bytes))
+  else
+    info "Trash: $trash_count item(s), size unknown without Full Disk Access"
+  fi
+  empty_trash() {
+    osascript -e 'tell application "Finder"
+      set warned to warns before emptying of trash
+      set warns before emptying of trash to false
+      empty trash
+      set warns before emptying of trash to warned
+    end tell'
+  }
+  run 'Trash emptied' empty_trash
+fi
 
 step 'System & diagnostic logs'
 clean 'Logs' false true \
