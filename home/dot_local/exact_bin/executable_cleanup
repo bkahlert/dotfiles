@@ -368,24 +368,24 @@ clean 'Kotlin/Native toolchains' true false "${konan_old[@]}"
 step 'Playwright browsers (reinstall with: npx playwright install)'
 clean 'Playwright browsers' true false "$HOME/Library/Caches/ms-playwright"/*
 
-# JetBrains IDEs keep caches, configs and logs per <Product><year>.<n>. A folder
-# is stale when no installed JetBrains app has that year.n version.
+# JetBrains IDEs keep caches, configs and logs per data directory such as
+# IntelliJIdea2026.2 or IdeaIC2025.2. Each installed app names its own in
+# product-info.json; a versioned folder no installed app claims is stale.
 step 'JetBrains caches, configs and logs of uninstalled IDE versions'
-jetbrains_versions=''
+jetbrains_installed=''
 for app in /Applications/*.app "$HOME"/Applications/*.app; do
-  plist=$app/Contents/Info.plist
-  [[ -f $plist ]] || continue
-  [[ $(plutil -extract CFBundleIdentifier raw -o - "$plist" 2>/dev/null) == com.jetbrains.* ]] || continue
-  v=$(plutil -extract CFBundleShortVersionString raw -o - "$plist" 2>/dev/null)
-  [[ $v =~ ^([0-9]{4}\.[0-9]+) ]] && jetbrains_versions+=" ${BASH_REMATCH[1]}"
+  product_info=$app/Contents/Resources/product-info.json
+  [[ -f $product_info ]] || continue
+  name=$(plutil -extract dataDirectoryName raw -o - "$product_info" 2>/dev/null)
+  [[ -n $name ]] && jetbrains_installed+=" $name"
 done
 jetbrains_stale=()
-if [[ -n $jetbrains_versions ]]; then
+if [[ -n $jetbrains_installed ]]; then
   for d in "$HOME/Library/Caches/JetBrains"/* "$HOME/Library/Application Support/JetBrains"/* "$HOME/Library/Logs/JetBrains"/*; do
-    [[ -d $d && ${d##*/} =~ ([0-9]{4}\.[0-9]+)$ ]] || continue
-    [[ "$jetbrains_versions " == *" ${BASH_REMATCH[1]} "* ]] || jetbrains_stale+=("$d")
+    [[ -d $d && ${d##*/} =~ [0-9]{4}\.[0-9]+$ ]] || continue
+    [[ "$jetbrains_installed " == *" ${d##*/} "* ]] || jetbrains_stale+=("$d")
   done
-  info "installed:${jetbrains_versions}"
+  info "installed:${jetbrains_installed}"
   clean 'JetBrains stale versions' true false "${jetbrains_stale[@]}"
 else
   skip 'no JetBrains IDE installed; cannot tell which versions are stale'
