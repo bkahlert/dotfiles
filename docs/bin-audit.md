@@ -30,7 +30,7 @@ decisions are made and fixes land, so a later session can pick up here.
 | Script | Purpose | Effect | Idempotent | Verified | Uses | Findings | Recommendation | Status |
 |---|---|---|---|---|---|---|---|---|
 | `ansi-test` | Terminal capability reference card | read | n/a | run ✔ | 1 | Fine. | fix: template | fixed |
-| `apply-macos-defaults` | 93 `defaults write` calls, timezone, Spotlight, restarts Dock/Finder/Mail/SystemUIServer/Terminal | write:system prefs, sudo, kills apps | mostly (restarts every run) | read | 0 | Written for macOS 11.3, header points at a `scripts/capture-defaults-key` that no longer exists; many keys are likely obsolete on macOS 27; `--no-restart` is the only flag. Biggest blast radius in the directory. | review | deferred |
+| `apply-macos-defaults` | 93 `defaults write` calls, timezone, Spotlight, restarts Dock/Finder/Mail/SystemUIServer/Terminal | write:system prefs, sudo, kills apps | mostly (restarts every run) | read | 0 | Written for macOS 11.3, header points at a `scripts/capture-defaults-key` that no longer exists; many keys are likely obsolete on macOS 27; `--no-restart` is the only flag. Biggest blast radius in the directory. | drop | dropped |
 | `box` | Throwaway container shell / one-shot command | write:pulls image, runs container | yes | run ✔ | 0 | Works on podman. Supersedes `docker-command` / `docker-shell`. | keep | keep |
 | `cert-get` (+ `cert-download` symlink) | Print leaf cert as PEM; symlink writes `<domain>.pem` in cwd | read, net (write:cwd as `cert-download`) | yes | run ✔ | 0 | Fine. | fix: template | fixed |
 | `cert-print` | Print decoded certificate | read, net | n/a | run ✔ | 0 | Fine. | fix: template | fixed |
@@ -93,7 +93,9 @@ Taken one by one in the first session:
   pass-through wrappers
   (`docker`, `ft`, `idea`, `idea-wait`, `omlx`, `serve`, `serve-live`) are
   left alone on purpose: their `--help` belongs to the wrapped command.
-- `apply-macos-defaults` is deferred to its own session.
+- `apply-macos-defaults` dropped (decision 2026-09-25): written for macOS 11.3, never
+  re-verified, and the biggest blast radius in the directory. History keeps it
+  if a curated `defaults` set is ever wanted again.
 - Open: nothing in this directory. Next candidates for the same treatment are
   `quick-access/functions` and the inline functions in `conf.d`.
 
@@ -124,6 +126,5 @@ Taken one by one in the first session:
 2. Apply the three trivial fixes (`flushdns`, `mir`, `explain`).
 3. Fix `docker-latest` if `docker-ip` is kept; otherwise drop both.
 4. Merge `ports-print` into `whats-in-port` (no argument = list every listener).
-5. Schedule a separate session for `apply-macos-defaults`.
-6. Update [quick-access/README.md](../quick-access/README.md) if any
+5. Update [quick-access/README.md](../quick-access/README.md) if any
    location or convention changes.
