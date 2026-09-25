@@ -8,8 +8,8 @@
 // Exit:    0 callback reached · 1 usage or connection error
 //          2 timed out (stderr names state, url, title) · 3 password page, no password
 //
-// Pages and selectors were recorded in
-// docs/superpowers/plans/2026-09-22-gcloud-login-findings.md.
+// Pages and selectors were recorded in the dotfiles repo's history:
+//   git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md
 
 const fs = require('node:fs');
 const { parseArgs } = require('node:util');

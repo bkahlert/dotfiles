@@ -5,7 +5,7 @@ description: Use when `gcloud-login` or `op-agent` fails, hangs, or needs a chan
 
 # gcloud-login automation
 
-`gcloud-login` (`~/.local/bin`; source `home/dot_local/exact_bin/executable_gcloud-login` in the dotfiles repo) logs the gcloud CLI or ADC into an ista Google account without manual steps, except the admin security key. The recorded page sequences and every constraint discovered live in `docs/superpowers/plans/2026-09-22-gcloud-login-findings.md` in the dotfiles repo; read it before changing anything.
+`gcloud-login` (`~/.local/bin`; source `home/dot_local/exact_bin/executable_gcloud-login` in the dotfiles repo) logs the gcloud CLI or ADC into an ista Google account without manual steps, except the admin security key. The recorded page sequences and every constraint discovered live in the dotfiles repo's history (`git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md`); read it before changing anything.
 
 ## Flow
 
