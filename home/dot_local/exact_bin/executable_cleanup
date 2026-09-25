@@ -1,16 +1,23 @@
 #!/usr/bin/env bash
 # Purpose: Reclaim disk space by clearing caches, logs, and stale build artifacts on macOS.
-# Usage:   cleanup [--apply] [--yes]
+# Usage:   cleanup [--apply] [--yes] [--sim-unused <days>]
 #
 # Options:
-#   --apply      Perform the deletions. Without it, only show what would be deleted.
-#   -y, --yes    Auto-accept risky prompts (still needs --apply to delete).
-#   -h, --help   Show this help.
+#   --apply               Perform the deletions. Without it, only report what would be deleted.
+#   -y, --yes             Auto-accept risky prompts (still needs --apply to delete).
+#   --sim-unused <days>   Delete iOS simulators and runtimes not booted for <days> days (default: 30).
+#                         0 deletes every simulator that was booted at least once.
+#   -h, --help            Show this help.
+#
+# Safe items (caches, logs, leftovers) are removed without asking. Risky items
+# (backups, archives, whole dependency caches, simulators, IDE configs) are listed
+# and confirmed one by one. The dry run never prompts; it reports both totals.
 #
 # Examples:
 #   cleanup                            # report only
-#   cleanup --apply                    # delete, ask before the risky items
+#   cleanup --apply                    # delete safe items, ask before the risky ones
 #   cleanup --apply --yes              # delete everything without asking
+#   cleanup --apply --sim-unused 7     # also drop simulators idle for a week
 
 set -uo pipefail
 
@@ -21,14 +28,19 @@ die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&
 
 apply=false
 assume_yes=false
+sim_unused=30
 while (( $# )); do
   case $1 in
-    -h|--help) usage; exit 0 ;;
-    --apply)   apply=true; shift ;;
-    -y|--yes)  assume_yes=true; shift ;;
-    *)         die "unexpected argument: $1" ;;
+    -h|--help)      usage; exit 0 ;;
+    --apply)        apply=true; shift ;;
+    -y|--yes)       assume_yes=true; shift ;;
+    --sim-unused)   sim_unused=${2?--sim-unused: missing value}; shift 2 ;;
+    --sim-unused=*) sim_unused=${1#*=}; shift ;;
+    -?*)            die "unknown option: $1" ;;
+    *)              die "unexpected argument: $1" ;;
   esac
 done
+[[ $sim_unused =~ ^[0-9]+$ ]] || die "--sim-unused: expected a number of days, got '$sim_unused'"
 
 if [ -t 1 ]; then
   c_bold=$(tput bold); c_reset=$(tput sgr0); c_yellow=$(tput setaf 3)
@@ -40,13 +52,14 @@ fi
 step() { printf '\n%s⚙ %s%s\n' "$c_yellow" "$1" "$c_reset"; }
 info() { printf '%sℹ%s %s\n' "$c_blue" "$c_reset" "$1"; }
 ok()   { printf '%s✔%s %s\n' "$c_green" "$c_reset" "$1"; }
-warn() { printf '%s!%s %s\n' "$c_yellow" "$c_reset" "$1"; }
+warn() { printf '%s%s!%s %s\n' "$c_bold" "$c_yellow" "$c_reset" "$1"; }
 skip() { printf '%s▪%s %s\n' "$c_gray" "$c_reset" "$1"; }
+item() { printf '  %s%s%s\n' "$c_gray" "$1" "$c_reset"; }
 
 bytes_to_human() {
   local b=${1:-0} d='' s=0
   local S=(B KiB MiB GiB TiB PiB EiB ZiB YiB)
-  while ((b > 1024)); do
+  while ((b >= 1024)); do
     d=$(printf ".%02d" $((b % 1024 * 100 / 1024)))
     b=$((b / 1024)); ((s++))
   done
@@ -63,40 +76,53 @@ size_of() {
   printf '%s' "$total"
 }
 
+# Dry-run totals: what goes without asking, and what waits behind a prompt.
 reclaimable=0
+reclaimable_risky=0
 
-confirm_delete() {
-  local label=$1
-  $assume_yes && { info "auto-yes: $label"; return 0; }
-  local prompt
-  $apply && prompt="Delete $label? [y/N] " || prompt="Would you delete $label? [y/N] "
+# Only called in apply mode; the dry run never reaches a prompt.
+confirm() {
+  $assume_yes && { info 'auto-yes'; return 0; }
+  [ -t 0 ] || { info 'non-interactive: keeping'; return 1; }
   local reply=''
-  if [ -t 0 ]; then
-    read -r -p "$prompt" reply || reply=''
-  else
-    info "non-interactive: keeping $label"; return 1
-  fi
+  read -r -p "$1 [y/N] " reply || return 1
   [[ $reply =~ ^[Yy]([Ee][Ss])?$ ]]
 }
 
-do_rm()   { $apply && rm -rf "$@" 2>/dev/null; return 0; }
-sudo_rm() { $apply && sudo rm -rf "$@" 2>/dev/null; return 0; }
+remove() {
+  local use_sudo=$1; shift
+  if $use_sudo; then sudo -n rm -rf "$@" 2>/dev/null; else rm -rf "$@" 2>/dev/null; fi
+}
 
 # clean <label> <risky:true|false> <sudo:true|false> <paths...>
 clean() {
   local label=$1 risky=$2 use_sudo=$3; shift 3
   local existing=() p
   for p in "$@"; do [[ -e $p ]] && existing+=("$p"); done
-  if [ ${#existing[@]} -eq 0 ]; then skip "$label: nothing to clean"; return; fi
+  (( ${#existing[@]} )) || { skip "$label: nothing to clean"; return; }
   local bytes; bytes=$(size_of "${existing[@]}")
   info "$label: $(bytes_to_human "$bytes") across ${#existing[@]} path(s)"
   if $risky; then
-    for p in "${existing[@]}"; do printf '  %s%s%s\n' "$c_gray" "$p" "$c_reset"; done
-    confirm_delete "$label" || { skip "$label kept"; return; }
+    for p in "${existing[@]}"; do item "$p"; done
+    if ! $apply; then
+      reclaimable_risky=$((reclaimable_risky + bytes)); skip "$label: would ask"; return
+    fi
+    confirm "Delete $label?" || { skip "$label kept"; return; }
+  elif ! $apply; then
+    reclaimable=$((reclaimable + bytes)); skip "$label (dry-run)"; return
   fi
-  reclaimable=$((reclaimable + bytes))
-  if $use_sudo; then sudo_rm "${existing[@]}"; else do_rm "${existing[@]}"; fi
-  $apply && ok "$label cleaned" || skip "$label (dry-run)"
+  if remove "$use_sudo" "${existing[@]}"; then
+    ok "$label cleaned"
+  else
+    warn "$label: some paths could not be removed"
+  fi
+}
+
+# run <label> <cmd...>: run a command in apply mode, announce it in the dry run.
+run() {
+  local label=$1; shift
+  if ! $apply; then info "would run: $*"; return; fi
+  if "$@" &>/dev/null; then ok "$label"; else warn "$label failed: $*"; fi
 }
 
 if $apply; then
@@ -115,11 +141,33 @@ if $apply; then
   fi
 fi
 
-old_avail=$(df / | tail -1 | awk '{print $4}')
+old_avail=$(df -k / | tail -1 | awk '{print $4}')
 
-# ---------- safe ----------
-step 'Trash (all volumes + ~/.Trash)'
-clean 'Trash' false true /Volumes/*/.Trashes/* "$HOME/.Trash"/*
+# ---------- safe: paths ----------
+# ~/.Trash is TCC-protected: without Full Disk Access the shell sees an empty
+# directory. Finder sees the real thing and empties the trash of every volume.
+step 'Trash (all volumes, via Finder)'
+trash_count=$(osascript -e 'tell application "Finder" to count items of trash' 2>/dev/null || printf 0)
+if (( trash_count == 0 )); then
+  skip 'Trash: empty'
+else
+  trash_bytes=$(size_of "$HOME/.Trash")
+  if (( trash_bytes )); then
+    info "Trash: $trash_count item(s), $(bytes_to_human "$trash_bytes")"
+    $apply || reclaimable=$((reclaimable + trash_bytes))
+  else
+    info "Trash: $trash_count item(s), size unknown without Full Disk Access"
+  fi
+  empty_trash() {
+    osascript -e 'tell application "Finder"
+      set warned to warns before emptying of trash
+      set warns before emptying of trash to false
+      empty trash
+      set warns before emptying of trash to warned
+    end tell'
+  }
+  run 'Trash emptied' empty_trash
+fi
 
 step 'System & diagnostic logs'
 clean 'Logs' false true \
@@ -128,14 +176,14 @@ clean 'Logs' false true \
   /Library/Logs/Adobe/* \
   "$HOME/Library/Containers/com.apple.mail/Data/Library/Logs/Mail"/*
 
+step 'JVM heap dumps in ~'
+clean 'Heap dumps' false false "$HOME"/*.hprof
+
 step 'Xcode DerivedData'
 clean 'DerivedData' false false "$HOME/Library/Developer/Xcode/DerivedData"/*
 
 step 'CocoaPods cache'
 clean 'CocoaPods' false false "$HOME/Library/Caches/CocoaPods"/*
-
-step 'Gradle caches'
-clean 'Gradle' false false "$HOME/.gradle/caches"
 
 step 'pip cache'
 clean 'pip' false false "$HOME/Library/Caches/pip"
@@ -145,6 +193,88 @@ if [[ -n ${PYENV_VIRTUALENV_CACHE_PATH:-} ]]; then
   clean 'pyenv-virtualenv' false false "$PYENV_VIRTUALENV_CACHE_PATH"
 else
   skip 'PYENV_VIRTUALENV_CACHE_PATH not set'
+fi
+
+user_tmp=$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || printf '%s' "${TMPDIR:-/tmp}")
+user_tmp=${user_tmp%/}
+
+step 'gcloud-login driver test leftovers (older than 1h)'
+leftovers=()
+while IFS= read -r p; do leftovers+=("$p"); done < <(
+  find "$user_tmp" -maxdepth 1 -name 'gcloud-login-driver-test-*' -mmin +60 2>/dev/null
+)
+clean 'Driver test leftovers' false false "${leftovers[@]}"
+
+# Chromium-based apps clone their bundle into <tmp>/../X/<bundle-id>.code_sign_clone
+# for signature checks and remove it on exit. Crashed or killed runs leave them
+# behind. A running app still uses its clone, so keep those.
+step 'Code-sign clones of apps that are not running'
+stale_clones=()
+for clone in "${user_tmp%/T}/X"/*.code_sign_clone/code_sign_clone.*; do
+  [[ -d $clone ]] || continue
+  app=''
+  for a in "$clone"/*.app; do [[ -e $a ]] && { app=${a##*/}; break; }; done
+  [[ -n $app ]] && pgrep -qf "/$app/" && continue
+  stale_clones+=("$clone")
+done
+clean 'Code-sign clones' false false "${stale_clones[@]}"
+
+# ---------- safe: tool commands ----------
+step 'Composer cache'
+if command -v composer &>/dev/null; then
+  run 'composer cache cleared' composer clearcache
+else
+  skip 'composer not installed'
+fi
+
+step 'Homebrew cleanup'
+if command -v brew &>/dev/null; then
+  brew_cache=$(brew --cache 2>/dev/null || true)
+  if [[ -n $brew_cache && -e $brew_cache ]]; then
+    bytes=$(size_of "$brew_cache")
+    $apply || reclaimable=$((reclaimable + bytes))
+    info "brew cache: $(bytes_to_human "$bytes")"
+  fi
+  run 'brew cleaned' brew cleanup --prune=all -s
+else
+  skip 'brew not installed'
+fi
+
+step 'RubyGems cleanup'
+if command -v gem &>/dev/null; then
+  run 'gem cleanup done' gem cleanup
+else
+  skip 'gem not installed'
+fi
+
+step 'npm cache'
+if command -v npm &>/dev/null; then
+  run 'npm cache cleared' npm cache clean --force
+else
+  skip 'npm not installed'
+fi
+
+step 'Yarn cache'
+if command -v yarn &>/dev/null; then
+  run 'yarn cache cleared' yarn cache clean --force
+else
+  skip 'yarn not installed'
+fi
+
+step 'uv cache'
+if command -v uv &>/dev/null; then
+  run 'uv cache cleared' uv cache clean
+else
+  skip 'uv not installed'
+fi
+
+step 'Containers: dangling images, stopped containers, unused volumes'
+if command -v docker &>/dev/null && docker info &>/dev/null; then
+  docker system df 2>/dev/null | while IFS= read -r line; do item "$line"; done
+  run 'containers pruned' docker system prune -f
+  run 'volumes pruned' docker volume prune -f
+else
+  skip 'docker/podman not installed or not running'
 fi
 
 # ---------- risky ----------
@@ -157,6 +287,9 @@ clean 'iOS Device Backups' true false "$HOME/Library/Application Support/MobileS
 step 'Xcode Archives (submission artifacts)'
 clean 'Xcode Archives' true false "$HOME/Library/Developer/Xcode/Archives"/*
 
+step 'Xcode iOS DeviceSupport (symbols; rebuilt when a device connects)'
+clean 'iOS DeviceSupport' true false "$HOME/Library/Developer/Xcode/iOS DeviceSupport"/*
+
 step 'Dropbox cache'
 if [[ -d "$HOME/Dropbox/.dropbox.cache" ]]; then
   clean 'Dropbox cache' true true "$HOME/Dropbox/.dropbox.cache"/*
@@ -164,101 +297,177 @@ else
   skip 'Dropbox not installed'
 fi
 
-step 'iOS Simulators (xcrun simctl erase all)'
-if command -v xcrun &>/dev/null; then
-  if confirm_delete 'all iOS Simulator state'; then
-    if $apply; then
-      osascript -e 'tell application "com.apple.CoreSimulator.CoreSimulatorService" to quit' 2>/dev/null || true
-      osascript -e 'tell application "Simulator" to quit' 2>/dev/null || true
-      xcrun simctl shutdown all 2>/dev/null || true
-      xcrun simctl erase all 2>/dev/null || true
-      ok 'Simulators erased'
-    else
-      skip 'Simulators (dry-run)'
+step 'Gradle caches (every dependency is downloaded again)'
+if [[ -d "$HOME/.gradle/caches" ]]; then
+  $apply && command -v gradle &>/dev/null && gradle --stop &>/dev/null
+  clean 'Gradle caches' true false "$HOME/.gradle/caches"
+else
+  skip 'Gradle caches: nothing to clean'
+fi
+
+# Pruning inside the VM never shrinks the host disk image; recreating the
+# machine does. Everything inside it (images, containers, volumes) is lost.
+podman_recreate() {
+  local name=$1 cpus=$2 mem=$3 disk=$4 rootful=$5 was_running=$6
+  local init=(podman machine init --cpus "$cpus" --memory "$mem" --disk-size "$disk")
+  [[ $rootful == true ]] && init+=(--rootful)
+  $was_running && podman machine stop "$name" &>/dev/null
+  podman machine rm -f "$name" &>/dev/null || { warn "podman machine $name: could not remove"; return; }
+  info "podman machine $name: downloading a fresh image, this takes a minute"
+  "${init[@]}" "$name" &>/dev/null || { warn "podman machine $name: init failed; run by hand: ${init[*]} $name"; return; }
+  if $was_running; then
+    podman machine start "$name" &>/dev/null || { warn "podman machine $name: recreated but failed to start"; return; }
+  fi
+  ok "podman machine $name recreated"
+}
+
+step 'Podman machine (recreate when its disk image exceeds 10 GiB; everything inside is lost)'
+if ! command -v podman &>/dev/null; then
+  skip 'podman not installed'
+elif ! command -v jq &>/dev/null; then
+  warn 'jq not installed; skipping podman machine'
+else
+  # Collect first: a prompt inside `while read < <(...)` would read the list, not the terminal.
+  machines=()
+  while IFS= read -r name; do
+    name=${name%\*}
+    [[ -n $name ]] && machines+=("$name")
+  done < <(podman machine list --format '{{.Name}}' 2>/dev/null)
+  (( ${#machines[@]} )) || skip 'no podman machine'
+  for name in "${machines[@]}"; do
+    IFS=$'\t' read -r state rootful cpus mem disk confdir < <(podman machine inspect "$name" 2>/dev/null \
+      | jq -r '.[0] | [.State, .Rootful, .Resources.CPUs, .Resources.Memory, .Resources.DiskSize, .ConfigDir.Path] | @tsv')
+    image=$(jq -r '.ImagePath.Path // empty' "$confdir/$name.json" 2>/dev/null)
+    [[ -n $image && -f $image ]] || { skip "podman machine $name: disk image not found"; continue; }
+    bytes=$(size_of "$image")
+    if (( bytes < 10 * 1024 * 1024 * 1024 )); then
+      skip "podman machine $name: $(bytes_to_human "$bytes") on disk, keeping"; continue
     fi
-  else
-    skip 'Simulators kept'
-  fi
+    info "podman machine $name: $(bytes_to_human "$bytes") on disk ($state, ${cpus} CPUs, ${mem} MiB, ${disk} GiB disk)"
+    item "$image"
+    was_running=false; [[ $state == running ]] && was_running=true
+    if ! $apply; then
+      reclaimable_risky=$((reclaimable_risky + bytes)); skip "podman machine $name: would ask"
+    elif confirm "Recreate podman machine $name? All images, containers and volumes inside are lost."; then
+      podman_recreate "$name" "$cpus" "$mem" "$disk" "$rootful" "$was_running"
+    else
+      skip "podman machine $name kept"
+    fi
+  done
+fi
+
+step 'Kotlin/Native toolchains (all but the newest)'
+konan_old=()
+konan_all=()
+while IFS= read -r p; do [[ -d $p ]] && konan_all+=("$p"); done < <(
+  printf '%s\n' "$HOME"/.konan/kotlin-native-prebuilt-* | sort -V
+)
+(( ${#konan_all[@]} > 1 )) && konan_old=("${konan_all[@]:0:${#konan_all[@]}-1}")
+clean 'Kotlin/Native toolchains' true false "${konan_old[@]}"
+
+step 'Playwright browsers (reinstall with: npx playwright install)'
+clean 'Playwright browsers' true false "$HOME/Library/Caches/ms-playwright"/*
+
+# JetBrains IDEs keep caches, configs and logs per data directory such as
+# IntelliJIdea2026.2 or IdeaIC2025.2. Each installed app names its own in
+# product-info.json; a versioned folder no installed app claims is stale.
+step 'JetBrains caches, configs and logs of uninstalled IDE versions'
+jetbrains_installed=''
+for app in /Applications/*.app "$HOME"/Applications/*.app; do
+  product_info=$app/Contents/Resources/product-info.json
+  [[ -f $product_info ]] || continue
+  name=$(plutil -extract dataDirectoryName raw -o - "$product_info" 2>/dev/null)
+  [[ -n $name ]] && jetbrains_installed+=" $name"
+done
+jetbrains_stale=()
+if [[ -n $jetbrains_installed ]]; then
+  for d in "$HOME/Library/Caches/JetBrains"/* "$HOME/Library/Application Support/JetBrains"/* "$HOME/Library/Logs/JetBrains"/*; do
+    [[ -d $d && ${d##*/} =~ [0-9]{4}\.[0-9]+$ ]] || continue
+    [[ "$jetbrains_installed " == *" ${d##*/} "* ]] || jetbrains_stale+=("$d")
+  done
+  info "installed:${jetbrains_installed}"
+  clean 'JetBrains stale versions' true false "${jetbrains_stale[@]}"
 else
+  skip 'no JetBrains IDE installed; cannot tell which versions are stale'
+fi
+
+step "iOS Simulators (not booted for ${sim_unused}+ days)"
+if ! command -v xcrun &>/dev/null; then
   skip 'xcrun not installed'
-fi
-
-# ---------- tool-specific (safe) ----------
-step 'Composer cache'
-if command -v composer &>/dev/null; then
-  $apply && { composer clearcache &>/dev/null; ok 'composer cleared'; } || info 'composer clearcache (would run)'
+elif ! command -v jq &>/dev/null; then
+  warn 'jq not installed; skipping simulators'
 else
-  skip 'composer not installed'
-fi
+  cutoff=$(date -u -v-"${sim_unused}d" +%Y-%m-%dT%H:%M:%SZ)
+  devices_json=$(xcrun simctl list devices -j 2>/dev/null || printf '{"devices":{}}')
 
-step 'Homebrew cleanup'
-if command -v brew &>/dev/null; then
-  brew_cache=$(brew --cache 2>/dev/null || true)
-  if [[ -n $brew_cache && -e $brew_cache ]]; then
-    bytes=$(size_of "$brew_cache")
-    reclaimable=$((reclaimable + bytes))
-    info "brew cache: $(bytes_to_human "$bytes")"
-  fi
-  if $apply; then
-    brew cleanup -s &>/dev/null || true
-    [[ -n $brew_cache ]] && rm -rf "$brew_cache" 2>/dev/null
-    brew tap --repair &>/dev/null || true
-    ok 'brew cleaned'
+  # Devices whose runtime is gone can never boot again: safe.
+  unavailable_bytes=$(jq '[.devices[][] | select(.isAvailable == false) | .dataPathSize] | add // 0' <<<"$devices_json")
+  unavailable_count=$(jq '[.devices[][] | select(.isAvailable == false)] | length' <<<"$devices_json")
+  if (( unavailable_count )); then
+    info "unavailable simulators: $unavailable_count, $(bytes_to_human "$unavailable_bytes")"
+    $apply || reclaimable=$((reclaimable + unavailable_bytes))
+    run 'unavailable simulators deleted' xcrun simctl delete unavailable
   else
-    skip 'brew (dry-run)'
+    skip 'unavailable simulators: none'
   fi
-else
-  skip 'brew not installed'
-fi
 
-step 'RubyGems cleanup'
-if command -v gem &>/dev/null; then
-  $apply && { gem cleanup &>/dev/null; ok 'gem cleanup done'; } || info 'gem cleanup (would run)'
-else
-  skip 'gem not installed'
-fi
-
-step 'Docker prune (dangling volumes/containers/images)'
-if command -v docker &>/dev/null && docker info &>/dev/null; then
-  if $apply; then
-    while read -r v; do [[ -n $v ]] && docker volume rm "$v" &>/dev/null; done < <(docker volume ls -q -f 'dangling=true')
-    while read -r c; do [[ -n $c ]] && docker rm "$c" &>/dev/null; done < <(docker ps -q -f 'status=exited')
-    while read -r i; do [[ -n $i ]] && docker rmi "$i" &>/dev/null; done < <(docker images -q -f 'dangling=true')
-    ok 'docker pruned'
+  # Devices booted at least once but not since the cutoff: risky. Never-booted
+  # devices are Xcode's default fleet, hold no data and get recreated anyway.
+  stale_tsv=$(jq -r --arg c "$cutoff" '
+    .devices[][]
+    | select(.isAvailable and .lastUsedAt != null and .lastUsedAt < $c)
+    | [.udid, .dataPathSize, .lastUsedAt[:10], .name] | @tsv' <<<"$devices_json")
+  if [[ -z $stale_tsv ]]; then
+    skip "stale simulators: none"
   else
-    info 'docker prune (would run)'
+    stale_udids=(); stale_bytes=0
+    while IFS=$'\t' read -r udid bytes last name; do
+      stale_udids+=("$udid"); stale_bytes=$((stale_bytes + bytes))
+      item "$(printf '%-10s %10s  %s  %s' "$last" "$(bytes_to_human "$bytes")" "$name" "$udid")"
+    done <<<"$stale_tsv"
+    info "stale simulators: ${#stale_udids[@]}, $(bytes_to_human "$stale_bytes")"
+    if ! $apply; then
+      reclaimable_risky=$((reclaimable_risky + stale_bytes)); skip 'stale simulators: would ask'
+    elif confirm 'Delete these simulators?'; then
+      xcrun simctl shutdown "${stale_udids[@]}" &>/dev/null || true
+      run 'stale simulators deleted' xcrun simctl delete "${stale_udids[@]}"
+    else
+      skip 'stale simulators kept'
+    fi
   fi
-else
-  skip 'docker not installed or daemon not running'
+
+  # Runtimes (8 GiB disk images) with the same rule; never-used ones stay,
+  # one of them is the SDK the installed Xcode builds against.
+  runtimes_tsv=$(xcrun simctl runtime list -j 2>/dev/null | jq -r --arg c "$cutoff" '
+    .[]
+    | select(.deletable and .lastUsedAt != null and .lastUsedAt < $c)
+    | [.identifier, .sizeBytes, .lastUsedAt[:10], (.runtimeIdentifier | split(".") | last), .build] | @tsv')
+  if [[ -z $runtimes_tsv ]]; then
+    skip 'stale runtimes: none'
+  else
+    stale_runtimes=(); runtime_bytes=0
+    while IFS=$'\t' read -r id bytes last name build; do
+      stale_runtimes+=("$id"); runtime_bytes=$((runtime_bytes + bytes))
+      item "$(printf '%-10s %10s  %s (%s)' "$last" "$(bytes_to_human "$bytes")" "$name" "$build")"
+    done <<<"$runtimes_tsv"
+    info "stale runtimes: ${#stale_runtimes[@]}, $(bytes_to_human "$runtime_bytes")"
+    if ! $apply; then
+      reclaimable_risky=$((reclaimable_risky + runtime_bytes)); skip 'stale runtimes: would ask'
+    elif confirm 'Delete these runtimes?'; then
+      for id in "${stale_runtimes[@]}"; do run "runtime $id deleted" xcrun simctl runtime delete "$id"; done
+    else
+      skip 'stale runtimes kept'
+    fi
+  fi
 fi
 
-step 'npm cache'
-if command -v npm &>/dev/null; then
-  $apply && { npm cache clean --force &>/dev/null; ok 'npm cache cleared'; } || info 'npm cache clean (would run)'
-else
-  skip 'npm not installed'
-fi
-
-step 'Yarn cache'
-if command -v yarn &>/dev/null; then
-  $apply && { yarn cache clean --force &>/dev/null; ok 'yarn cache cleared'; } || info 'yarn cache clean (would run)'
-else
-  skip 'yarn not installed'
-fi
-
-step 'Purge inactive memory'
+new_avail=$(df -k / | tail -1 | awk '{print $4}')
+freed_kb=$((new_avail - old_avail))
 if $apply; then
-  sudo purge 2>/dev/null && ok 'memory purged' || warn 'purge skipped (no sudo?)'
+  freed=$((freed_kb < 0 ? 0 : freed_kb * 1024))
+  printf '\n%s✔ Reclaimed: %s%s (APFS frees space lazily; the number may lag)\n' "$c_green" "$(bytes_to_human "$freed")" "$c_reset"
 else
-  info 'sudo purge (would run)'
-fi
-
-new_avail=$(df / | tail -1 | awk '{print $4}')
-delta_kb=$((old_avail - new_avail))
-if $apply; then
-  freed=$((delta_kb < 0 ? 0 : delta_kb * 1024))
-  printf '\n%s✔ Reclaimed: %s%s\n' "$c_green" "$(bytes_to_human "$freed")" "$c_reset"
-else
-  printf '\n%s↗ Would reclaim: ~%s (estimated)%s\n' "$c_blue" "$(bytes_to_human "$reclaimable")" "$c_reset"
+  printf '\n%s↗ Would reclaim: ~%s without asking, plus ~%s behind confirmations (estimated)%s\n' \
+    "$c_blue" "$(bytes_to_human "$reclaimable")" "$(bytes_to_human "$reclaimable_risky")" "$c_reset"
   printf '%sRun with --apply to actually clean.%s\n' "$c_gray" "$c_reset"
 fi
