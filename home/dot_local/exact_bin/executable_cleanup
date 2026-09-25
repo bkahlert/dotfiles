@@ -8,14 +8,17 @@ set -uo pipefail
 
 [[ $(uname) == Darwin ]] || { printf 'cleanup: macOS only\n' >&2; exit 1; }
 
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nTry %s --help\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
 apply=false
 assume_yes=false
-while [ $# -gt 0 ]; do
+while (( $# )); do
   case $1 in
-    --apply) apply=true && shift ;;
-    --yes|-y) assume_yes=true && shift ;;
-    -h|--help) sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//' && exit 0 ;;
-    *) printf 'cleanup: unknown argument: %s\n' "$1" >&2 && exit 2 ;;
+    -h|--help) usage; exit 0 ;;
+    --apply)   apply=true; shift ;;
+    -y|--yes)  assume_yes=true; shift ;;
+    *)         die "unexpected argument: $1" ;;
   esac
 done
 

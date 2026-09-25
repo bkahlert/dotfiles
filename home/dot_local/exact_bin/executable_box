@@ -15,16 +15,21 @@
 
 set -euo pipefail
 
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nTry %s --help\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
 here=false
 image=${BOX_IMAGE:-alpine}
 
 while (( $# )); do
   case $1 in
-    --here) here=true; shift ;;
-    --image) image=${2?--image: missing value} && shift 2 ;;
-    --image=*) image=${1#*=} && shift ;;
-    --) shift; break ;;
-    *) break ;;
+    -h|--help) usage; exit 0 ;;
+    --here)    here=true; shift ;;
+    --image)   image=${2?--image: missing value}; shift 2 ;;
+    --image=*) image=${1#*=}; shift ;;
+    --)        shift; break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         break ;;
   esac
 done
 
