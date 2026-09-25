@@ -17,8 +17,8 @@
 # First run per account: the browser profile is empty, so the normal account
 # goes through the Microsoft sign-in (ista account, Authenticator code, "Stay
 # signed in" = Yes) and the security key by hand; afterwards it is silent.
-# See docs/superpowers/plans/2026-09-22-gcloud-login-findings.md in the
-# dotfiles repo for every observed page.
+# Every observed page is recorded in the dotfiles repo's history:
+#   git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md
 
 set -euo pipefail
 

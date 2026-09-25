@@ -105,7 +105,7 @@ Example: `brew "1password-cli" # 1Password CLI (op); required by chezmoi to read
 | `~/.npmrc` | [dot_npmrc.tmpl](home/dot_npmrc.tmpl) | Business: GitLab registry |
 | `~/.startup` | [executable_dot_startup](home/executable_dot_startup) | Login script (macOS, run via LaunchAgent) |
 | `~/.agents/skills/*`, `~/.claude/skills/*` | [dot_agents/skills](home/dot_agents/skills), [private_dot_claude/skills](home/private_dot_claude/skills) | Repo-owned agent skills + their symlinks; third-party ones via [setup-skills](home/.chezmoiscripts/run_onchange_after_setup-skills.sh). See [quick-access/README.md](quick-access/README.md) |
-| `~/.local/bin/gcloud-login` | [executable_gcloud-login](home/dot_local/exact_bin/executable_gcloud-login) | Unattended gcloud/ADC login (ista); design in [docs/superpowers/plans](docs/superpowers/plans/2026-09-22-gcloud-login-findings.md) |
+| `~/.local/bin/gcloud-login` | [executable_gcloud-login](home/dot_local/exact_bin/executable_gcloud-login) | Unattended gcloud/ADC login (ista); design notes in git history (`git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md`) |
 
 ## Common Tasks
 

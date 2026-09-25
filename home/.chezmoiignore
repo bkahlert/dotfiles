@@ -6,7 +6,6 @@ LICENSE
 Containerfile
 Makefile
 entrypoint.sh
-docs/
 tests/
 
 # Anthropic Claude CLI symlink — managed by https://claude.ai/install.sh,
