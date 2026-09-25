@@ -2,9 +2,11 @@
 # Purpose: Run a command (or interactive shell) in a throwaway container.
 # Usage:   box [--here] [--image <image>[:<tag>]] [--] [<command>...]
 #
-# --here          Mount the current working directory at the same path inside
-#                 the container and set it as the container's cwd.
-# --image <ref>   Container image to use (default: $BOX_IMAGE or alpine).
+# Options:
+#   --here          Mount the current working directory at the same path inside
+#                   the container and set it as the container's cwd.
+#   --image <ref>   Container image to use (default: $BOX_IMAGE or alpine).
+#   -h, --help      Show this help.
 #
 # Examples:
 #   box                              # interactive sh in alpine:latest
@@ -15,16 +17,21 @@
 
 set -euo pipefail
 
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
 here=false
 image=${BOX_IMAGE:-alpine}
 
 while (( $# )); do
   case $1 in
-    --here) here=true; shift ;;
-    --image) image=${2?--image: missing value} && shift 2 ;;
-    --image=*) image=${1#*=} && shift ;;
-    --) shift; break ;;
-    *) break ;;
+    -h|--help) usage; exit 0 ;;
+    --here)    here=true; shift ;;
+    --image)   image=${2?--image: missing value}; shift 2 ;;
+    --image=*) image=${1#*=}; shift ;;
+    --)        shift; break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         break ;;
   esac
 done
 

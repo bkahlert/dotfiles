@@ -1,24 +1,35 @@
 #!/usr/bin/env bash
-# Purpose: Remove offending entries from ~/.ssh/known_hosts. Accepts either a
-#          hostname/IP (preferred — uses ssh-keygen -R to nuke all entries for
-#          that host atomically, including the hostname/IP twin) or a raw line
-#          number from ssh's "Offending key in known_hosts:N" message.
-# Usage:   known-hosts-fix <host>     # ssh-keygen -R <host>
-#          known-hosts-fix <line>     # extract host from that line, then -R it
-#                                     # (or delete the line directly if it's a
-#                                     #  hashed entry we can't reverse)
+# Purpose: Remove offending entries from ~/.ssh/known_hosts.
+# Usage:   known-hosts-fix <host> | <line>
+#
+# Arguments:
+#   <host>   Hostname or IP. Runs ssh-keygen -R <host>, which removes all entries
+#            for that host atomically, including the hostname/IP twin. Preferred.
+#   <line>   Line number from ssh's "Offending key in known_hosts:N" message. The
+#            host is extracted from that line and removed with ssh-keygen -R.
+#            Hashed entries cannot be reversed and are deleted directly instead.
+#
+# Options:
+#   -h, --help   Show this help.
 
 set -uo pipefail
 
 readonly known_hosts="${HOME}/.ssh/known_hosts"
 
-usage() {
-  printf 'Usage: %s <host-or-line>\n' "${0##*/}" >&2
-  exit 1
-}
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
-[[ $# -eq 1 ]] || usage
-arg=$1
+args=()
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; args+=("$@"); break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} == 1 )) || die "expected exactly one <host> or <line>"
+arg=${args[0]}
 
 # Branch on whether the arg is purely numeric (line) or anything else (host).
 if [[ $arg =~ ^[0-9]+$ ]]; then
