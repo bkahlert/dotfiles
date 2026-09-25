@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # Purpose: Fetch the leaf certificate a TLS server presents and print it as
-#          PEM. Invoked as `cert-download` (a symlink), it writes the PEM to
-#          <domain>.pem in the current directory instead.
-# Usage:   cert-get <domain> [<port>]
-#          cert-download <domain> [<port>]
+#          PEM, or save it to <domain>.pem in the current directory.
+# Usage:   cert-get [--download] <domain> [<port>]
+#
+# Options:
+#   -d, --download   Write the PEM to <domain>.pem instead of stdout and print
+#                    the file name.
+#   -h, --help       Show this help.
 #
 # Arguments:
 #   <domain>     Host to connect to; also sent as the SNI server name.
@@ -12,20 +15,21 @@
 # Examples:
 #   cert-get example.com
 #   cert-get mail.example.com 993
-#   cert-download example.com          # writes example.com.pem
+#   cert-get --download example.com     # writes example.com.pem
 
 set -euo pipefail
 
 usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
 die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
-args=()
+download=false; args=()
 while (( $# )); do
   case $1 in
-    -h|--help) usage; exit 0 ;;
-    --)        shift; args+=("$@"); break ;;
-    -?*)       die "unknown option: $1" ;;
-    *)         args+=("$1"); shift ;;
+    -h|--help)     usage; exit 0 ;;
+    -d|--download) download=true; shift ;;
+    --)            shift; args+=("$@"); break ;;
+    -?*)           die "unknown option: $1" ;;
+    *)             args+=("$1"); shift ;;
   esac
 done
 (( ${#args[@]} )) || { usage >&2; exit 2; }
@@ -38,7 +42,8 @@ fetch() {
     | openssl x509 -outform PEM
 }
 
-case ${0##*/} in
-  cert-download) fetch >"$domain.pem" && printf '%s\n' "$domain.pem" ;;
-  *) fetch ;;
-esac
+if $download; then
+  fetch >"$domain.pem" && printf '%s\n' "$domain.pem"
+else
+  fetch
+fi
