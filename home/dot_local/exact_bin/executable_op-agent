@@ -28,6 +28,7 @@ readonly WRITE_TIMEOUT_DS=50          # 5 s, in 0.1 s steps
 
 err() { printf 'op-agent: %s\n' "$1" >&2; }
 die() { err "$1"; exit "${2:-1}"; }
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
 
 running() {
   [[ -f "$PID_FILE" ]] && kill -0 "$(<"$PID_FILE")" 2>/dev/null
@@ -215,5 +216,6 @@ case ${1:-} in
   stop) stop ;;
   status) status ;;
   read) read_secret "${2?op-agent read: reference not set}" ;;
-  *) die "usage: op-agent start | stop | status | read <op-ref>" ;;
+  -h|--help) usage ;;
+  *) die "unknown command: ${1:-<none>} (see 'op-agent --help')" 2 ;;
 esac

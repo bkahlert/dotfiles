@@ -1,4 +1,28 @@
-#!/bin/bash
-# Prints the latest release version of a GitHub project
-# Usage: gh-latest owner/repo
-curl -LfsS "https://api.github.com/repos/${1?Repository missing}/releases/latest" | jq -r .tag_name
+#!/usr/bin/env bash
+# Purpose: Print the tag of the latest release of a GitHub repository.
+# Usage:   gh-latest <owner>/<repo>
+#
+# Uses the unauthenticated GitHub API (60 requests per hour per IP).
+#
+# Options:
+#   -h, --help   Show this help.
+
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+args=()
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; args+=("$@"); break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} == 1 )) || die "expected exactly one <owner>/<repo>"
+repo=${args[0]}
+[[ $repo == ?*/?* ]] || die "not an <owner>/<repo>: $repo"
+
+curl -LfsS "https://api.github.com/repos/$repo/releases/latest" | jq -r .tag_name

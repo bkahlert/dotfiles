@@ -11,6 +11,7 @@
 #          --status   report CLI account, ADC identity and token validity; exit 0 if all valid
 #          --timeout  seconds to wait for the browser flow (default 120; use 300 on a
 #                     fresh browser profile, where the Microsoft sign-in is manual)
+#          -h, --help show this help
 # Exit:    0 success · 1 precondition or credential failure · 2 browser flow timed out
 #
 # First run per account: the browser profile is empty, so the normal account
@@ -42,18 +43,20 @@ ok()   { printf '%s✔%s %s\n' "$c_green" "$c_reset" "$1" >&2; }
 warn() { printf '%s!%s %s\n' "$c_yellow" "$c_reset" "$1" >&2; }
 err()  { printf '%s✘%s %s\n' "$c_red" "$c_reset" "$1" >&2; }
 die()  { err "$1"; exit "${2:-1}"; }
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
 
 mode=cli
 status=false
 timeout=120
 while [ $# -gt 0 ]; do
   case $1 in
+    -h|--help) usage; exit 0 ;;
     --admin) [[ $mode == adc ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode=admin && shift ;;
     --adc) [[ $mode == admin ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode=adc && shift ;;
     --status) status=true && shift ;;
     --timeout) timeout=${2?$1: parameter value not set} && shift 2 ;;
     --timeout=*) timeout=${1#*=} && shift ;;
-    *) die "gcloud-login: unknown option $1 (usage: gcloud-login [--admin | --adc] [--status] [--timeout <seconds>])" ;;
+    *) die "gcloud-login: unknown option $1 (see 'gcloud-login --help')" 2 ;;
   esac
 done
 

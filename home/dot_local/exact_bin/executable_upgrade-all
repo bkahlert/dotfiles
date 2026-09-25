@@ -5,8 +5,21 @@
 # Each step is skipped if the tool isn't installed. A failure in one step does
 # not abort the remaining steps; failures are listed at the end and make the
 # script exit non-zero.
+#
+# Options:
+#   -h, --help   Show this help.
 
 set -uo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    *)         die "unknown argument: $1" ;;
+  esac
+done
 
 if [ -t 1 ]; then
   c_reset=$(tput sgr0); c_yellow=$(tput setaf 3); c_green=$(tput setaf 2)

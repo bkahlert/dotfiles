@@ -1,13 +1,37 @@
-#!/bin/bash
-# Opens explainshell.com for the given command
-if [[ $# == 0 ]]; then
-  echo "usage: explain <cmd> <args>"
-  exit 0
-fi
+#!/usr/bin/env bash
+# Purpose: Open explainshell.com for a command line.
+# Usage:   explain [--] <command> [<arg>...]
+#
+# Everything from the first word on is the command being explained, so its
+# own options need no escaping: `explain tar -xzvf foo.tgz`. Use `--` if the
+# command itself starts with a dash.
+#
+# Options:
+#   -h, --help   Show this help.
 
-cmd=${*// /+}
-if command -v xdg-open &>/dev/null; then
-  xdg-open "http://explainshell.com/explain?cmd=$cmd"
-elif command -v open &>/dev/null; then
-  open "http://explainshell.com/explain?cmd=$cmd"
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         break ;;
+  esac
+done
+(( $# )) || die "command missing"
+
+cmd=$*
+url="https://explainshell.com/explain?cmd=${cmd// /+}"
+
+if command -v open >/dev/null; then
+  open "$url"
+elif command -v xdg-open >/dev/null; then
+  xdg-open "$url"
+else
+  printf '%s: no browser opener found (open, xdg-open)\n' "${0##*/}" >&2
+  exit 1
 fi

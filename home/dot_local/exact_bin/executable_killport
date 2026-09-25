@@ -1,22 +1,41 @@
 #!/usr/bin/env bash
-# Purpose: Kill every process listening on the given TCP port.
-#          Sends SIGTERM, waits up to 2s, then SIGKILL to any survivor.
+# Purpose: Kill every process listening on a TCP port. Sends SIGTERM, waits up
+#          to 2 s, then SIGKILL to any survivor.
 # Usage:   killport <port>
 #
 # Completion for this command lives in ~/.config/zsh/completions/_killport.
+#
+# Options:
+#   -h, --help   Show this help.
 
 set -uo pipefail
 
-err()  { printf '\033[31m%s\033[0m\n' "$*" >&2; }
-info() { printf '\033[34m%s\033[0m\n' "$*"; }
-warn() { printf '\033[33m%s\033[0m\n' "$*"; }
-ok()   { printf '\033[32m%s\033[0m\n' "$*"; }
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
-port=${1-}
-if [[ -z $port ]]; then
-  err "Usage: killport <port>"
-  exit 1
+if [ -t 1 ]; then
+  c_reset=$(tput sgr0); c_red=$(tput setaf 1); c_green=$(tput setaf 2)
+  c_yellow=$(tput setaf 3); c_blue=$(tput setaf 4); c_bold=$(tput bold)
+else
+  c_reset=''; c_red=''; c_green=''; c_yellow=''; c_blue=''; c_bold=''
 fi
+info() { printf '%sℹ%s %s\n' "$c_blue" "$c_reset" "$1"; }
+ok()   { printf '%s✔%s %s\n' "$c_green" "$c_reset" "$1"; }
+warn() { printf '%s%s!%s %s\n' "$c_bold" "$c_yellow" "$c_reset" "$1"; }
+err()  { printf '%s✘%s %s\n' "$c_red" "$c_reset" "$1" >&2; }
+
+args=()
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; args+=("$@"); break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} == 1 )) || die "expected exactly one <port>"
+port=${args[0]}
+[[ $port =~ ^[0-9]+$ ]] || die "not a port number: $port"
 
 # Positional params hold the pids: lsof -t prints one per line, and this stays
 # bash 3.2 compatible (no mapfile), which is what macOS ships.

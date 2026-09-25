@@ -5,6 +5,21 @@
 #
 # The bind test runs in python so EACCES (port 80 without sudo) is caught as
 # well, not just "address already in use".
+#
+# Options:
+#   -h, --help   Show this help.
+
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    *)         die "unknown argument: $1" ;;
+  esac
+done
 
 exec python3 -c '
 import socket
