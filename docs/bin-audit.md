@@ -50,7 +50,7 @@ decisions are made and fixes land, so a later session can pick up here.
 | `dscleanup` | Delete `.DS_Store` recursively | write:deletes files | yes | run ✔ | 0 | Fine. | fix: template | fixed |
 | `explain` | Open explainshell.com for a command | read, opens browser | n/a | read | 0 | Uses `http://`, which now 301-redirects; switch to `https://`. | fix: https + template | fixed |
 | `flushdns` | Flush the DNS cache | write:signals mDNSResponder | yes | run ✘ | 0 | Without sudo: `No matching processes belonging to you were found`. Needs `sudo killall -HUP mDNSResponder`. | fix: sudo + template | fixed |
-| `ft` (+ `full-text-search` symlink) | Recursive grep with 5 lines of context | read | n/a | run ✔ | 0 | Works with BSD grep. | keep | keep |
+| `grepr` (was `ft`) | Recursive grep with 5 lines of context | read | n/a | run ✔ | 0 | Works with BSD grep. Renamed from `ft`, `full-text-search` symlink dropped (2026-09-25). | keep, rename | keep |
 | `gcloud-login`, `gcloud-login-browser`, `gcloud-login-driver`, `op-agent` | Unattended gcloud / ADC login and 1Password agent | write:gcloud credentials, browser profile, op session | yes | run ✔ (`--status`, `op-agent status`) | 3 | Added 2026-09-23 (PR #48) with design docs, a skill and tests. Out of scope for this audit. | fix: --help, unknown option exits 2 | fixed |
 | `gh-latest` | Latest release tag of a GitHub repo | read, net | n/a | run ✔ | 0 | Unauthenticated API (60 req/h). Could use `gh release view --json tagName` since `gh` is installed. | fix: template | fixed |
 | `idea` | Locate and run the IntelliJ CLI | passthrough | n/a | run ✔ (2026.2.3 via app bundle) | 2 | Toolbox script path absent here, app-bundle fallback works. Callers: suffix aliases, `idea-wait`. | keep | keep |
@@ -91,7 +91,7 @@ Taken one by one in the first session:
   and gets none prints the help. `Options:` only lists real options, and
   `Examples:` holds tried invocations (rules extended accordingly). Pure
   pass-through wrappers
-  (`docker`, `ft`, `idea`, `idea-wait`, `omlx`, `serve`, `serve-live`) are
+  (`docker`, `grepr`, `idea`, `idea-wait`, `omlx`, `serve`, `serve-live`) are
   left alone on purpose: their `--help` belongs to the wrapped command.
 - `apply-macos-defaults` dropped (decision 2026-09-25): written for macOS 11.3, never
   re-verified, and the biggest blast radius in the directory. History keeps it
