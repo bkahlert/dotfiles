@@ -12,6 +12,11 @@ tests/
 # not chezmoi. Without this, exact_bin/ would remove it on apply.
 .local/bin/claude
 
+{{- if ne .chezmoi.os "darwin" }}
+# The timeout wrapper only stands in for the GNU timeout macOS lacks; here it would shadow the real one.
+.local/bin/timeout
+{{- end }}
+
 # AWS — only config is managed; credentials and SSO token cache are never committed.
 .aws/credentials
 .aws/sso/

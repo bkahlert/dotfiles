@@ -13,6 +13,7 @@ brew "zoxide"                      # Smarter cd that learns frecency; aliased to
 brew "bat"                         # cat replacement with syntax highlighting and git diff support
 brew "jq"                          # Command-line JSON processor; used by scripts and aliases
 brew "btop"                        # Terminal resource monitor (CPU, memory, disk, network)
+brew "coreutils"                   # GNU core utilities as g-prefixed binaries; macOS ships no timeout, ~/.local/bin/timeout forwards to gtimeout
 cask "1password-cli"               # 1Password CLI (op); required by chezmoi to read secrets at apply time
 cask "keepassxc"                   # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent, and chezmoi reads personal secrets from its database at apply time
 cask "font-jetbrains-mono-nerd-font" # Nerd Font variant of JetBrains Mono; required by Starship glyphs
