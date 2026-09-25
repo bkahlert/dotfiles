@@ -11,6 +11,10 @@
 #   --subtitle <subtitle>   Second line under the title.
 #   --sound <sound>         Sound name, e.g. Purr, Glass, Hero.
 #   -h, --help              Show this help.
+#
+# Examples:
+#   notify 'Build finished'
+#   notify 'You have just been notified' --title '🎉 Congratulations' --sound Purr
 
 set -euo pipefail
 
@@ -39,7 +43,7 @@ while (( $# )); do
     *)            args+=("$1"); shift ;;
   esac
 done
-(( ${#args[@]} )) || die "message missing"
+(( ${#args[@]} )) || { usage >&2; exit 2; }
 message=${args[*]}
 
 osascript - "$message" "$title" "$subtitle" "$sound" <<'APPLESCRIPT'

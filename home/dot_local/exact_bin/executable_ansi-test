@@ -2,9 +2,6 @@
 # Purpose: Visual terminal capability reference card (SGR, color, underline
 #          styles, OSC 8, Unicode, Nerd Fonts).
 # Usage:   ansi-test
-#
-# Options:
-#   -h, --help   Show this help.
 
 set -u
 

@@ -87,7 +87,10 @@ Taken one by one in the first session:
   `ports-print` (stays separate from `whats-in-port`).
 - Every keeper that takes arguments now follows the header/help/argument
   template from `rules/bash.md` (PR #52): `-h`/`--help` prints the file
-  header, unknown options exit 2 with a hint. Pure pass-through wrappers
+  header, unknown options exit 2 with a hint, a script that needs arguments
+  and gets none prints the help. `Options:` only lists real options, and
+  `Examples:` holds tried invocations (rules extended accordingly). Pure
+  pass-through wrappers
   (`docker`, `ft`, `idea`, `idea-wait`, `omlx`, `serve`, `serve-live`) are
   left alone on purpose: their `--help` belongs to the wrapped command.
 - `apply-macos-defaults` is deferred to its own session.

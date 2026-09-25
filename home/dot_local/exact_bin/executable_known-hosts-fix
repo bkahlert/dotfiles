@@ -9,8 +9,9 @@
 #            host is extracted from that line and removed with ssh-keygen -R.
 #            Hashed entries cannot be reversed and are deleted directly instead.
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   known-hosts-fix 192.168.1.10
+#   known-hosts-fix 42                 # from "Offending key in known_hosts:42"
 
 set -uo pipefail
 
@@ -28,6 +29,7 @@ while (( $# )); do
     *)         args+=("$1"); shift ;;
   esac
 done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
 (( ${#args[@]} == 1 )) || die "expected exactly one <host> or <line>"
 arg=${args[0]}
 

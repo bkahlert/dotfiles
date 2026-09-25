@@ -3,8 +3,9 @@
 #          gzipped tar archive, to be unpacked elsewhere with pbpaste-dir.
 # Usage:   pbcopy-dir <path>...
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   pbcopy-dir src/ README.md          # here …
+#   pbpaste-dir ~/tmp                  # … and on the other machine
 
 set -euo pipefail
 
@@ -20,7 +21,7 @@ while (( $# )); do
     *)         args+=("$1"); shift ;;
   esac
 done
-(( ${#args[@]} )) || die "path missing"
+(( ${#args[@]} )) || { usage >&2; exit 2; }
 for path in "${args[@]}"; do
   [[ -e $path ]] || die "no such file or directory: $path"
 done

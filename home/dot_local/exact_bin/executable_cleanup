@@ -6,6 +6,11 @@
 #   --apply      Perform the deletions. Without it, only show what would be deleted.
 #   -y, --yes    Auto-accept risky prompts (still needs --apply to delete).
 #   -h, --help   Show this help.
+#
+# Examples:
+#   cleanup                            # report only
+#   cleanup --apply                    # delete, ask before the risky items
+#   cleanup --apply --yes              # delete everything without asking
 
 set -uo pipefail
 

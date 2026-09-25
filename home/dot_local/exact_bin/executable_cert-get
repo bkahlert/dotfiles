@@ -9,8 +9,10 @@
 #   <domain>     Host to connect to; also sent as the SNI server name.
 #   <port>       TCP port (default: 443).
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   cert-get example.com
+#   cert-get mail.example.com 993
+#   cert-download example.com          # writes example.com.pem
 
 set -euo pipefail
 
@@ -26,7 +28,7 @@ while (( $# )); do
     *)         args+=("$1"); shift ;;
   esac
 done
-(( ${#args[@]} >= 1 )) || die "domain missing"
+(( ${#args[@]} )) || { usage >&2; exit 2; }
 (( ${#args[@]} <= 2 )) || die "too many arguments"
 domain=${args[0]}
 port=${args[1]:-443}

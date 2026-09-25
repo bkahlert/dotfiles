@@ -5,8 +5,9 @@
 # Arguments:
 #   <path>       Directories to clean (default: the current one).
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   dscleanup
+#   dscleanup ~/Downloads /Volumes/USB
 
 set -euo pipefail
 

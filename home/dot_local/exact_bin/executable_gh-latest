@@ -4,8 +4,8 @@
 #
 # Uses the unauthenticated GitHub API (60 requests per hour per IP).
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   gh-latest cli/cli                  # v2.101.0
 
 set -euo pipefail
 
@@ -21,6 +21,7 @@ while (( $# )); do
     *)         args+=("$1"); shift ;;
   esac
 done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
 (( ${#args[@]} == 1 )) || die "expected exactly one <owner>/<repo>"
 repo=${args[0]}
 [[ $repo == ?*/?* ]] || die "not an <owner>/<repo>: $repo"

@@ -4,9 +4,6 @@
 #
 # macOS: lsof over TCP listeners; without sudo only your own processes show.
 # Linux: ss, falling back to netstat, over TCP and UDP.
-#
-# Options:
-#   -h, --help   Show this help.
 
 set -euo pipefail
 

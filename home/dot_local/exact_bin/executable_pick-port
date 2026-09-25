@@ -6,8 +6,8 @@
 # The bind test runs in python so EACCES (port 80 without sudo) is caught as
 # well, not just "address already in use".
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   python3 -m http.server "$(pick-port)"
 
 set -euo pipefail
 

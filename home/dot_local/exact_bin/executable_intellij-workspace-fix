@@ -10,6 +10,9 @@
 # Options:
 #   -n, --dry-run   Report which files would change, write nothing.
 #   -h, --help      Show this help.
+#
+# Examples:
+#   cd ~/Development/foo && intellij-workspace-fix --dry-run
 
 set -uo pipefail
 

@@ -6,8 +6,9 @@
 # Arguments:
 #   <dir>        Target directory, created if missing (default: the current one).
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   pbcopy-dir src/ README.md          # on the other machine …
+#   pbpaste-dir ~/tmp                  # … and here
 
 set -euo pipefail
 

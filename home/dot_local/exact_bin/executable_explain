@@ -3,11 +3,12 @@
 # Usage:   explain [--] <command> [<arg>...]
 #
 # Everything from the first word on is the command being explained, so its
-# own options need no escaping: `explain tar -xzvf foo.tgz`. Use `--` if the
-# command itself starts with a dash.
+# own options need no escaping. Use `--` if the command itself starts with a
+# dash.
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   explain tar -xzvf foo.tgz
+#   explain find . -name '*.log' -mtime +7 -delete
 
 set -euo pipefail
 
@@ -22,7 +23,7 @@ while (( $# )); do
     *)         break ;;
   esac
 done
-(( $# )) || die "command missing"
+(( $# )) || { usage >&2; exit 2; }
 
 cmd=$*
 url="https://explainshell.com/explain?cmd=${cmd// /+}"

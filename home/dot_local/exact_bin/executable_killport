@@ -5,8 +5,8 @@
 #
 # Completion for this command lives in ~/.config/zsh/completions/_killport.
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   killport 8080
 
 set -uo pipefail
 
@@ -33,6 +33,7 @@ while (( $# )); do
     *)         args+=("$1"); shift ;;
   esac
 done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
 (( ${#args[@]} == 1 )) || die "expected exactly one <port>"
 port=${args[0]}
 [[ $port =~ ^[0-9]+$ ]] || die "not a port number: $port"

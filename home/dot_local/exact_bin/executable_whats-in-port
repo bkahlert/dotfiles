@@ -5,8 +5,10 @@
 #
 # Without sudo only your own processes show. Exits 1 if nothing is bound.
 #
-# Options:
-#   -h, --help   Show this help.
+# Examples:
+#   whats-in-port 3000
+#   COMMAND   PID           USER   FD   TYPE  DEVICE SIZE/OFF NODE NAME
+#   node    25583 bjoern.kahlert   23u  IPv6  0x…        0t0  TCP *:3000 (LISTEN)
 
 set -euo pipefail
 
@@ -22,6 +24,7 @@ while (( $# )); do
     *)         args+=("$1"); shift ;;
   esac
 done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
 (( ${#args[@]} == 1 )) || die "expected exactly one <port>"
 port=${args[0]}
 [[ $port =~ ^[0-9]+$ ]] || die "not a port number: $port"

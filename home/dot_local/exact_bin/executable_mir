@@ -7,6 +7,10 @@
 # Options:
 #   -n, --dry-run   Show what would be transferred and deleted, change nothing.
 #   -h, --help      Show this help.
+#
+# Examples:
+#   mir ~/Pictures /Volumes/Backup/Pictures
+#   mir --dry-run ~/Pictures /Volumes/Backup/Pictures
 
 set -euo pipefail
 
@@ -24,6 +28,7 @@ while (( $# )); do
     *)            args+=("$1"); shift ;;
   esac
 done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
 (( ${#args[@]} == 2 )) || die "expected <source-dir> and <destination-dir>"
 src=${args[0]%/}
 dst=${args[1]%/}

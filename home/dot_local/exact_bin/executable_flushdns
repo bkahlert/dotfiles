@@ -4,9 +4,6 @@
 #
 # Needs sudo: mDNSResponder runs as root, so an unprivileged HUP is refused
 # with "No matching processes belonging to you were found".
-#
-# Options:
-#   -h, --help   Show this help.
 
 set -euo pipefail
 
