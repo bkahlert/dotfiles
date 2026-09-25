@@ -283,6 +283,55 @@ else
   skip 'Gradle caches: nothing to clean'
 fi
 
+# Pruning inside the VM never shrinks the host disk image; recreating the
+# machine does. Everything inside it (images, containers, volumes) is lost.
+podman_recreate() {
+  local name=$1 cpus=$2 mem=$3 disk=$4 rootful=$5 was_running=$6
+  local init=(podman machine init --cpus "$cpus" --memory "$mem" --disk-size "$disk")
+  [[ $rootful == true ]] && init+=(--rootful)
+  $was_running && podman machine stop "$name" &>/dev/null
+  podman machine rm -f "$name" &>/dev/null || { warn "podman machine $name: could not remove"; return; }
+  info "podman machine $name: downloading a fresh image, this takes a minute"
+  "${init[@]}" "$name" &>/dev/null || { warn "podman machine $name: init failed; run by hand: ${init[*]} $name"; return; }
+  if $was_running; then
+    podman machine start "$name" &>/dev/null || { warn "podman machine $name: recreated but failed to start"; return; }
+  fi
+  ok "podman machine $name recreated"
+}
+
+step 'Podman machine (recreate when its disk image exceeds 10 GiB; everything inside is lost)'
+if ! command -v podman &>/dev/null; then
+  skip 'podman not installed'
+elif ! command -v jq &>/dev/null; then
+  warn 'jq not installed; skipping podman machine'
+else
+  podman_seen=false
+  while IFS= read -r name; do
+    name=${name%\*}
+    [[ -n $name ]] || continue
+    podman_seen=true
+    IFS=$'\t' read -r state rootful cpus mem disk confdir < <(podman machine inspect "$name" 2>/dev/null \
+      | jq -r '.[0] | [.State, .Rootful, .Resources.CPUs, .Resources.Memory, .Resources.DiskSize, .ConfigDir.Path] | @tsv')
+    image=$(jq -r '.ImagePath.Path // empty' "$confdir/$name.json" 2>/dev/null)
+    [[ -n $image && -f $image ]] || { skip "podman machine $name: disk image not found"; continue; }
+    bytes=$(size_of "$image")
+    if (( bytes < 10 * 1024 * 1024 * 1024 )); then
+      skip "podman machine $name: $(bytes_to_human "$bytes") on disk, keeping"; continue
+    fi
+    info "podman machine $name: $(bytes_to_human "$bytes") on disk ($state, ${cpus} CPUs, ${mem} MiB, ${disk} GiB disk)"
+    item "$image"
+    was_running=false; [[ $state == running ]] && was_running=true
+    if ! $apply; then
+      reclaimable_risky=$((reclaimable_risky + bytes)); skip "podman machine $name: would ask"
+    elif confirm "Recreate podman machine $name? All images, containers and volumes inside are lost."; then
+      podman_recreate "$name" "$cpus" "$mem" "$disk" "$rootful" "$was_running"
+    else
+      skip "podman machine $name kept"
+    fi
+  done < <(podman machine list --format '{{.Name}}' 2>/dev/null)
+  $podman_seen || skip 'no podman machine'
+fi
+
 step 'Kotlin/Native toolchains (all but the newest)'
 konan_old=()
 konan_all=()
