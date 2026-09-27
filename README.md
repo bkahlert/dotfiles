@@ -1,8 +1,6 @@
-# dotfiles
+# dotfiles [![Buy Me A Coffee](https://img.shields.io/static/v1?label=&message=%E2%98%95%20Buy%20Me%20A%20Coffee&color=FFDD00)](https://www.buymeacoffee.com/bkahlert)
 
 Personal dotfiles managed with [chezmoi](https://www.chezmoi.io/).
-
-[![Buy Me A Coffee](https://img.shields.io/static/v1?label=&message=%E2%98%95%20Buy%20Me%20A%20Coffee&color=FFDD00)](https://www.buymeacoffee.com/bkahlert)
 
 ## Quick start
 
