@@ -19,7 +19,9 @@ custom fields set:
 
 Empty `ssh-config-content` = key-only entry; skipped (the private key
 still gets pushed to ssh-agent by KeePassXC's KeeAgent integration on
-DB unlock, just no Host block contribution).
+DB unlock, just no Host block contribution). Entries in the Recycle Bin
+are skipped too: pykeepass iterates the bin like any group, and it keeps
+copies of moved entries.
 """
 # kdbx-hash: {{ output "shasum" "-a" "256" (joinPath .chezmoi.homeDir "Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx") }}
 
@@ -48,6 +50,21 @@ def prompt_password() -> str:
     return r.stdout.rstrip("\n")
 
 
+def live_entries(kp: PyKeePass) -> list:
+    trash = kp.recyclebin_group
+    if trash is None:
+        return list(kp.entries)
+
+    def in_trash(group) -> bool:
+        while group is not None:
+            if group.uuid == trash.uuid:
+                return True
+            group = group.parentgroup
+        return False
+
+    return [e for e in kp.entries if not in_trash(e.group)]
+
+
 def main() -> int:
     if not KDBX.exists():
         sys.exit(f"kdbx not found at {KDBX} (iCloud not synced? open KeePassXC to trigger download)")
@@ -58,7 +75,7 @@ def main() -> int:
     by_file: dict[Path, list[tuple[str, str]]] = {}  # path -> [(entry-title, block)]
     pub_targets: dict[Path, bytes] = {}              # path -> bytes
 
-    for entry in kp.entries:
+    for entry in live_entries(kp):
         cf = entry.custom_properties or {}
         ssh_file = (cf.get("ssh-config-file") or "").strip()
         ssh_content = (cf.get("ssh-config-content") or "").strip()
