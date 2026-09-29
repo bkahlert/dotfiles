@@ -48,14 +48,15 @@ Third person, present tense, indicative. Functions and properties open with the 
 
 Tags follow the language's convention, even where it repeats the signature. Javadoc lists `@param` and `@return` for
 every parameter and return value. KDoc describes parameters in the sentence as `[name]` links. It reserves `@param` and
-`@return` for a description too long for that sentence, so its tag list is often partial or absent. Python docstrings are
-imperative (`Return the …`, PEP 257). For any other language, read how its standard library does it.
+`@return` for a description too long for that sentence, so its tag list is often partial or absent. `@throws` stays in
+both. Python docstrings are imperative (`Return the …`, PEP 257). For any other language, read how its standard library
+does it.
 
 ## Code samples
 
-A sample, in a doc comment or a Markdown fence, parses as written. Cut the rest with `/* ... */`, or with `// ...`
-inside Javadoc or JSDoc, where `*/` ends the doc comment. A placeholder the language accepts also works: `TODO()` in
-Kotlin, `...` in Python. Bare `...` in Kotlin or Java is a syntax error.
+A sample, in a doc comment or a Markdown fence, parses as written; names need not resolve. Cut the rest with `/* ...
+*/`, or with `// ...` inside Javadoc or JSDoc, where `*/` ends the doc comment. A placeholder the language accepts also
+works: `TODO()` in Kotlin, `...` in Python. Bare `...` in Kotlin or Java is a syntax error.
 
 ## Inline comments: only the why
 
