@@ -1,7 +1,7 @@
 # Git: branches and commit messages
 
-Commit history is machine-read — commitlint gates it; semantic-release, release-please and conventional-changelog turn it into version bumps and
-changelogs — so every commit must parse the same way in all of them.
+Commit history is machine-read: commitlint gates it, and semantic-release, release-please and conventional-changelog turn it into version bumps
+and changelogs. Write commits in the form all of them parse.
 
 ## Branches
 
@@ -35,6 +35,8 @@ by effort: a large internal rewrite is `refactor`, a one-line change users notic
 | `revert` | `revert: <original header>`, body `This reverts commit <sha>.` | patch |
 | `refactor`, `docs`, `test`, `build`, `ci`, `style`, `chore` | as named, unlisted in changelogs; `chore` for what fits nowhere else | none |
 
+A breaking change (see Footers) is a major release whatever the type.
+
 **Scope** — one lowercase noun for the area touched (`parser`, `auth`, `zsh`). Reuse existing scopes, since the changelog groups by them:
 `git log --format=%s | grep -oE '^\w+\([^)]+\)' | sort | uniq -c`. Omit only for cross-cutting changes.
 
@@ -44,13 +46,15 @@ by effort: a large internal rewrite is `refactor`, a one-line change users notic
 
 **Footers** — after a blank line, one git trailer per line:
 
-- Breaking change: `!` before the colon *and* `BREAKING CHANGE: <what breaks, how to migrate>`. The `!` shows in one-line logs; the footer is what
-  older tooling reads.
-- Ticket: `Closes #42` / `Fixes #42` closes it, `Refs: PROJ-123` links it. Here, not in the description — tools link footer references.
+- Breaking change: `BREAKING CHANGE: <what breaks, how to migrate>`, uppercase. Every tool reads it. Add `!` before the colon only where the
+  repository's tooling parses it: release-please, git-cliff and the conventionalcommits preset do; semantic-release's default Angular preset does
+  not and drops the header's type.
+- Ticket: `Closes #42` / `Fixes #42` is parsed as a reference and closes the issue; `Refs: PROJ-123` stays a plain trailer. Here, not in the
+  description, so the changelog line stays clean.
 - No AI-attribution trailers (`Co-Authored-By: Claude …`, `Generated with …`), in commits or PR descriptions.
 
 ```
-feat(auth)!: require PKCE for the authorization-code flow
+feat(auth): require PKCE for the authorization-code flow
 
 Public clients could complete the flow without a code challenge, which
 allowed code interception on mobile. Requests without code_challenge
