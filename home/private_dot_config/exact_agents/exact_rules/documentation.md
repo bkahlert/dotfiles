@@ -11,9 +11,11 @@ cannot say.
 
 ## Public API: the contract, complete
 
-Public API is what other code calls without reading the body: a library's surface, a module boundary, anything another
-team consumes. Every such declaration you add or change has a doc comment, because its readers cannot see the body. Test
-code has none ([testing.md](testing.md)).
+Public API depends on the module. A library is any module that is published or that another module depends on. There,
+every `public` or `protected` declaration is public API; `private`, `internal` and file-private are not. An application
+module, one nothing depends on, has only entry points: what a framework, another team or an operator calls. Every
+public-API declaration you add or change has a doc comment, because its readers cannot see the body. Test code has none
+([testing.md](testing.md)).
 
 The doc comment answers, in this order and only as far as they apply:
 
