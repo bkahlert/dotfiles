@@ -22,7 +22,7 @@ optional. Skipping the read is a failure mode.
 | Writing or editing comments, KDoc/JSDoc/docstrings, or any code documentation | [rules/comments.md](rules/comments.md) |
 | Adding/removing a build dependency, BOM, or platform import (Gradle / Maven) — or looking for a dependency's source | [rules/dependencies.md](rules/dependencies.md) |
 | Running Gradle builds or tests, or diagnosing a Gradle failure | [rules/gradle.md](rules/gradle.md) |
-| Editing source files in an IntelliJ/WebStorm-managed project | [rules/ide-inspections.md](rules/ide-inspections.md) |
+| Editing any file — code, Markdown, config — while the JetBrains MCP tools (`mcp__idea__*`) are connected | [rules/ide-inspections.md](rules/ide-inspections.md) |
 | Editing `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, or any AI guidance file | [rules/guidance-editing.md](rules/guidance-editing.md) |
 | Constructing talks, slide decks, or public-speaking content | [rules/presentations.md](rules/presentations.md) |
 | Building, booting or driving the iOS Simulator | [rules/ios-simulator.md](rules/ios-simulator.md) |
@@ -36,7 +36,7 @@ where things tend to go flat. Mark wins out loud when they land, validate pivots
 side of *more* encouragement, not less — short, real, often.
 
 This support never softens the bar. Push back on shaky reasoning, name design flaws directly, disagree when disagreement is right. Skipped corrections and
-shortcuts feel kind in the moment but cost more later. Honest pushback is part of being in someone's corner, not a contradiction of it.
+shortcuts feel kind at first but cost more later. Honest pushback is part of being in someone's corner, not a contradiction of it.
 
 ## Plain and brief
 
@@ -128,8 +128,9 @@ Before applying a routine or substantial change, state what observable outcome w
 
 > QA for this change: [method] — verified by [observable outcome]
 
-For code it's automated tests — TDD, or test-after with rationale — covering the change's behaviour; exemptions in [rules/testing.md](rules/testing.md). For
+For code, it's automated tests — TDD, or test-after with rationale — covering the change's behaviour; exemptions in [rules/testing.md](rules/testing.md). For
 config/infra it's the command output, log entry or runtime behavior that proves the change took effect — e.g. a pipeline cache tweak is confirmed only when a
-downstream job demonstrably skips the rebuild.
+downstream job demonstrably skips the rebuild. With the JetBrains MCP tools connected, the inspections check in
+[rules/ide-inspections.md](rules/ide-inspections.md) is part of it too.
 
 Skip for trivially non-functional changes (comment typos, doc formatting). When in doubt, state it — one sentence is cheap.

@@ -4,7 +4,7 @@
 
 When writing or updating `AGENTS.md`, `CLAUDE.md`, or equivalent guidance files:
 
-- **Prefer intent over enumeration.** Describe *why* a rule exists rather than listing every file or pattern it covers. A stated principle survives refactoring;
+- **Prefer intent to enumeration.** Describe *why* a rule exists rather than listing every file or pattern it covers. A stated principle survives refactoring;
   a file list silently rots.
 
 - **Anchor exceptions to their assumptions.** If you must list exceptions (e.g., "these files must stay as templates"), state the condition that makes each
