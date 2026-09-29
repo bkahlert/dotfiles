@@ -61,6 +61,8 @@ Blank line after the body, one git trailer per line:
   `git log --oneline`, the footer carries the migration text and is what older tooling reads. Either alone triggers a major release.
 - `Closes #42` / `Fixes #42` closes the tracker issue; `Refs: PROJ-123` links without closing. Put the ticket here, not in the description: the
   tools render footer references as links and keep the changelog line clean.
+- No `Co-Authored-By:` or other AI-attribution trailers — not in commits, and not in PR descriptions, which squash-merge folds into the commit
+  body.
 - Reverts: header `revert: <original header>`, body `This reverts commit <sha>.` followed by the reason.
 
 ```
