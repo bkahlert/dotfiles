@@ -1,89 +1,66 @@
 # Git: branches and commit messages
 
-Commit history is machine-read: commitlint gates it, and semantic-release, release-please, conventional-changelog and git-cliff turn it into version
-bumps and changelogs. Every rule below exists so that a commit parses the same way in all of them.
+Commit history is machine-read — commitlint gates it; semantic-release, release-please and conventional-changelog turn it into version bumps and
+changelogs — so every commit must parse the same way in all of them.
 
 ## Branches
 
-- Never commit on `main`/`master`. Every change starts on a branch and lands through a pull request.
-- Name: `<type>/<TICKET-ID>-<slug>`, e.g. `feat/PROJ-123-oauth-login`, `fix/42-null-token`.
-    - `<type>` is the commit type the branch mostly produces (see below), so branch and changelog share one vocabulary.
-    - `<TICKET-ID>` as the tracker writes it (`PROJ-123`; the bare number for GitHub/GitLab issues). Omit the segment only when no ticket exists:
-      `docs/git-rule`.
-    - `<slug>`: two to five lowercase words, hyphen-separated, saying what the branch does — not the ticket title verbatim.
-- One branch per ticket. Short-lived; delete after merge.
+Never commit on `main`/`master`; every change starts on a branch and lands through a pull request. One branch per ticket, deleted after merge.
 
-## Commit messages
+Name: `<type>/<TICKET-ID>-<slug>`, e.g. `feat/PROJ-123-oauth-login`. The type is a commit type from below. The ticket ID is written as the tracker
+writes it and omitted only when there is no ticket (`docs/git-rule`). The slug is two to five lowercase hyphenated words saying what the branch does.
 
-[Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) with the Angular type set — the grammar every changelog tool parses by
-default.
+## Commits
+
+[Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/) with the Angular types — the grammar every changelog tool parses by
+default:
 
 ```
 <type>(<scope>)!: <description>
 
 <body>
 
-<footer>
+<footers>
 ```
 
-### Header
+**Type** — lowercase, from this table. It decides the version bump and whether the change is listed at all, so choose by effect on the user, not
+by effort: a large internal rewrite is `refactor`, a one-line change users notice is `feat` or `fix`.
 
-- `type` — lowercase, one of the following; anything else fails `@commitlint/config-conventional`:
+| Type | Use for | Release |
+|---|---|---|
+| `feat` | a user-visible capability | minor |
+| `fix` | a user-visible bug fix | patch |
+| `perf` | faster or leaner, behaviour unchanged | patch |
+| `revert` | `revert: <original header>`, body `This reverts commit <sha>.` | patch |
+| `refactor`, `docs`, `test`, `build`, `ci`, `style`, `chore` | as named, unlisted in changelogs; `chore` for what fits nowhere else | none |
 
-  | Type | Use for | Release |
-  |---|---|---|
-  | `feat` | a user-visible capability | minor |
-  | `fix` | a user-visible bug fix | patch |
-  | `perf` | faster or leaner, behaviour unchanged | patch |
-  | `revert` | undoing a commit | patch |
-  | `refactor` | code change that is neither `feat` nor `fix` | none |
-  | `docs`, `test`, `build`, `ci`, `style`, `chore` | as named; `chore` for what fits nowhere else | none |
+**Scope** — one lowercase noun for the area touched (`parser`, `auth`, `zsh`). Reuse existing scopes, since the changelog groups by them:
+`git log --format=%s | grep -oE '^\w+\([^)]+\)' | sort | uniq -c`. Omit only for cross-cutting changes.
 
-  The type decides the version bump and the changelog section, so choose it by effect on the user, not by effort: a large internal rewrite is
-  `refactor`, a one-line change users notice is `feat` or `fix`. Only `feat`, `fix`, `perf`, `revert` and breaking changes appear in a changelog
-  by default.
-- `scope` — the area of the code the change touches, as one lowercase noun: `parser`, `auth`, `zsh`. Letters, digits and hyphens. Reuse the
-  scopes already in the history (`git log --format=%s | grep -oE '^\w+\([^)]+\)' | sort | uniq -c`): the changelog groups by scope, and `api`
-  next to `apis` makes two groups. Omit the scope only when the change is cross-cutting.
-- `description` — imperative present tense (`add`, not `added` or `adds`), lowercase first letter, no trailing period; it completes "this commit
-  will …". Whole header at most 72 characters (commitlint allows 100, but `git log --oneline` and GitHub cut off past 72).
+**Description** — imperative present (`add`, not `added`), lowercase, no trailing period; whole header at most 72 characters.
 
-### Body
+**Body** — after a blank line, wrapped at 72: what changed and why, not how. Omit when the header says it all.
 
-Blank line after the header, lines wrapped at 72. Say what changed and why — the motivation, the previous behaviour, the trade-off. Not how; the
-diff shows that. Skip the body when the header says it all.
+**Footers** — after a blank line, one git trailer per line:
 
-### Footers
-
-Blank line after the body, one git trailer per line:
-
-- `BREAKING CHANGE: <what breaks and how to migrate>`, plus `!` after the type/scope in the header. Use both: the `!` is visible in
-  `git log --oneline`, the footer carries the migration text and is what older tooling reads. Either alone triggers a major release.
-- `Closes #42` / `Fixes #42` closes the tracker issue; `Refs: PROJ-123` links without closing. Put the ticket here, not in the description: the
-  tools render footer references as links and keep the changelog line clean.
-- No `Co-Authored-By:` or other AI-attribution trailers — not in commits, and not in PR descriptions, which squash-merge folds into the commit
-  body.
-- Reverts: header `revert: <original header>`, body `This reverts commit <sha>.` followed by the reason.
+- Breaking change: `!` after the scope *and* `BREAKING CHANGE: <what breaks, how to migrate>`. The `!` shows in one-line logs; the footer is what
+  older tooling reads.
+- Ticket: `Closes #42` / `Fixes #42` closes it, `Refs: PROJ-123` links it. Here, not in the description — tools link footer references.
+- No `Co-Authored-By:` or other AI-attribution trailers, in commits or PR descriptions.
 
 ```
 feat(auth)!: require PKCE for the authorization-code flow
 
 Public clients could complete the flow without a code challenge, which
-allowed authorization-code interception on mobile. Following RFC 7636,
-the server now rejects requests without code_challenge.
+allowed code interception on mobile. Requests without code_challenge
+are now rejected (RFC 7636).
 
-BREAKING CHANGE: clients must send code_challenge and code_verifier;
-the implicit-flow fallback was removed.
+BREAKING CHANGE: clients must send code_challenge and code_verifier.
 Refs: PROJ-123
 ```
 
-### One change per commit
+**One change per commit** — each commit is one changelog line; a commit that fixes and adds reports only one. Split it, and keep reformatting in
+its own `style` commit.
 
-Each commit becomes one changelog line. A commit that fixes a bug and adds a feature reports only one of them; split it. Reformatting inside a
-`feat` commit buries the feature in noise; make it a separate `style` commit.
-
-### Pull requests
-
-With squash-merge the PR title becomes the commit header on `main` and is all the changelog tools see. Write it as a header
-(`type(scope): description`); GitHub appends `(#61)` itself. Put the footers (`BREAKING CHANGE:`, `Closes`) in the PR description so they end up
-in the squash commit's body.
+**Pull requests** — under squash-merge the PR title becomes the commit header and the description its body, so write the title as a header and
+put footers in the description. GitHub appends `(#61)` itself.
