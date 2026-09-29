@@ -49,10 +49,10 @@ Third person, present tense, indicative. Functions and properties open with the 
 `A generic ordered collection of elements.` One fact per sentence. One line when the contract fits on one.
 
 Tags follow the language's convention, even where it repeats the signature. Javadoc lists `@param` and `@return` for
-every parameter and return value. KDoc describes parameters in the sentence as `[name]` links. It reserves `@param` and
-`@return` for a description too long for that sentence, so its tag list is often partial or absent. `@throws` stays in
-both. Python docstrings are imperative (`Return the …`, PEP 257). For any other language, read how its standard library
-does it.
+every parameter and return value. KDoc describes parameters in the sentence as `[name]` links and adds `@param` or
+`@return` only for a description too long for that sentence. Most KDoc therefore has no tags; where one appears it
+covers that parameter alone, as the stdlib's `fold` does. `@throws` stays in both. Python docstrings are imperative
+(`Return the …`, PEP 257). For any other language, read how its standard library does it.
 
 ## Code samples
 
