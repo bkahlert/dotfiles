@@ -25,8 +25,8 @@ The doc comment answers, in this order and only as far as they apply:
 Leave out what the signature already says, how the body does it, and when to use it. A maintainer's reason for a
 constraint is not contract either; it goes in a `//` comment (see [Where rationale lives](#where-rationale-lives)).
 
-Even an obvious public member gets its one line, as `size` does above. Anywhere else, a doc that only rewords the name
-(`getName` → "Gets the name") is noise. Write none.
+Even an obvious public member gets its one line, as `size` does above. On anything that is not public API, a doc that
+only rewords the name (`getName` → "Gets the name") is noise. Write none.
 
 ```kotlin
 // ❌ Tutorial voice, no contract
@@ -46,9 +46,10 @@ Third person, present tense, indicative. Functions and properties open with the 
 `Throws`. Never `This function returns`, `Will return`, `you`, `we`. Classes and interfaces are noun phrases:
 `A generic ordered collection of elements.` One fact per sentence. One line when the contract fits on one.
 
-Tags follow the language. KDoc names parameters inline as `[index]` and uses `@param` only for what the sentence cannot
-carry. Javadoc lists `@param` and `@return` for every parameter and return value, by convention. Python docstrings are
-imperative (`Return the …`, PEP 257). For any other language, read how its standard library does it.
+Tags follow the language's convention, even where it repeats the signature. Javadoc lists `@param` and `@return` for
+every parameter and return value. KDoc names parameters inline as `[index]` and uses `@param` only for what the sentence
+cannot carry. Python docstrings are imperative (`Return the …`, PEP 257). For any other language, read how its standard
+library does it.
 
 ## Code samples
 
