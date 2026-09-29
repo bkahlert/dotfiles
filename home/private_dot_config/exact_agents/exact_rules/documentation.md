@@ -1,6 +1,7 @@
 # Code documentation
 
-Doc comments (KDoc, Javadoc, JSDoc, docstrings) and inline comments. Markdown files follow [markdown.md](markdown.md).
+Doc comments (KDoc, Javadoc, JSDoc, docstrings), inline comments, and code samples wherever they appear. Markdown prose
+follows [markdown.md](markdown.md).
 
 The bar is the language's standard library: `kotlin.collections`, `java.util`. Their docs state the contract, short and
 complete, in a fixed register. Chatty, partial or missing docs fail that bar.
@@ -48,6 +49,12 @@ Third person, present tense, indicative. Functions and properties open with the 
 Tags follow the language. KDoc names parameters inline as `[index]` and uses `@param` only for what the sentence cannot
 carry. Javadoc lists `@param` and `@return` for every parameter and return value, by convention. Python docstrings are
 imperative (`Return the …`, PEP 257). For any other language, read how its standard library does it.
+
+## Code samples
+
+A sample, in a doc comment or a Markdown fence, parses as written. Cut the rest with `/* ... */`, or with `// ...`
+inside Javadoc or JSDoc, where `*/` ends the doc comment. A placeholder the language accepts also works: `TODO()` in
+Kotlin, `...` in Python. Bare `...` in Kotlin or Java is a syntax error.
 
 ## Inline comments: only the why
 

@@ -99,20 +99,20 @@ that lets the helper sit below its use.
 
 ```kotlin
 // ❌ Bad — fixtures before the first test
-private fun technician(name: String = "Ada") = Technician(...)
-private fun resourceFor(technician: Technician?) = Resource(...)
+private fun technician(name: String = "Ada") = Technician(/* ... */)
+private fun resourceFor(technician: Technician?) = Resource(/* ... */)
 
 class ResourceTest : ShouldSpec({
-    context("name") { ... }
+    context("name") { /* ... */ }
 })
 
 // ✅ Good — tests first, fixtures below
 class ResourceTest : ShouldSpec({
-    context("name") { ... }
+    context("name") { /* ... */ }
 })
 
-private fun technician(name: String = "Ada") = Technician(...)
-private fun resourceFor(technician: Technician?) = Resource(...)
+private fun technician(name: String = "Ada") = Technician(/* ... */)
+private fun resourceFor(technician: Technician?) = Resource(/* ... */)
 ```
 
 ## 8. Comments: exceptional
