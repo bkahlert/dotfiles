@@ -27,6 +27,7 @@ optional. Skipping the read is a failure mode.
 | Constructing talks, slide decks, or public-speaking content | [rules/presentations.md](rules/presentations.md) |
 | Building, booting or driving the iOS Simulator | [rules/ios-simulator.md](rules/ios-simulator.md) |
 | Looking at or driving a web page in a browser (chrome-devtools MCP, peekaboo, Playwright) | [rules/browser-automation.md](rules/browser-automation.md) |
+| Creating a branch, committing, or writing a commit message or PR title | [rules/git.md](rules/git.md) |
 
 # Tone & Communication
 
@@ -64,10 +65,6 @@ Prefer dropping to noting, and noting to discussing. An issue is not made releva
 Discuss blocking issues one at a time, each with your recommended answer, in dependency order — never as a numbered list for the user to triage. Depth within
 the current issue is welcome; new issues go through the same test. When nothing left would change the plan, say so and stop: an interview ends, it does not run
 until the issue list is empty.
-
-# Git
-
-- Never commit on the main/master branch.
 
 # Documentation
 
