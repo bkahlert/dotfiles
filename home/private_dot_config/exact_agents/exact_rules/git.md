@@ -8,7 +8,8 @@ changelogs — so every commit must parse the same way in all of them.
 Never commit on `main`/`master`; every change starts on a branch and lands through a pull request. One branch per ticket, deleted after merge.
 
 Name: `<type>/<TICKET-ID>-<slug>`, e.g. `feat/PROJ-123-oauth-login`. The type is a commit type from below. The ticket ID is written as the tracker
-writes it and omitted only when there is no ticket (`docs/git-rule`). The slug is two to five lowercase hyphenated words saying what the branch does.
+writes it (`PROJ-123`, or `42` for a GitHub issue) and omitted only when there is no ticket (`docs/git-rule`). The slug is two to five lowercase
+hyphenated words saying what the branch does.
 
 ## Commits
 
@@ -16,7 +17,7 @@ writes it and omitted only when there is no ticket (`docs/git-rule`). The slug i
 default:
 
 ```
-<type>(<scope>)!: <description>
+<type>(<scope>): <description>
 
 <body>
 
@@ -43,10 +44,10 @@ by effort: a large internal rewrite is `refactor`, a one-line change users notic
 
 **Footers** — after a blank line, one git trailer per line:
 
-- Breaking change: `!` after the scope *and* `BREAKING CHANGE: <what breaks, how to migrate>`. The `!` shows in one-line logs; the footer is what
+- Breaking change: `!` before the colon *and* `BREAKING CHANGE: <what breaks, how to migrate>`. The `!` shows in one-line logs; the footer is what
   older tooling reads.
 - Ticket: `Closes #42` / `Fixes #42` closes it, `Refs: PROJ-123` links it. Here, not in the description — tools link footer references.
-- No `Co-Authored-By:` or other AI-attribution trailers, in commits or PR descriptions.
+- No AI-attribution trailers (`Co-Authored-By: Claude …`, `Generated with …`), in commits or PR descriptions.
 
 ```
 feat(auth)!: require PKCE for the authorization-code flow
@@ -62,5 +63,6 @@ Refs: PROJ-123
 **One change per commit** — each commit is one changelog line; a commit that fixes and adds reports only one. Split it, and keep reformatting in
 its own `style` commit.
 
-**Pull requests** — under squash-merge the PR title becomes the commit header and the description its body, so write the title as a header and
-put footers in the description. GitHub appends `(#61)` itself.
+**Pull requests** — under squash-merge the PR title becomes the commit header, so write it as a header; GitHub appends `(#61)` itself. Footers in
+the PR description reach the squash commit only if the repository's squash message is set to "title and description" — otherwise add them in the
+merge dialog.
