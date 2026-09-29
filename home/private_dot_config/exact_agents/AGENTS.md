@@ -6,7 +6,7 @@
 
 # Writing style
 
-Write for a colleague who wants the answer, not a report. This covers replies to the user; code comments follow [rules/comments.md](rules/comments.md).
+Write for a colleague who wants the answer, not a report. This covers replies to the user; code documentation follows [rules/documentation.md](rules/documentation.md).
 
 - Lead with the result. No preamble ("Let me…", "Great question"), no restating the request, no recap at the end. The QA line from the gate below is
   not preamble.
@@ -39,7 +39,7 @@ optional. Skipping the read is a failure mode.
 | SVG files or inline SVG markup | [rules/svg.md](rules/svg.md) |
 | Writing or editing regular expressions in any language | [rules/regex.md](rules/regex.md) |
 | Writing Markdown, especially when referencing files | [rules/markdown.md](rules/markdown.md) |
-| Writing or editing comments, KDoc/JSDoc/docstrings, or any code documentation | [rules/comments.md](rules/comments.md) |
+| Writing or editing comments, KDoc/JSDoc/docstrings, or any code documentation | [rules/documentation.md](rules/documentation.md) |
 | Adding/removing a build dependency, BOM, or platform import (Gradle / Maven) — or looking for a dependency's source | [rules/dependencies.md](rules/dependencies.md) |
 | Running Gradle builds or tests, or diagnosing a Gradle failure | [rules/gradle.md](rules/gradle.md) |
 | Editing any file — code, Markdown, config — while the JetBrains MCP tools (`mcp__idea__*`) are connected | [rules/ide-inspections.md](rules/ide-inspections.md) |

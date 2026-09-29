@@ -118,7 +118,7 @@ private fun resourceFor(technician: Technician?) = Resource(...)
 ## 8. Comments: exceptional
 
 Tests typically carry no comments. Expressiveness lives in names, nesting and assertions; a test that needs a comment to be understood needs a more
-readable implementation first. See [comments.md](comments.md) for the general rule.
+readable implementation first. See [documentation.md](documentation.md) for the general rule.
 
 - **No KDoc** on test classes or test helpers. A helper whose name cannot carry its meaning gets a better name first.
 - **The rare exception** is knowledge the test itself cannot express: a corner case that is hard to see from the implementation, or the result of research
