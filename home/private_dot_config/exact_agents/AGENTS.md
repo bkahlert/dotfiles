@@ -13,7 +13,7 @@ optional. Skipping the read is a failure mode.
 |---|---|
 | Tailwind, DaisyUI, Flowbite, or any utility-class CSS framework | [rules/tailwind.md](rules/tailwind.md) |
 | TypeScript / Kotlin / Java type design (any new type or signature) | [rules/typing.md](rules/typing.md) |
-| Writing or modifying tests in any framework (Kotest, Jest, RSpec, JUnit, Mocha) | [rules/testing.md](rules/testing.md) |
+| Deciding what to test, or writing or modifying tests in any framework (Kotest, Jest, RSpec, JUnit, Mocha) | [rules/testing.md](rules/testing.md) |
 | Shell or Bash scripts (`*.sh`, `*.bash`, shebang `#!/usr/bin/env bash`) | [rules/bash.md](rules/bash.md) |
 | Authoring or editing a `Dockerfile` / `Containerfile` / OCI image build | [rules/docker.md](rules/docker.md) |
 | SVG files or inline SVG markup | [rules/svg.md](rules/svg.md) |
@@ -128,7 +128,8 @@ Before applying a routine or substantial change, state what observable outcome w
 
 > QA for this change: [method] — verified by [observable outcome]
 
-For code that's TDD, test-after with rationale, or explicit manual steps. For config/infra it's the command output, log entry or runtime behavior that proves the
-change took effect — e.g. a pipeline cache tweak is confirmed only when a downstream job demonstrably skips the rebuild.
+For code it's automated tests — TDD, or test-after with rationale — covering the change's behaviour; exemptions in [rules/testing.md](rules/testing.md). For
+config/infra it's the command output, log entry or runtime behavior that proves the change took effect — e.g. a pipeline cache tweak is confirmed only when a
+downstream job demonstrably skips the rebuild.
 
 Skip for trivially non-functional changes (comment typos, doc formatting). When in doubt, state it — one sentence is cheap.

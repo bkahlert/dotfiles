@@ -1,6 +1,28 @@
-# Test Naming & Structure
+# Testing
 
-## 1. One Class per Subject
+## 1. Functional code ships with tests
+
+Every functional aspect of a change — behaviour a caller or user can observe: a return value, a state change, an emitted event, an error path — is covered
+by an automated test in the same change.
+
+- **Only drafts and prototypes are exempt**, and only when the user has declared one (spike, proof of concept, "just try it", "quick draft").
+- **Infeasible is said, not skipped.** If a behaviour cannot be tested with reasonable effort, name it in the reply with the reason and the manual check done
+  instead.
+
+## 2. Fast and lightweight — never at the expense of coverage
+
+Keep each test as fast and small as the behaviour under test allows.
+
+- **Test at the lowest level that exercises the behaviour.** Pure logic is tested without a framework, container or database around it; an integration
+  test is for behaviour that *is* the integration: SQL, serialization, HTTP wiring, framework configuration.
+- **Setup is proportional.** Build only the fixture the assertion needs, share expensive setup (containers, application contexts) across the class, and use
+  the project's existing test stack — no new library for one matcher.
+- **No waiting, no incidental I/O.** Replace `sleep` and polling with injected clocks, fakes or awaiting the actual signal; keep network, file system and
+  wall-clock time out unless they are what is being tested.
+- **Lightweight is not shallow.** Dropping an assertion or an error path, mocking the subject, or swapping an integration test for a unit test that cannot
+  fail for the real defect is a quality cut, not an optimisation.
+
+## 3. One Class per Subject
 
 A test class is named after its subject plus `Test` or `IntegrationTest` — nothing else (`FooTest`, or `FooKtTest` for the top-level functions in
 `Foo.kt`). No `FooLoggingTest`.
@@ -9,7 +31,7 @@ A test class is named after its subject plus `Test` or `IntegrationTest` — not
 - **A different class gets its own test**: if the would-be extra class actually exercises something else (a metrics helper, say), test that class directly
   under its own name.
 
-## 2. Specificity via Nesting
+## 4. Specificity via Nesting
 
 Achieve test specificity through hierarchical nesting rather than long BDD descriptions. Each level should add a single layer of context.
 
@@ -18,7 +40,7 @@ Achieve test specificity through hierarchical nesting rather than long BDD descr
 - **The "Full Path" Rule**: The test's intent should be clear when reading the nested breadcrumbs (e.g., Resource > Name > On missing technician > should be
   null).
 
-## 3. Phrasing & Conditional Logic
+## 5. Phrasing & Conditional Logic
 
 - **Names are claims**: a stranger must be able to check the name against the subject, and read off the regression it guards against — e.g.
   `should("log the duration of an ended stream as text")`.
@@ -26,7 +48,7 @@ Achieve test specificity through hierarchical nesting rather than long BDD descr
 - **Time Dimension**: Only use "when" or "if" if the condition implies a temporal sequence or complex logic that "on" cannot represent.
 - **Direct Outcomes**: The final leaf node should focus strictly on the result/assertion (e.g., `should be null`, `it returns 200`).
 
-## 4. Assertion Structure
+## 6. Assertion Structure
 
 Assertions must target the **immediate return value** of the action under test. Never chain the action call with assertions — store the result first.
 
@@ -57,7 +79,7 @@ keys shouldBe listOf("a", "b", "c")
 
 Prefer expressive matchers over manual boolean extraction (`shouldNotContainJsonKey` over `.has("key") shouldBe false`).
 
-## 5. File Layout: tests first, helpers last
+## 7. File Layout: tests first, helpers last
 
 A reader opens a test file to learn what the code does. The test cases answer that; fixtures, builders and custom matchers don't. Put the test cases at the
 top and the infrastructure below them.
@@ -93,7 +115,7 @@ private fun technician(name: String = "Ada") = Technician(...)
 private fun resourceFor(technician: Technician?) = Resource(...)
 ```
 
-## 6. Comments: exceptional
+## 8. Comments: exceptional
 
 Tests typically carry no comments. Expressiveness lives in names, nesting and assertions; a test that needs a comment to be understood needs a more
 readable implementation first. See [comments.md](comments.md) for the general rule.
@@ -102,7 +124,7 @@ readable implementation first. See [comments.md](comments.md) for the general ru
 - **The rare exception** is knowledge the test itself cannot express: a corner case that is hard to see from the implementation, or the result of research
   worth keeping — e.g. the upstream bug a test works around.
 
-## 7. Framework Adaptability
+## 9. Framework Adaptability
 
 Adapt the syntax to the project's specific framework while maintaining the hierarchical philosophy:
 
@@ -110,7 +132,7 @@ Adapt the syntax to the project's specific framework while maintaining the hiera
 - **Jest/RSpec/Mocha**: Use `describe(...)` for subjects, `context(...)` for states, and `it(...)` for assertions.
 - **JUnit 5**: Use `@Nested` classes with `@DisplayName`.
 
-## 8. Examples
+## 10. Examples
 
 **Bad (Flat & Verbose)**
 "If the technician exists the name of the resource should equal the technician's name"
@@ -130,7 +152,7 @@ context("resource") {
 }
 ```
 
-## 9. Framework pitfalls
+## 11. Framework pitfalls
 
 - **mockk and Kotlin value classes**: arguments arrive erased at the call boundary, so `firstArg<MyValueClass>()` throws `ClassCastException`. Read the
   underlying type and re-wrap: `MyValueClass(firstArg<UUID>())`.
