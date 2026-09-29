@@ -16,6 +16,12 @@ When writing or updating `AGENTS.md`, `CLAUDE.md`, or equivalent guidance files:
 - **Review guidance after making code changes.** After any significant refactor, scan the guidance file for descriptions that no longer match the codebase.
   Stale guidance is worse than no guidance — it actively misleads future agents.
 
+## Independent review
+
+Every sentence of guidance is loaded and obeyed in every future session, so before committing a change to it, have an agent with fresh context — a different
+model where available — review the diff: cut what would not change what an agent does, keep what would (including a *why* that decides edge cases), and flag
+rules duplicated or contradicted elsewhere. Verify each suggestion against the files before applying it. Typo and formatting fixes are exempt.
+
 ## Codebase Invariants
 
 When a session introduces or discovers a cross-cutting constraint that all code must comply with (e.g., adopting a code style, renaming convention,
