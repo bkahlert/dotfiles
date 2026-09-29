@@ -126,11 +126,6 @@ See [quick-access/README.md](quick-access/README.md) — it decides which of the
 **Add a brew package:**
 Edit [run_once_before_01-install-packages.sh](home/.chezmoiscripts/run_once_before_01-install-packages.sh) and add to the Brewfile.
 
-## Git Commits
-
-- Do **not** include `Co-Authored-By:` or any AI attribution lines in commit messages.
-- Never commit directly on `main` — always work on a topic branch.
-
 ## Shipping Changes
 
 This repo is solo-maintained and uses GitHub PRs as the merge mechanism (not as a review gate). The ship flow comes in **two offers**, in order: first apply the change locally so the user can test it, then ship it. Don't bundle both into one prompt — the user needs a chance to verify between them.
