@@ -14,8 +14,8 @@ cannot say.
 Public API depends on the module. A library is any module that is published or that another module depends on. There,
 every `public` or `protected` declaration is public API; `private`, `internal` and file-private are not. An application
 module, one nothing depends on, has only entry points: what a framework, another team or an operator calls. Every
-public-API declaration you add or change has a doc comment, because its readers cannot see the body. Test code has none
-([testing.md](testing.md)).
+public-API declaration you add or change has a doc comment, because its readers cannot see the body. Test code has no
+doc comments ([testing.md](testing.md)).
 
 The doc comment answers, in this order and only as far as they apply:
 
@@ -48,17 +48,17 @@ Third person, present tense, indicative. Functions and properties open with the 
 `Throws`. Never `This function returns`, `Will return`, `you`, `we`. Classes and interfaces are noun phrases:
 `A generic ordered collection of elements.` One fact per sentence. One line when the contract fits on one.
 
-Tags follow the language's convention, even where it repeats the signature. Javadoc lists `@param` and `@return` for
-every parameter and return value. KDoc describes parameters in the sentence as `[name]` links and adds `@param` or
-`@return` only for a description too long for that sentence. Most KDoc therefore has no tags; where one appears it
-covers that parameter alone, as the stdlib's `fold` does. `@throws` stays in both. Python docstrings are imperative
-(`Return the …`, PEP 257). For any other language, read how its standard library does it.
+Tags follow the language's convention, even where it repeats the signature or the summary. Javadoc lists `@param` and
+`@return` for every parameter and return value. KDoc describes parameters in the sentence as `[name]` links and adds
+`@param` or `@return` only for a description too long for that sentence. Most KDoc therefore has no tags; where one
+appears it covers that parameter alone, as the stdlib's `fold` does. `@throws` stays in both. Python docstrings are
+imperative (`Return the …`, PEP 257). For any other language, read how its standard library does it.
 
 ## Code samples
 
-A sample, in a doc comment or a Markdown fence, parses as written; names need not resolve. Cut the rest with `/* ...
-*/`, or with `// ...` inside Javadoc or JSDoc, where `*/` ends the doc comment. A placeholder the language accepts also
-works: `TODO()` in Kotlin, `...` in Python. Bare `...` in Kotlin or Java is a syntax error.
+A sample, in a doc comment or a Markdown fence, parses as written; names need not resolve. Cut the rest with
+`/* ... */`; inside Javadoc or JSDoc use `// ...`, since `*/` would end the doc comment. A placeholder the language
+accepts also works: `TODO()` in Kotlin, `...` in Python. Bare `...` in Kotlin or Java is a syntax error.
 
 ## Inline comments: only the why
 
