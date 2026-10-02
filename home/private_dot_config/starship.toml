@@ -153,6 +153,8 @@ disabled = true
 symbol = ' '
 
 [kubernetes]
+disabled = false
+detect_env_vars = ['KUBECONFIG']
 symbol = '󱃾 '
 
 [localip]
