@@ -12,6 +12,11 @@ tests/
 # not chezmoi. Without this, exact_bin/ would remove it on apply.
 .local/bin/claude
 
+# browser-harness shims — managed by `uv tool install browser-harness`,
+# same treatment as the Claude CLI above.
+.local/bin/browser-harness
+.local/bin/browser-harness-mcp
+
 {{- if ne .chezmoi.os "darwin" }}
 # The timeout wrapper only stands in for the GNU timeout macOS lacks; here it would shadow the real one.
 .local/bin/timeout
