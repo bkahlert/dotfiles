@@ -98,7 +98,8 @@ chezmoi source-path "$(whence -p foo)"   # map a script back to its source file
 Most completions are **not** here. Homebrew formulae install theirs into
 `$HOMEBREW_PREFIX/share/zsh/site-functions` (`_git`, `_kubectl`, `_op`, …),
 plugins bring their own, and some tools generate one at startup — gcloud
-sources `completion.zsh.inc` from [10-gcloud-sdk.zsh](../home/private_dot_config/zsh/exact_conf.d/10-gcloud-sdk.zsh).
+sources `completion.zsh.inc` from [10-gcloud-sdk.zsh](../home/private_dot_config/zsh/exact_conf.d/10-gcloud-sdk.zsh),
+idp the output of `idp completion zsh` from [10-idp.zsh](../home/private_dot_config/zsh/exact_conf.d/exact_ista/10-idp.zsh).
 
 `completions/` is for the rest: a tool with no formula, or one of the scripts
 in `bin/`. One file per command, named `_<command>`, starting with `#compdef
