@@ -9,6 +9,7 @@ format = 'on [$symbol$profile]($style) [$region]($style dimmed) [$duration]($sty
 symbol = '  '
 
 [azure]
+disabled = false
 symbol = ' '
 
 [battery]
