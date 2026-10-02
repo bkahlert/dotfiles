@@ -5,7 +5,7 @@ add_newline = false
 command_timeout = 5000
 
 [aws]
-format = 'on [$symbol$profile]($style) [$region]($style dimmed) [$duration]($style dimmed)'
+format = 'on [$symbol$profile]($style) [$region]($style dimmed) [$duration]($style dimmed) '
 symbol = '  '
 
 [azure]
@@ -42,7 +42,7 @@ symbol = ' '
 symbol = ' '
 
 [cmd_duration]
-format = ' took [$duration]($style) '
+format = 'took [$duration]($style) '
 
 [conda]
 symbol = ' '
@@ -94,7 +94,7 @@ symbol = ' '
 symbol = ' '
 
 [gcloud]
-format = 'on [$symbol$account]($style) [$project]($style dimmed)'
+format = 'on [$symbol$account]($style) [$project]($style dimmed) '
 symbol = '󱇶 '
 [gcloud.project_aliases]
 ista-express-development = 'ies-dev'
