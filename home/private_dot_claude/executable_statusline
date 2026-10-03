@@ -1,21 +1,35 @@
 #!/usr/bin/env bash
+# Purpose: Render the Claude Code status line from the session JSON on stdin.
+# Usage:   statusline [--nerd-fonts | --no-nerd-fonts] [--preview]
+#
+# Options:
+#   --nerd-fonts      Force Nerd Font icons (overrides detection and NERD_FONTS).
+#   --no-nerd-fonts   Force emoji fallbacks (overrides detection and NERD_FONTS).
+#   --preview         Read the sample input of tests/claude/test_statusline.py in the dotfiles
+#                     repo (chezmoi source-path) instead of stdin.
+#   -h, --help        Show this help.
+#
+# Examples:
+#   statusline --preview --nerd-fonts      # the sample session with Nerd Font icons
+#   statusline --preview --no-nerd-fonts   # the same with emoji fallbacks
+#
+# Configured in ~/.claude/settings.json as statusLine.command.
+# Requires bash >= 4.2 (for $'\uXXXX') and jq.
+
 # shellcheck disable=SC1003  # printf '\\' is the OSC 8 string terminator (ESC \), not an escaped quote
-# Status line script for Claude Code.
-# Reads session JSON from stdin and prints a single-line status string.
-# Usage: configured via settings.json as statusLine.command
-#        --nerd-fonts     force Nerd Font icons (overrides detection + NERD_FONTS)
-#        --no-nerd-fonts  force emoji fallbacks  (overrides detection + NERD_FONTS)
-#        --preview        read the sample input of tests/claude/test_statusline.py in the dotfiles
-#                         repo (chezmoi source-path) instead of stdin, e.g. `statusline --preview --nerd-fonts`
-# Requires: bash ≥ 4.2 (for $'\uXXXX'), jq
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
 preview=0
-while [[ $# -gt 0 ]]; do
+while (( $# )); do
   case $1 in
-    --nerd-fonts)    NERD_FONTS=1 && shift ;;
-    --no-nerd-fonts) NERD_FONTS=0 && shift ;;
-    --preview)       preview=1 && shift ;;
-    *) break ;;
+    -h|--help)       usage; exit 0 ;;
+    --nerd-fonts)    NERD_FONTS=1; shift ;;
+    --no-nerd-fonts) NERD_FONTS=0; shift ;;
+    --preview)       preview=1; shift ;;
+    -?*)             die "unknown option: $1" ;;
+    *)               die "unexpected argument: $1" ;;
   esac
 done
 

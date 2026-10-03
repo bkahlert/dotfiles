@@ -97,6 +97,23 @@ class TestStatusline:
             assert calls("uv") == [["run", "--locked", "tests/claude/test_statusline.py", "--print-input"]]
             assert (sandbox.home / "uv.cwd").read_text() == f"{sandbox.home}/dotfiles\n"
 
+    class TestOnHelp:
+        def test_should_print_the_header(self, run):
+            result = run("statusline", "--help")
+            assert result.returncode == 0
+            assert result.stdout.startswith("Purpose:")
+
+    class TestOnBadArguments:
+        def test_should_exit_2_on_an_unknown_option(self, run):
+            result = run("statusline", "--nope")
+            assert result.returncode == 2
+            assert result.stderr == "statusline: unknown option: --nope\nSee 'statusline --help'\n"
+
+        def test_should_reject_a_positional_argument(self, run):
+            result = run("statusline", "x")
+            assert result.returncode == 2
+            assert result.stderr == "statusline: unexpected argument: x\nSee 'statusline --help'\n"
+
 
 def render(run, fields):
     return run("statusline", "--no-nerd-fonts", stdin=json.dumps(fields))
