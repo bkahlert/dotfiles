@@ -10,5 +10,4 @@
 
 [conf_d]
 10-nvm = "legacy: test when next touched"
-20-claude = "legacy: test when next touched"
 90-scratch = "legacy: test when next touched"
