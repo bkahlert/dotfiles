@@ -126,7 +126,7 @@ killport 8765                                   # complete it, then free it
 ```
 
 If a new completion doesn't show up, the dump is the usual suspect —
-[03-completions.zsh](../home/private_dot_config/zsh/exact_conf.d/03-completions.zsh)
+[08-completions.zsh](../home/private_dot_config/zsh/exact_conf.d/08-completions.zsh)
 rebuilds `.zcompdump` when a file here is newer than it, so the file's mtime
 has to be later than the dump's. `rm -f $ZDOTDIR/.zcompdump && exec zsh`
 forces it.
@@ -138,8 +138,9 @@ forces it.
 ~/.config/zsh/.zprofile         → Homebrew shellenv (login shells)
 ~/.config/zsh/.zshrc            → autoloads functions, sources conf.d/*
   00-context.zsh                → stamps $DOTFILES_CONTEXT
-  01–07                         → core (options, history, completions,
-                                  keybindings, prompt, aliases, plugins)
+  01–07                         → core (options, history, keybindings, prompt,
+                                  aliases, plugins)
+  08-completions.zsh            → compinit, after the plugins that extend $fpath
   09-path.zsh                   → $PATH, before anything resolves a command
   10-*.zsh                      → tool modules, one per tool
   20-claude.zsh                 → Claude CLI

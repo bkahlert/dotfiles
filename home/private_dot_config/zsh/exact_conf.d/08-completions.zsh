@@ -1,3 +1,6 @@
+# Runs after 07-plugins.zsh: plugins such as zsh-completions put their
+# completion directories on $fpath, and compinit only registers what is on
+# $fpath when it runs.
 autoload -Uz compinit
 
 # Homebrew's completions live in its own site-functions dir, put on $fpath by
