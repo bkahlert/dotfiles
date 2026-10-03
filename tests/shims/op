@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Purpose: Stand in for the 1Password CLI in tests; answers the calls chezmoi makes.
+# Usage:   op --version | op read [--no-newline] op://<vault>/<item>/<field>
+#
+# Examples:
+#   op read op://Employee/GitLab Token/credential   # fake:GitLab Token/credential
+
+set -euo pipefail
+
+case ${1:-} in
+  --version) echo 2.30.0 ;;
+  read)
+    shift
+    newline=1
+    [[ ${1:-} == --no-newline ]] && { newline=0; shift; }
+    ref=${1:?op read: missing reference}
+    item=${ref#op://*/}
+    item=${item%/*}
+    printf 'fake:%s/%s' "$item" "${ref##*/}"
+    (( newline )) && printf '\n'
+    ;;
+  *) printf 'op: unsupported in tests: %s\n' "$*" >&2; exit 1 ;;
+esac
