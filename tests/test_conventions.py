@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from repo import CONF_D_SOURCE, FUNCTIONS_SOURCE, ROOT, scripts
+from repo import CONF_D_SOURCE, FUNCTIONS_SOURCE, ROOT, chezmoiscripts, scripts
 
 TESTS = ROOT / "tests"
 ALLOWLIST = tomllib.loads((TESTS / "untested.toml").read_text())
@@ -38,6 +38,9 @@ def subjects():
     for source in sorted(FUNCTIONS_SOURCE.glob("[!.]*")):
         found.append(Subject("functions", source.name, source,
                              (TESTS / "functions" / f"test_{source.name.replace('-', '_')}.py",)))
+    for key, source in chezmoiscripts():
+        found.append(Subject("chezmoiscripts", key, source,
+                             (TESTS / "chezmoiscripts" / f"test_{key.replace('-', '_')}.py",)))
     for source in sorted(CONF_D_SOURCE.rglob("*.zsh*")):
         if source.suffix not in (".zsh", ".tmpl") or not DEFINES_A_FUNCTION.search(source.read_text()):
             continue
