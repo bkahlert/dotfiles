@@ -25,12 +25,12 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-      - name: Install zsh, shellcheck and actionlint
+      - name: Install zsh, xmlstarlet, shellcheck and actionlint
         # Both linters are pinned to the versions Homebrew ships locally, so `make lint` reports the
         # same findings here and on a developer machine; the image's own shellcheck is older.
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends zsh
+          sudo apt-get install -y --no-install-recommends xmlstarlet zsh
           curl -fsSL https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz \
             | sudo tar -xJ -f - --strip-components=1 -C /usr/local/bin shellcheck-v0.11.0/shellcheck
           curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash | sudo bash -s -- 1.7.12 /usr/local/bin
@@ -56,7 +56,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-      - run: brew install bash chezmoi sheldon starship zoxide
+      - run: brew install bash chezmoi sheldon starship xmlstarlet zoxide
       - run: make unit integration-native
         env:
           CHROMIUM_BIN: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
