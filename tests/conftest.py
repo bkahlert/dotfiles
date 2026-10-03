@@ -7,13 +7,14 @@ import pytest
 from repo import BIN_SOURCE, FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path
 
 # Tools that reach the network, a vault, system state or the user's own state (repositories,
-# processes, the clipboard, container machines). A guard stands in for each so a subject under test
-# can never call the real one; a test that needs one installs a fake with fake_bin. `docker` is a
-# script under test here, so its podman fallback is what gets guarded.
-GUARDED = ("op", "keepassxc-cli", "gh", "glab", "gcloud", "idp", "curl", "wget", "ssh", "scp",
-           "brew", "open", "osascript", "launchctl", "defaults", "sudo",
-           "git", "chezmoi", "podman", "npm", "npx", "mas", "softwareupdate", "security",
-           "dscacheutil", "pbcopy", "pbpaste", "lsof", "killall", "pkill")
+# processes, the clipboard, container machines), or ignore `HOME` (`ssh-keygen -R` edits the
+# passwd-database home's known_hosts). A guard stands in for each so a subject under test can never
+# call the real one; a test that needs one installs a fake with fake_bin. `docker` is a script under
+# test here, so its podman fallback is what gets guarded.
+GUARDED = ("op", "keepassxc-cli", "gh", "glab", "gcloud", "idp", "curl", "wget", "ssh", "scp", "ssh-keygen",
+           "openssl", "brew", "open", "osascript", "launchctl", "defaults", "sudo", "xcrun",
+           "git", "chezmoi", "podman", "npm", "npx", "yarn", "composer", "gem", "uv",
+           "mas", "softwareupdate", "security", "dscacheutil", "pbcopy", "pbpaste", "lsof", "killall", "pkill")
 # A record is written by one printf, so two fakes in a pipeline cannot interleave their records.
 # NUL cannot occur inside an argument, so it ends one; a record ends with RS followed by NUL.
 ARG_SEPARATOR = "\0"

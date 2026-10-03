@@ -22,6 +22,15 @@ class TestSandbox:
             assert result.returncode == 127
             assert result.stderr == "git: not faked in this test\n"
 
+        @pytest.mark.parametrize("command", [
+            ["ssh-keygen", "-l", "-f", "/dev/null"], ["openssl", "version"], ["xcrun", "--version"],
+            ["gem", "--version"], ["uv", "--version"], ["yarn", "--version"], ["composer", "--version"],
+        ], ids=lambda command: command[0])
+        def test_should_guard_the_tools_the_script_tests_fake(self, run, command):
+            result = run(*command)
+            assert result.returncode == 127
+            assert result.stderr == f"{command[0]}: not faked in this test\n"
+
     class TestFakeBin:
         def test_should_record_every_call_with_its_arguments(self, run, fake_bin, calls):
             fake_bin("gh")

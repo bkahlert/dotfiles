@@ -196,7 +196,7 @@ Fixtures in [tests/conftest.py](tests/conftest.py) run the real script or functi
 - `run("name", *args)` runs a `bin/` script by its target name in a sandbox: temp `HOME`, `XDG_*` and `TMPDIR`; `PATH` is fakes first, then the other `bin/` scripts, then system directories only.
 - `fake_bin("tool", stdout=..., exit_code=..., script=...)` puts a fake on `PATH`; `calls("tool")` returns its recorded argument lists.
 - `zsh("snippet", function="name")` or `zsh("snippet", modules=["08-print.zsh"])` runs `zsh -f` with the source tree's functions and modules.
-- Network, vault, system-state and user-state tools (`op`, `gh`, `gcloud`, `curl`, `brew`, `git`, `chezmoi`, `podman`, `open`, `osascript`, `launchctl`, `defaults`, `sudo`, `pbcopy`, `lsof`, `pkill`, ...) are guarded: calling one unfaked fails with exit 127. Fake what the subject needs; coreutils, `awk`, `sed`, `jq` are real.
+- Network, vault, system-state and user-state tools (`op`, `gh`, `gcloud`, `curl`, `openssl`, `ssh-keygen`, `brew`, `git`, `chezmoi`, `podman`, `xcrun`, `open`, `osascript`, `launchctl`, `defaults`, `sudo`, `pbcopy`, `lsof`, `pkill`, ...) are guarded: calling one unfaked fails with exit 127. Fake what the subject needs; coreutils, `awk`, `sed`, `jq` are real.
 
 Classes nest as [testing.md](home/private_dot_config/exact_agents/exact_rules/testing.md) asks: `TestGhLatest` > `TestOnUnknownOption` > `test_should_exit_2_and_name_the_option`.
 
