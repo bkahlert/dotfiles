@@ -10,73 +10,91 @@ import pytest
 
 class TestStatusline:
     class TestOnNerdFonts:
-        def test_should_render_glyphs_and_a_segment_bar(self, run, clock):
+        def test_should_render_glyphs_and_a_segment_bar(self, run):
             result = run("statusline", "--nerd-fonts", stdin=json.dumps(INPUT))
             assert result.returncode == 0
             assert result.stdout == NERD
 
     class TestOnNoNerdFonts:
-        def test_should_render_text_variant_emoji(self, run, clock):
+        def test_should_render_text_variant_emoji(self, run):
             result = run("statusline", "--no-nerd-fonts", stdin=json.dumps(INPUT))
             assert result.returncode == 0
             assert result.stdout == FALLBACK
 
     class TestOnAutoDetection:
-        def test_should_cache_the_probe_and_render_accordingly(self, run, clock, sandbox):
+        def test_should_cache_the_probe_and_render_accordingly(self, run, sandbox):
             result = run("statusline", stdin=json.dumps(INPUT))
             cached = (sandbox.home / ".cache/claude/nerd-font-support").read_text()
             assert cached in ("0", "1")
             assert result.stdout == {"1": NERD, "0": FALLBACK}[cached]
 
-        def test_should_trust_a_cached_result(self, run, clock, sandbox):
+        def test_should_trust_a_cached_result(self, run, sandbox):
             cache_detection(sandbox, "1")
             result = run("statusline", stdin=json.dumps(INPUT))
             assert result.stdout == NERD
 
-        def test_should_let_the_environment_override_the_cache(self, run, clock, sandbox):
+        def test_should_ignore_a_trailing_newline_in_the_cache(self, run, sandbox):
+            cache_detection(sandbox, "1\n")
+            result = run("statusline", stdin=json.dumps(INPUT))
+            assert result.stdout == NERD
+
+        def test_should_still_render_when_the_cache_cannot_be_written(self, run, sandbox):
+            (sandbox.home / ".cache/claude").write_text("")
+            result = run("statusline", stdin=json.dumps(INPUT))
+            assert result.returncode == 0
+            assert result.stdout in (NERD, FALLBACK)
+
+        def test_should_let_the_environment_override_the_cache(self, run, sandbox):
             cache_detection(sandbox, "1")
             result = run("env", "NERD_FONTS=0", "statusline", stdin=json.dumps(INPUT))
             assert result.stdout == FALLBACK
 
     class TestOnConfiguredModel:
-        def test_should_dim_a_model_that_matches_the_settings(self, run, clock, sandbox):
+        def test_should_dim_a_model_that_matches_the_settings(self, run, sandbox):
             configure_model(sandbox, "settings.json", "sonnet")
             result = render(run, INPUT)
             assert f"{DIM}⚙︎ claude-sonnet-4-6{RESET}" in result.stdout
 
-        def test_should_highlight_a_model_that_differs_from_the_settings(self, run, clock, sandbox):
+        def test_should_highlight_a_model_that_differs_from_the_settings(self, run, sandbox):
             configure_model(sandbox, "settings.json", "opus")
             result = render(run, INPUT)
             assert f"{YELLOW}⚙︎ claude-sonnet-4-6{RESET}" in result.stdout
 
-        def test_should_prefer_the_local_settings(self, run, clock, sandbox):
+        def test_should_prefer_the_local_settings(self, run, sandbox):
             configure_model(sandbox, "settings.json", "opus")
             configure_model(sandbox, "settings.local.json", "sonnet")
             result = render(run, INPUT)
             assert f"{DIM}⚙︎ claude-sonnet-4-6{RESET}" in result.stdout
 
     class TestOnThresholds:
-        def test_should_colour_the_cost_yellow_from_5_dollars(self, run, clock):
+        def test_should_colour_the_cost_yellow_from_5_dollars(self, run):
             result = render(run, {"cost": {"total_cost_usd": 5.0}})
             assert f"{YELLOW}$5.00{RESET}" in result.stdout
 
-        def test_should_colour_the_cost_red_from_10_dollars(self, run, clock):
+        def test_should_colour_the_cost_red_from_10_dollars(self, run):
             result = render(run, {"cost": {"total_cost_usd": 10}})
             assert f"{RED}$10.00{RESET}" in result.stdout
 
-        def test_should_colour_the_context_red_from_75_percent(self, run, clock):
+        def test_should_colour_the_context_red_from_75_percent(self, run):
             result = render(run, {"context_window": {"used_percentage": 75.9}})
             assert f"{RED}◕ 75%{RESET}" in result.stdout
 
-        def test_should_mark_an_expired_rate_limit_window(self, run, clock):
-            result = render(run, {"rate_limits": {"five_hour": {"used_percentage": 3, "resets_at": FROZEN - 1000}}})
+        def test_should_mark_an_expired_rate_limit_window(self, run):
+            result = render(run, {"rate_limits": {"five_hour": {"used_percentage": 3, "resets_at": int(time.time()) - 1000}}})
             assert link(LIMITS, f"{DIM}⏱︎ 3% ᵉˣᵖⁱʳᵉᵈ{RESET}") in result.stdout
 
     class TestOnSparseInput:
-        def test_should_render_only_the_model_and_the_context(self, run, clock):
+        def test_should_render_only_the_model_and_the_context(self, run):
             result = render(run, {})
             assert result.returncode == 0
             assert result.stdout == f"⚙︎ ? · {DIM}○ 0%{RESET}\n"
+
+    class TestOnGuiLaunch:
+        def test_should_render_with_only_the_system_path(self, run):
+            result = run("env", "PATH=/usr/bin:/bin", SCRIPT, "--nerd-fonts",
+                         stdin=json.dumps(INPUT))
+            assert result.returncode == 0
+            assert result.stdout == NERD
 
     class TestOnPrintInput:
         def test_should_print_the_sample_input_the_script_renders_as_the_golden(self, run):
@@ -86,7 +104,7 @@ class TestStatusline:
             assert result.stdout == NERD
 
     class TestOnPreview:
-        def test_should_render_the_sample_input_from_the_dotfiles_repo(self, run, fake_bin, calls, clock, sandbox):
+        def test_should_render_the_sample_input_from_the_dotfiles_repo(self, run, fake_bin, calls, sandbox):
             (sandbox.home / "dotfiles/home").mkdir(parents=True)
             fake_bin("chezmoi", stdout=f"{sandbox.home}/dotfiles/home")
             fake_bin("uv", script=f'pwd > "$HOME/uv.cwd"\nprintf %s {shlex.quote(json.dumps(INPUT))}\n')
@@ -167,26 +185,21 @@ def sample(now):
         "agent": {"name": "security-reviewer"},
         "exceeds_200k_tokens": False,
         "rate_limits": {
-            "five_hour": {"used_percentage": 28.5, "resets_at": now + 65000},
+            "five_hour": {"used_percentage": 28.5, "resets_at": now + 65300},
             "seven_day": {"used_percentage": 92.2, "resets_at": now + 358400},
         },
     }
-
-
-@pytest.fixture
-def clock(fake_bin):
-    fake_bin("date", stdout=str(FROZEN))
 
 
 DIM, YELLOW, RED, RESET = "\x1b[2m", "\x1b[33m", "\x1b[31m", "\x1b[0m"
 LIMITS = "https://console.anthropic.com/settings/limits"
 HOME = str(Path.home())
 ROOT = str(Path(__file__).resolve().parents[2])
+SCRIPT = f"{ROOT}/home/private_dot_claude/executable_statusline"
 TRANSCRIPT = f"file://{HOME}/.claude/transcripts/abc123def456.jsonl"
-FROZEN = 1893400000
 EMPTY_SEGMENTS = "" * 6
 
-INPUT = sample(FROZEN)
+INPUT = sample(int(time.time()))
 
 NERD = " · ".join([
     link(TRANSCRIPT, " abc123de:my-session"),

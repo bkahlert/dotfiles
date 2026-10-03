@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env python3
 # Purpose: Render the Claude Code status line from the session JSON on stdin.
 # Usage:   statusline [--nerd-fonts | --no-nerd-fonts] [--preview]
 #
@@ -14,303 +14,295 @@
 #   statusline --preview --no-nerd-fonts   # the same with emoji fallbacks
 #
 # Configured in ~/.claude/settings.json as statusLine.command.
-# Requires bash >= 4.2 (for $'\uXXXX') and jq.
+# Requires Python >= 3.9 (standard library only).
 
-# shellcheck disable=SC1003  # printf '\\' is the OSC 8 string terminator (ESC \), not an escaped quote
+import json
+import math
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+from typing import Callable, NamedTuple
 
-usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
-die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
+SEPARATOR = " · "
+RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
 
-preview=0
-while (( $# )); do
-  case $1 in
-    -h|--help)       usage; exit 0 ;;
-    --nerd-fonts)    NERD_FONTS=1; shift ;;
-    --no-nerd-fonts) NERD_FONTS=0; shift ;;
-    --preview)       preview=1; shift ;;
-    -?*)             die "unknown option: $1" ;;
-    *)               die "unexpected argument: $1" ;;
-  esac
-done
+# (warn, error) lower bounds
+USAGE_THRESHOLDS = (50, 75)
+COST_THRESHOLDS_CENTS = (500, 1000)
 
-if (( preview )); then
-  source=$(chezmoi source-path) || exit 1
-  exec < <(cd "${source%/*}" && uv run --locked tests/claude/test_statusline.py --print-input)
-fi
+SUPERSCRIPT = str.maketrans("0123456789dehimprx.", "⁰¹²³⁴⁵⁶⁷⁸⁹ᵈᵉʰⁱᵐᵖʳˣ·")
+
+
+# ── Icons ──────────────────────────────────────────────────
+
+# Context bar: left cap, 8 middle segments, right cap, each as (empty, full).
+BAR = [("\uee00", "\uee03"), *[("\uee01", "\uee04")] * 8, ("\uee02", "\uee05")]
+
+# (upper bound exclusive, glyph)
+CIRCLES = [(12, "○"), (37, "◔"), (62, "◑"), (87, "◕"), (math.inf, "●")]
+
+
+def bar(pct):
+    # each segment covers 10 points and fills at its midpoint
+    return "".join(full if pct >= 5 + 10 * i else empty for i, (empty, full) in enumerate(BAR))
+
+
+def circle(pct):
+    return next(glyph for bound, glyph in CIRCLES if pct < bound)
+
+
+class Icons(NamedTuple):
+    session: str
+    model: str
+    agent: str
+    gauge: Callable[[int], str]
+    tokens: str
+    clock: str
+    calendar: str
+    restart: str
+
+
+# tokens and restart are blank on purpose; their parts render without an icon.
+NERD_ICONS = Icons(
+    session="\uf292",
+    model="\ue28c",
+    agent="\U000f06a9",
+    gauge=bar,
+    tokens="",
+    clock="\uf017",
+    calendar="\uf272",
+    restart="",
+)
+
+# U+FE0E on characters listed in Unicode's emoji-variation-sequences.txt keeps them monochrome.
+TEXT_ICONS = Icons(
+    session="#",
+    model="⚙\ufe0e",
+    agent="웃",
+    gauge=circle,
+    tokens="",
+    clock="⏱\ufe0e",
+    calendar="⧗\ufe0e",
+    restart="",
+)
+
 
 # ── Nerd Font detection ────────────────────────────────────
-# Result is cached in XDG_CACHE_HOME to avoid repeated filesystem probes.
-# Override: set NERD_FONTS=1 (force on) or NERD_FONTS=0 (force off).
-_NF_CACHE="${XDG_CACHE_HOME:-$HOME/.cache}/claude/nerd-font-support"
 
-_nf_detect() {
-  case "${NERD_FONTS:-}" in
-    0) printf '0'; return ;;
-    1) printf '1'; return ;;
-  esac
-  # macOS: check user and system font directories for any Nerd Font file
-  if [[ $(uname) == Darwin ]]; then
-    if [[ -n $(find ~/Library/Fonts /Library/Fonts -maxdepth 1 -iname '*nerd*' -print -quit 2>/dev/null) ]]; then
-      printf '1'; return
-    fi
-  fi
-  # Linux / fallback: use fc-list if fontconfig is available
-  if command -v fc-list &>/dev/null && fc-list 2>/dev/null | grep -qi "nerd font"; then
-    printf '1'; return
-  fi
-  printf '0'
-}
+def nerd_fonts_supported(override):
+    """Flag, then NERD_FONTS, then a cached probe of the installed fonts."""
+    for forced in (override, os.environ.get("NERD_FONTS")):
+        if forced in ("0", "1"):
+            return forced == "1"
+    cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "claude" / "nerd-font-support"
+    try:
+        if not cache.is_file():
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text("1" if nerd_fonts_installed() else "0")
+        return cache.read_text().strip() == "1"
+    except OSError:
+        return nerd_fonts_installed()
 
-_nf_supported() {
-  # Explicit override always wins, even over cache
-  case "${NERD_FONTS:-}" in
-    0) return 1 ;;
-    1) return 0 ;;
-  esac
-  if [[ ! -f "$_NF_CACHE" ]]; then
-    mkdir -p "$(dirname "$_NF_CACHE")"
-    _nf_detect > "$_NF_CACHE"
-  fi
-  [[ "$(< "$_NF_CACHE")" == "1" ]]
-}
 
-# icon NF_CHAR FALLBACK
-# Prints the Nerd Font glyph when supported, otherwise the fallback.
-# Fallbacks use U+FE0E (text variation selector) on chars listed in
-# Unicode's emoji-variation-sequences.txt, ensuring monochrome rendering.
-icon() { _nf_supported && printf '%s' "$1" || printf '%s' "$2"; }
+def nerd_fonts_installed():
+    if sys.platform == "darwin":
+        for directory in (Path.home() / "Library/Fonts", Path("/Library/Fonts")):
+            if directory.is_dir() and any("nerd" in entry.name.lower() for entry in directory.iterdir()):
+                return True
+    if shutil.which("fc-list"):
+        fonts = subprocess.run(["fc-list"], capture_output=True, text=True).stdout
+        return "nerd font" in fonts.lower()
+    return False
 
-# ── Icons (Nerd Font glyph / text-variant emoji fallback) ──
-IC_SESSION=$'\uf292'            # nf-fa-hashtag
-IC_SESSION_FB='#'               #
-IC_MODEL=$'\ue28c'              # nf-fae-brain
-IC_MODEL_FB=$'\u2699\uFE0E'     # ⚙︎  gear       (U+2699, text variant)
-IC_AGENT=$'\UF06A9'             # nf-md-robot
-IC_AGENT_FB=$'\uc6c3'           # 웃
 
-# Progress Bar Icons (Nerd Font Legacy)
-IC_CTX_LF=$'\U000ee03'          # progress-left (full)
-IC_CTX_LE=$'\U000ee00'          # progress-left (empty)
-IC_CTX_MF=$'\U000ee04'          # progress-full
-IC_CTX_ME=$'\U000ee01'          # progress-empty
-IC_CTX_RF=$'\U000ee05'          # progress-right (full)
-IC_CTX_RE=$'\U000ee02'          # progress-right (empty)
+# ── Input ──────────────────────────────────────────────────
 
-IC_TOKENS='' # $'\UF0830'            # nf-md-poker_chip
-IC_TOKENS_FB='' # $'\u2742'          # ❂
+def read_session(text):
+    try:
+        session = json.loads(text)
+    except ValueError:
+        return {}
+    return session if isinstance(session, dict) else {}
 
-IC_CLOCK=$'\uf017'              # nf-fa-clock    (5-hour window)
-IC_CLOCK_FB=$'\u23F1\uFE0E'     # ⏱︎  stopwatch  (U+23F1, text variant)
-IC_CAL=$'\uf272'                # nf-fa-calendar_week (7-day window)
-IC_CAL_FB=$'\u29D7\uFE0E'       # ⧗
-IC_RESTART='' # $'\UF0709'           # nf-md-restart
-IC_RESTART_FB='' # $'\u21BB'         # ↻
 
-# ── Configuration ─────────────────────────────────────────
-_COST_WARN=500        # ¢ — cost threshold for yellow
-_COST_ERR=1000        # ¢ — cost threshold for red
-_MODEL_DEFAULT=''    # override: set to a model ID to force dim/yellow model styling
-# auto-detect configured model from settings (local takes precedence)
-for _mf in ~/.claude/settings.local.json ~/.claude/settings.json; do
-  [[ -f "$_mf" ]] || continue
-  _mv=$(jq -r '.model // ""' "$_mf" 2>/dev/null)
-  [[ -n "$_mv" ]] && _MODEL_DEFAULT="$_mv" && break
-done
-unset _mf _mv
+def field(value, *path):
+    for key in path:
+        value = value.get(key) if isinstance(value, dict) else None
+    return value
 
-# ── JSON helper ────────────────────────────────────────────
-jq_field() { printf '%s' "$INPUT" | jq -r "$1"; }
 
-# ── Formatting helpers ─────────────────────────────────────
-# _pct_style PCT — prints ANSI style: dim <50, yellow <75, red ≥75
-_pct_style() {
-  local pct=$1
-  if   (( pct >= 75 )); then printf '\033[31m'
-  elif (( pct >= 50 )); then printf '\033[33m'
-  else                       printf '\033[2m'
-  fi
-}
+def number(value):
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
-# to_sup STR — converts ASCII digits and unit letters to Unicode superscripts
-to_sup() {
-  local s="$1"
-  s="${s//0/⁰}"; s="${s//1/¹}"; s="${s//2/²}"; s="${s//3/³}"; s="${s//4/⁴}"
-  s="${s//5/⁵}"; s="${s//6/⁶}"; s="${s//7/⁷}"; s="${s//8/⁸}"; s="${s//9/⁹}"
-  s="${s//d/ᵈ}"; s="${s//e/ᵉ}"; s="${s//h/ʰ}"; s="${s//i/ⁱ}"; s="${s//m/ᵐ}"
-  s="${s//p/ᵖ}"; s="${s//r/ʳ}"; s="${s//x/ˣ}"; s="${s//./·}"
-  printf '%s' "$s"
-}
 
-# fmt_tokens N — formats a token count as a short string (e.g. 200000 → "200k", 1000000 → "1m")
-fmt_tokens() {
-  local n=$1
-  if   (( n >= 1000000 )); then awk "BEGIN { printf \"%gm\", $n/1000000 }"
-  elif (( n >= 1000     )); then awk "BEGIN { printf \"%gk\", $n/1000 }"
-  else printf '%s' "$n"
-  fi
-}
+def configured_model():
+    for name in ("settings.local.json", "settings.json"):
+        try:
+            model = field(json.loads((Path.home() / ".claude" / name).read_text()), "model")
+        except (OSError, ValueError):
+            continue
+        if isinstance(model, str) and model:
+            return model
+    return ""
 
-# resets_in EPOCH — prints superscript time until epoch (e.g. "²˙⁵ʰ", "³˙⁵ᵈ")
-resets_in() {
-  local ts=$1
-  [[ -z "$ts" || "$ts" == "null" ]] && return
-  local delta=$(( ts - $(date +%s) ))
-  local raw
-  if   (( delta <= 0 ));      then raw='expired'
-  elif (( delta < 3600 ));    then raw="$(( delta / 60 ))m"
-  elif (( delta < 172800 ));  then raw="$(awk "BEGIN { printf \"%.1fh\", $delta/3600 }")"
-  else                             raw="$(awk "BEGIN { printf \"%.1fd\", $delta/86400 }")"
-  fi
-  to_sup "$raw"
-}
+
+# ── Formatting ─────────────────────────────────────────────
+
+def severity(value, thresholds):
+    warn, error = thresholds
+    return RED if value >= error else YELLOW if value >= warn else DIM
+
+
+def format_tokens(count):
+    if count >= 1_000_000:
+        return f"{count / 1_000_000:g}m"
+    if count >= 1000:
+        return f"{count / 1000:g}k"
+    return str(int(count))
+
+
+def resets_in(epoch):
+    delta = epoch - int(time.time())
+    if delta <= 0:
+        text = "expired"
+    elif delta < 3600:
+        text = f"{int(delta // 60)}m"
+    elif delta < 172800:
+        text = f"{delta / 3600:.1f}h"
+    else:
+        text = f"{delta / 86400:.1f}d"
+    return text.translate(SUPERSCRIPT)
+
+
+def link(url, text):
+    return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
+
 
 # ── Parts ──────────────────────────────────────────────────
-part_session() {
-  local id name path text
-  id=$(jq_field '.session_id // "" | .[0:8]')
-  [[ -z "$id" ]] && return
-  name=$(jq_field '.session_name // ""')
-  path=$(jq_field '.transcript_path // ""')
-  text="$(icon "$IC_SESSION" "$IC_SESSION_FB") ${id}${name:+:$name}"
-  if [[ -n "$path" ]]; then
-    printf '\033]8;;file://%s\033\\%s\033]8;;\033\\' "$path" "$text"
-  else
-    printf '%s' "$text"
-  fi
-}
 
-part_model() {
-  local id style='' reset=$'\033[0m'
-  id=$(jq_field '.model.id // "?"')
-  if [[ -n "$_MODEL_DEFAULT" ]]; then
-    # settings may use short names ("haiku") or full IDs ("claude-haiku-4-5"); substring-match both ways
-    local id_lc="${id,,}" def_lc="${_MODEL_DEFAULT,,}"
-    if [[ "$id_lc" == *"$def_lc"* || "$def_lc" == *"$id_lc"* ]]; then
-      style=$'\033[2m'
-    else
-      style=$'\033[33m'
-    fi
-  fi
-  printf '%s%s %s%s' "$style" "$(icon "$IC_MODEL" "$IC_MODEL_FB")" "$id" "${style:+$reset}"
-}
-
-part_agent() {
-  local name
-  name=$(jq_field '.agent.name // ""')
-  [[ -z "$name" ]] && return
-  printf '%s %s' "$(icon "$IC_AGENT" "$IC_AGENT_FB")" "$name"
-}
-
-part_context() {
-  local pct max_tok max_str
-  pct=$(jq_field '.context_window.used_percentage // 0 | if type == "number" then floor else 0 end')
-  max_tok=$(jq_field '.context_window.context_window_size // ""')
-  [[ -n "$max_tok" && "$max_tok" != "null" ]] && max_str="$(fmt_tokens "$max_tok")"
-  local style reset=$'\033[0m'
-  style="$(_pct_style "$pct")"
-
-  if _nf_supported; then
-    local bar=""
-    # 10 segments: Left Cap, 8x Mid, Right Cap — each covers 10 pct points, fills at midpoint
-    (( pct >=  5 )) && bar+="$IC_CTX_LF" || bar+="$IC_CTX_LE"
-    (( pct >= 15 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
-    (( pct >= 25 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
-    (( pct >= 35 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
-    (( pct >= 45 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
-    (( pct >= 55 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
-    (( pct >= 65 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
-    (( pct >= 75 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
-    (( pct >= 85 )) && bar+="$IC_CTX_MF" || bar+="$IC_CTX_ME"
-    (( pct >= 95 )) && bar+="$IC_CTX_RF" || bar+="$IC_CTX_RE"
-    printf '%s%s %d%%%s' "$style" "$bar" "$pct" "$reset"
-  else
-    local circle
-    if (( pct < 12 )); then circle=$'\u25CB';
-    elif (( pct < 37 )); then circle=$'\u25D4';
-    elif (( pct < 62 )); then circle=$'\u25D1';
-    elif (( pct < 87 )); then circle=$'\u25D5';
-    else circle=$'\u25CF'; fi
-    printf '%s%s %d%%%s' "$style" "$circle" "$pct" "$reset"
-  fi
-  if [[ -n "$max_str" ]]; then
-    local tok_icon
-    tok_icon="$(icon "$IC_TOKENS" "$IC_TOKENS_FB")"
-    printf ' %s╱%s%s%s' "$style" "$max_str" "${tok_icon:+ $tok_icon}" "$reset"
-  fi
-}
-
-part_cost() {
-  local usd
-  usd=$(jq_field '.cost.total_cost_usd // ""')
-  [[ -z "$usd" || "$usd" == "null" ]] && return
-  local cents style reset=$'\033[0m'
-  cents=$(awk "BEGIN { print int($usd * 100) }")
-  if   (( cents >= _COST_ERR  )); then style=$'\033[31m'
-  elif (( cents >= _COST_WARN )); then style=$'\033[33m'
-  else                                 style=$'\033[2m'
-  fi
-  local val
-  val=$(awk "BEGIN { printf \"\$%.2f\", $usd }")
-  printf '%s%s%s' "$style" "$val" "$reset"
-}
-
-_RATE_LIMIT_URL='https://console.anthropic.com/settings/limits'
+def part_session(session, icons):
+    session_id = (field(session, "session_id") or "")[:8]
+    if not session_id:
+        return ""
+    name = field(session, "session_name") or ""
+    text = f"{icons.session} {session_id}{':' + name if name else ''}"
+    path = field(session, "transcript_path") or ""
+    return link(f"file://{path}", text) if path else text
 
 
-part_rate_limit_5h() {
-  local pct at
-  pct=$(jq_field '.rate_limits.five_hour.used_percentage // "" | if type == "number" then floor else "" end')
-  [[ -z "$pct" ]] && return
-  at=$(jq_field '.rate_limits.five_hour.resets_at // ""')
-  local style reset=$'\033[0m'
-  style="$(_pct_style "$pct")"
-  local out
-  out="${style}$(icon "$IC_CLOCK" "$IC_CLOCK_FB") ${pct}%"
-  local reset_str
-  reset_str="$(resets_in "$at")"
-  [[ -n "$reset_str" ]] && out+=" $(icon "$IC_RESTART" "$IC_RESTART_FB")${reset_str}"
-  out+="${reset}"
-  printf '\033]8;;%s\033\\%s\033]8;;\033\\' "$_RATE_LIMIT_URL" "$out"
-}
+def part_model(session, icons, configured):
+    model = field(session, "model", "id")
+    model = "?" if model is None else model
+    if not configured:
+        return f"{icons.model} {model}"
+    # settings may use short names ("haiku") or full IDs ("claude-haiku-4-5"); match both ways
+    a, b = model.lower(), configured.lower()
+    style = DIM if a in b or b in a else YELLOW
+    return f"{style}{icons.model} {model}{RESET}"
 
-part_rate_limit_7d() {
-  local pct at
-  pct=$(jq_field '.rate_limits.seven_day.used_percentage // "" | if type == "number" then floor else "" end')
-  [[ -z "$pct" ]] && return
-  at=$(jq_field '.rate_limits.seven_day.resets_at // ""')
-  local style reset=$'\033[0m'
-  style="$(_pct_style "$pct")"
-  local out
-  out="${style}$(icon "$IC_CAL" "$IC_CAL_FB") ${pct}%"
-  local reset_str
-  reset_str="$(resets_in "$at")"
-  [[ -n "$reset_str" ]] && out+=" $(icon "$IC_RESTART" "$IC_RESTART_FB")${reset_str}"
-  out+="${reset}"
-  printf '\033]8;;%s\033\\%s\033]8;;\033\\' "$_RATE_LIMIT_URL" "$out"
-}
 
-# ── Rendering ──────────────────────────────────────────────
-render() {
-  local out="" part
-  for part in "$@"; do
-    [[ -z "$part" ]] && continue
-    [[ -n "$out" ]] && out+=" · "
-    out+="$part"
-  done
-  printf '%s\n' "$out"
-}
+def part_agent(session, icons):
+    name = field(session, "agent", "name") or ""
+    return f"{icons.agent} {name}" if name else ""
+
+
+def part_context(session, icons):
+    window = field(session, "context_window")
+    used = number(field(window, "used_percentage"))
+    pct = 0 if used is None else math.floor(used)
+    style = severity(pct, USAGE_THRESHOLDS)
+    out = f"{style}{icons.gauge(pct)} {pct}%{RESET}"
+    size = number(field(window, "context_window_size"))
+    if size is not None:
+        tokens = f" {icons.tokens}" if icons.tokens else ""
+        out += f" {style}╱{format_tokens(size)}{tokens}{RESET}"
+    return out
+
+
+def part_cost(session):
+    usd = number(field(session, "cost", "total_cost_usd"))
+    if usd is None:
+        return ""
+    return f"{severity(int(usd * 100), COST_THRESHOLDS_CENTS)}${usd:.2f}{RESET}"
+
+
+def part_rate_limit(limit, icon, restart):
+    used = number(field(limit, "used_percentage"))
+    if used is None:
+        return ""
+    pct = math.floor(used)
+    out = f"{severity(pct, USAGE_THRESHOLDS)}{icon} {pct}%"
+    resets_at = number(field(limit, "resets_at"))
+    if resets_at is not None:
+        out += f" {restart}{resets_in(resets_at)}"
+    return link(RATE_LIMIT_URL, out + RESET)
+
 
 # ── Entry point ────────────────────────────────────────────
-main() {
-  INPUT=$(cat)
-  render \
-    "$(part_session)" \
-    "$(part_model)" \
-    "$(part_agent)" \
-    "$(part_context)" \
-    "$(part_cost)" \
-    "$(part_rate_limit_5h)" \
-    "$(part_rate_limit_7d)"
-}
 
-main
+def usage():
+    for line in Path(__file__).read_text().splitlines()[1:]:
+        if not line.startswith("#"):
+            break
+        print(line[2:] if line.startswith("# ") else line[1:])
+
+
+def die(message):
+    name = Path(sys.argv[0]).name
+    print(f"{name}: {message}\nSee '{name} --help'", file=sys.stderr)
+    sys.exit(2)
+
+
+def parse_args(args):
+    """Return the Nerd Font override ("0", "1" or None) and whether to preview."""
+    override, preview = None, False
+    for arg in args:
+        if arg in ("-h", "--help"):
+            usage()
+            sys.exit(0)
+        elif arg == "--nerd-fonts":
+            override = "1"
+        elif arg == "--no-nerd-fonts":
+            override = "0"
+        elif arg == "--preview":
+            preview = True
+        elif arg.startswith("-"):
+            die(f"unknown option: {arg}")
+        else:
+            die(f"unexpected argument: {arg}")
+    return override, preview
+
+
+def preview_input():
+    source = subprocess.run(["chezmoi", "source-path"], stdout=subprocess.PIPE, text=True)
+    if source.returncode:
+        sys.exit(1)
+    repo = Path(source.stdout.strip()).parent
+    sample = subprocess.run(["uv", "run", "--locked", "tests/claude/test_statusline.py", "--print-input"],
+                            cwd=repo, stdout=subprocess.PIPE, text=True)
+    return sample.stdout
+
+
+def main(args):
+    override, preview = parse_args(args)
+    session = read_session(preview_input() if preview else sys.stdin.read())
+    icons = NERD_ICONS if nerd_fonts_supported(override) else TEXT_ICONS
+    limits = field(session, "rate_limits")
+    parts = [
+        part_session(session, icons),
+        part_model(session, icons, configured_model()),
+        part_agent(session, icons),
+        part_context(session, icons),
+        part_cost(session),
+        part_rate_limit(field(limits, "five_hour"), icons.clock, icons.restart),
+        part_rate_limit(field(limits, "seven_day"), icons.calendar, icons.restart),
+    ]
+    print(SEPARATOR.join(part for part in parts if part))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
