@@ -8,6 +8,16 @@
 # run `chezmoi apply` before `sc` — otherwise `sc` re-sources the stale
 # already-applied target file.
 
+hero() {
+  curl -fsSL https://github.com/bkahlert/pihero/releases/latest/download/hero | bash -s -- "$@"
+}
+wizard() {
+  curl -fsSL https://github.com/bkahlert/pihero/releases/latest/download/wizard | bash -s -- "$@"
+}
+visitor() {
+  curl -fsSL https://github.com/bkahlert/pihero/releases/latest/download/visitor | bash -s -- "$@"
+}
+
 grafana-start() {
   local url="http://localhost:3000"
 
