@@ -1,4 +1,4 @@
-# dotfiles [![Buy Me A Coffee](https://img.shields.io/static/v1?label=&message=%E2%98%95%20Buy%20Me%20A%20Coffee&color=FFDD00)](https://www.buymeacoffee.com/bkahlert)
+# dotfiles [![CI](https://github.com/bkahlert/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/bkahlert/dotfiles/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/bkahlert/dotfiles?color=29ABE2&label=License)](https://github.com/bkahlert/dotfiles/blob/main/LICENSE) [![Buy Me A Coffee](https://img.shields.io/static/v1?label=&message=%E2%98%95%20Buy%20Me%20A%20Coffee&color=FFDD00)](https://www.buymeacoffee.com/bkahlert)
 
 Personal dotfiles managed with [chezmoi](https://www.chezmoi.io/).
 
