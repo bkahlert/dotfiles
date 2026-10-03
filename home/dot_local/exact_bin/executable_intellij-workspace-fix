@@ -1,11 +1,14 @@
-#!/usr/bin/env bash
-# Purpose: Enable "Reformat code" and "Optimize imports" on save in every
-#          IntelliJ workspace.xml below the current directory. Each changed
-#          file is backed up next to it with a timestamp suffix.
+#!/usr/bin/env python3
+# Purpose: Select "All file types" for "Reformat code" and "Optimize imports" on
+#          save in every IntelliJ workspace.xml below the current directory. The
+#          Go plugin restricts both to Go files in every project it touches. Each
+#          changed file is backed up next to it with a timestamp suffix.
 # Usage:   intellij-workspace-fix [--dry-run]
 #
-# Skips .git, build, cache and node_modules directories. Requires xmlstarlet
-# (brew install xmlstarlet).
+# The IDE rewrites workspace.xml when it exits, so close the project first.
+# Skips .git, build, cache and node_modules directories. Everything but the two
+# save-option components stays byte for byte. A file that cannot be edited
+# safely is reported, left alone, and makes the exit status 1.
 #
 # Options:
 #   -n, --dry-run   Report which files would change, write nothing.
@@ -13,75 +16,238 @@
 #
 # Examples:
 #   cd ~/Development/foo && intellij-workspace-fix --dry-run
+#
+# Requires Python >= 3.9 (standard library only).
 
-set -uo pipefail
+import os
+import re
+import shutil
+import sys
+import time
+import xml.etree.ElementTree as ElementTree
+from pathlib import Path
 
-usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
-die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
+GREEN, BLUE, GRAY, RED, RESET = "\033[32m", "\033[34m", "\033[38;5;8m", "\033[31m", "\033[0m"
+SKIPPED_DIRECTORIES = {".git", "build", "cache", "node_modules"}
+COMPONENTS = ("FormatOnSaveOptions", "OptimizeOnSaveOptions")
 
-dry_run=false
-while (( $# )); do
-  case $1 in
-    -h|--help)    usage; exit 0 ;;
-    -n|--dry-run) dry_run=true; shift ;;
-    *)            die "unknown argument: $1" ;;
-  esac
-done
+# The options of "All file types", as the IDE writes them, in the order it writes them. `myRunOnSave` is explicit
+# although the Go plugin's default already is `true`: the platform's default is `false`.
+OPTIONS = (
+    ("myAllFileTypesSelected", '    <option name="myAllFileTypesSelected" value="true" />\n'),
+    ("myRunOnSave", '    <option name="myRunOnSave" value="true" />\n'),
+    ("mySelectedFileTypes", '    <option name="mySelectedFileTypes">\n      <set />\n    </option>\n'),
+)
 
-command -v xmlstarlet >/dev/null || {
-  printf '%s: xmlstarlet not found (brew install xmlstarlet)\n' "${0##*/}" >&2
-  exit 1
-}
 
-if [ -t 1 ]; then
-  c_reset=$(tput sgr0); c_green=$(tput setaf 2); c_blue=$(tput setaf 4); c_gray=$(tput setaf 8)
-else
-  c_reset=''; c_green=''; c_blue=''; c_gray=''
-fi
-info() { printf '%sℹ%s %s\n' "$c_blue" "$c_reset" "$1"; }
-ok()   { printf '%s✔%s %s\n' "$c_green" "$c_reset" "$1"; }
-skip() { printf '%s▪%s %s\n' "$c_gray" "$c_reset" "$1"; }
+# ── Editing ────────────────────────────────────────────────
 
-# Prints the XML with <component name="$1"> holding exactly one
-# <option name="myRunOnSave" value="true" />.
-fix_on_save_option() {
-  local name=$1 xml=$2
-  if [[ $(printf '%s' "$xml" | xmlstarlet sel -t -v "count(/project/component[@name='$name'])") == 0 ]]; then
-    xml=$(printf '%s' "$xml" \
-      | xmlstarlet ed --subnode '/project' --type elem -n component \
-      | xmlstarlet ed --insert '/project/component[position()=last()]' --type attr -n name -v "$name")
-  else
-    xml=$(printf '%s' "$xml" | xmlstarlet ed --delete "/project/component[@name='$name']/option")
-  fi
-  printf '%s' "$xml" \
-    | xmlstarlet ed --subnode "/project/component[@name='$name']" --type elem -n option \
-    | xmlstarlet ed --insert "/project/component[@name='$name']/option[position()=last()]" --type attr -n name -v myRunOnSave \
-    | xmlstarlet ed --insert "/project/component[@name='$name']/option[position()=last()]" --type attr -n value -v true
-}
+def option_pattern(name):
+    return re.compile(rf'^    <option name="{name}"(?:[^>\n]*/>|>.*?^    </option>)\n', re.MULTILINE | re.DOTALL)
 
-fix_save_options() {
-  local xml=$1
-  xml=$(fix_on_save_option OptimizeOnSaveOptions "$xml")
-  xml=$(fix_on_save_option FormatOnSaveOptions "$xml")
-  # IntelliJ writes self-closing tags as `<x />`; xmlstarlet as `<x/>`.
-  printf '%s\n' "$xml" | sed -E 's# */>$# />#'
-}
 
-timestamp=$(date +%s)
-while IFS= read -r -d '' file; do
-  xml=$(<"$file")
-  fixed=$(fix_save_options "$xml")
-  if [[ $xml == "$fixed" ]]; then
-    skip "already fixed: $file"
-    continue
-  fi
-  if $dry_run; then
-    info "would fix: $file"
-    continue
-  fi
-  backup="${file%.*}.$timestamp.${file##*.}"
-  cp "$file" "$backup"
-  printf '%s\n' "$fixed" >"$file"
-  ok "fixed: $file (backup: ${backup##*/})"
-done < <(find . \( -type d \( -name .git -o -name build -o -name cache -o -name node_modules \) -prune \) \
-              -o -type f -name workspace.xml -print0)
+def component_pattern(name):
+    return re.compile(rf'^  <component name="{name}"(?: />|>\n(.*?)^  </component>)\n', re.MULTILINE | re.DOTALL)
+
+
+def select_all_file_types(body):
+    """Replace the three options where they are, add the missing ones next to them, leave every other option alone."""
+    spans = sorted(found.span() for name, _ in OPTIONS if (found := option_pattern(name).search(body)))
+    if any(previous[1] > following[0] for previous, following in zip(spans, spans[1:])):
+        raise ValueError("options with an unexpected layout")
+    first = spans[0][0] if spans else 0
+    position, in_front = None, ""
+    for name, wanted in OPTIONS:
+        found = option_pattern(name).search(body)
+        if found:
+            body = body[:found.start()] + wanted + body[found.end():]
+            position = found.start() + len(wanted)
+        elif position is None:
+            in_front += wanted
+        else:
+            body = body[:position] + wanted + body[position:]
+            position += len(wanted)
+    return body[:first] + in_front + body[first:]
+
+
+def insertion_point(text, name):
+    """Where the IDE would write the component: before the first one that sorts after it, else last."""
+    for found in re.finditer(r'^  <component name="([^"]+)"', text, re.MULTILINE):
+        if found.group(1) > name:
+            return found.start()
+    end = text.rfind("</project>")
+    if end < 0:
+        raise ValueError("no </project> to add the components to")
+    return end
+
+
+def fix_component(text, name):
+    found = component_pattern(name).search(text)
+    if found is None:
+        position = insertion_point(text, name)
+        return text[:position] + f'  <component name="{name}">\n{select_all_file_types("")}  </component>\n' + text[position:]
+    body = found.group(1) or ""
+    fixed = select_all_file_types(body)
+    if found.group(1) is not None and fixed == body:
+        return text
+    return text[:found.start()] + f'  <component name="{name}">\n{fixed}  </component>\n' + text[found.end():]
+
+
+def parse(text):
+    root = ElementTree.fromstring(text.encode("utf-8"))
+    if root.tag != "project":
+        raise ValueError(f"root element is <{root.tag}>, not <project>")
+    return root
+
+
+def without_save_options(root):
+    """The tree minus the three options, and minus the save components that hold nothing else, ignoring whitespace."""
+    names = {name for name, _ in OPTIONS}
+    for component in root.findall("component"):
+        if component.get("name") in COMPONENTS:
+            for option in component.findall("option"):
+                if option.get("name") in names:
+                    component.remove(option)
+            if not len(component) and not (component.text or "").strip() and list(component.attrib) == ["name"]:
+                root.remove(component)
+    for element in root.iter():
+        element.text, element.tail = (element.text or "").strip(), None
+    return ElementTree.tostring(root)
+
+
+def problem(original, fixed):
+    """Return why `fixed` is not `original` plus "All file types" in both components, or None."""
+    try:
+        root = parse(fixed)
+        before = parse(original)
+    except (ElementTree.ParseError, ValueError) as error:
+        return f"not a well-formed workspace: {error}"
+    for name in COMPONENTS:
+        components = root.findall(f"component[@name='{name}']")
+        if len(components) != 1:
+            return f"{len(components)} components named {name} after the edit"
+        options = components[0].findall("option")
+        for option_name, _ in OPTIONS:
+            count = sum(option.get("name") == option_name for option in options)
+            if count != 1:
+                return f"{count} options named {option_name} in {name} after the edit"
+        values = {option.get("name"): option for option in options}
+        selected = values["mySelectedFileTypes"].find("set")
+        if (values["myAllFileTypesSelected"].get("value") != "true" or values["myRunOnSave"].get("value") != "true"
+                or selected is None or len(selected)):
+            return f"{name} does not hold All file types after the edit"
+    if without_save_options(root) != without_save_options(before):
+        return "the edit changed more than the save options"
+    return None
+
+
+def fix(text):
+    for name in COMPONENTS:
+        text = fix_component(text, name)
+    return text
+
+
+# ── Output ─────────────────────────────────────────────────
+
+def paint(color, stream):
+    return (color, RESET) if stream.isatty() else ("", "")
+
+
+def report(symbol, color, message, stream=sys.stdout):
+    start, end = paint(color, stream)
+    print(f"{start}{symbol}{end} {message}", file=stream)
+
+
+# ── Entry point ────────────────────────────────────────────
+
+def usage():
+    for line in Path(__file__).read_text().splitlines()[1:]:
+        if not line.startswith("#"):
+            break
+        print(line[2:] if line.startswith("# ") else line[1:])
+
+
+def die(message):
+    name = Path(sys.argv[0]).name
+    print(f"{name}: {message}\nSee '{name} --help'", file=sys.stderr)
+    sys.exit(2)
+
+
+def parse_args(args):
+    """Return whether this is a dry run."""
+    dry_run = False
+    for arg in args:
+        if arg in ("-h", "--help"):
+            usage()
+            sys.exit(0)
+        elif arg in ("-n", "--dry-run"):
+            dry_run = True
+        else:
+            die(f"unknown argument: {arg}")
+    return dry_run
+
+
+def workspaces():
+    for directory, subdirectories, files in os.walk("."):
+        subdirectories[:] = sorted(d for d in subdirectories if d not in SKIPPED_DIRECTORIES)
+        if "workspace.xml" in files:
+            yield os.path.join(directory, "workspace.xml")
+
+
+def fixed_text(original):
+    """Return the fixed workspace; raise ValueError when `original` cannot be edited safely."""
+    if "\r" in original:
+        raise ValueError("CRLF line endings are not supported")
+    fixed = fix(original)
+    reason = None if fixed == original else problem(original, fixed)
+    if reason:
+        raise ValueError(reason)
+    return fixed
+
+
+def replace_contents(path, text):
+    """Write next to `path`, then rename over it, so a crash never leaves a truncated workspace."""
+    temporary = path.with_name(path.name + ".tmp")
+    try:
+        temporary.write_bytes(text.encode("utf-8"))
+        shutil.copymode(path, temporary)
+        os.replace(temporary, path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
+def fix_workspace(shown, dry_run, timestamp):
+    """Report what happened to the workspace at `shown`; return False when it could not be fixed."""
+    path = Path(shown)
+    try:
+        raw = path.read_bytes()
+        original = raw.decode("utf-8")
+        fixed = fixed_text(original)
+        if fixed == original:
+            report("▪", GRAY, f"already fixed: {shown}")
+        elif dry_run:
+            report("ℹ", BLUE, f"would fix: {shown}")
+        else:
+            if not os.access(path, os.W_OK):
+                raise PermissionError("not writable")
+            backup = path.with_name(f"{path.stem}.{timestamp}{path.suffix}")
+            with open(backup, "xb") as file:
+                file.write(raw)
+            replace_contents(path, fixed)
+            report("✔", GREEN, f"fixed: {shown} (backup: {backup.name})")
+    except (OSError, ValueError) as error:
+        report("✖", RED, f"failed: {shown}: {error}", sys.stderr)
+        return False
+    return True
+
+
+def main(args):
+    dry_run = parse_args(args)
+    timestamp = int(time.time())
+    results = [fix_workspace(path, dry_run, timestamp) for path in workspaces()]
+    sys.exit(0 if all(results) else 1)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
