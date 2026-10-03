@@ -51,8 +51,9 @@ class TestCleanup:
             dropbox.mkdir(parents=True)
             (dropbox / "blob").write_bytes(b"x")
             quiet_tools(fake_bin, sandbox)
+            fake_bin("sudo")
             run("cleanup", "--apply", "--yes", timeout=30)
-            elevated = calls("sudo")[1:]
+            elevated = [call for call in calls("sudo") if call[:2] == ["-n", "rm"]]
             paths = [path for call in elevated for path in call[3:]]
             allowed = ("/private/var/log/", "/Library/Logs/", f"{dropbox}/")
             assert calls("sudo")[0] == ["-v"]

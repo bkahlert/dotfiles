@@ -135,7 +135,8 @@ if $apply; then
   if ! sudo -v; then
     warn 'sudo not granted; system-level steps will be skipped'
   else
-    while true; do sudo -n true 2>/dev/null; sleep 60; kill -0 "$$" 2>/dev/null || exit; done &
+    # Detached from stdout and stderr: a keepalive that inherits them keeps a pipe to the caller open.
+    { while true; do sudo -n true; sleep 60; kill -0 "$$" 2>/dev/null || exit; done; } &>/dev/null &
     sudo_pid=$!
     trap 'kill "$sudo_pid" 2>/dev/null || true' EXIT
   fi
