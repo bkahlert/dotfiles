@@ -13,7 +13,7 @@ if [[ -n "${CAS_ARTIFACTORY_BASE_URL}" && -n "${CAS_ARTIFACTORY_CI_USER}" && -n 
 fi
 
 _artifactory_exports=$(python3 - "${HOME}/.m2/settings.xml" <<'PYEOF'
-import sys, re
+import sys, re, shlex
 import xml.etree.ElementTree as ET
 
 settings_file = sys.argv[1]
@@ -76,9 +76,10 @@ if username is None or password is None:
     print(f'artifactory: server "{repo_id}" is missing username or password', file=sys.stderr)
     sys.exit(1)
 
-print(f'export CAS_ARTIFACTORY_BASE_URL="{base_url}"')
-print(f'export CAS_ARTIFACTORY_CI_USER="{username.text}"')
-print(f'export CAS_ARTIFACTORY_CI_TOKEN="{password.text}"')
+# The output is eval'd by the shell, so quote the values: a password may contain " $ ` or \.
+print(f'export CAS_ARTIFACTORY_BASE_URL={shlex.quote(base_url)}')
+print(f'export CAS_ARTIFACTORY_CI_USER={shlex.quote(username.text)}')
+print(f'export CAS_ARTIFACTORY_CI_TOKEN={shlex.quote(password.text)}')
 PYEOF
 )
 
