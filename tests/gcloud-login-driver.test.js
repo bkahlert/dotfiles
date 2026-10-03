@@ -21,9 +21,12 @@ function findChromium() {
   return null;
 }
 
-const CHROMIUM = findChromium();
+const CHROMIUM = process.env.CHROMIUM_BIN || findChromium();
+if (!CHROMIUM && process.env.CI) {
+  throw new Error('no Chromium found; set CHROMIUM_BIN (the driver test must not skip on CI)');
+}
 
-describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not installed (run gcloud-login once)' }, () => {
+describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not installed (run gcloud-login once, or set CHROMIUM_BIN)' }, () => {
   let chromium, fixture;
 
   before(async () => {
