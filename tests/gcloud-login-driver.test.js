@@ -35,8 +35,8 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
   });
 
   after(async () => {
-    await chromium.kill();
-    fixture.server.close();
+    // The server must close even if Chromium cleanup fails: an open listener keeps node alive forever.
+    try { await chromium.kill(); } finally { fixture.server.close(); }
   }, { timeout: 20_000 });
 
   describe('on identifier, chooser, password, oauth-signin-interstitial and consent pages', () => {
@@ -97,7 +97,7 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
       // keychain item.
       '--use-mock-keychain', '--password-store=basic',
       'about:blank',
-    ], { stdio: 'ignore' });
+    ], { stdio: 'ignore', detached: true });
     const portFile = path.join(dir, 'DevToolsActivePort');
     for (let i = 0; i < 100 && !fs.existsSync(portFile); i++) await sleep(100);
     assert.ok(fs.existsSync(portFile), 'Chromium did not write DevToolsActivePort');
@@ -109,13 +109,21 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
       // Remove the throwaway profile only after Chromium exited; it writes to
       // the profile while shutting down and would recreate parts of it. On
       // Linux Chromium may already be gone, and SIGTERM is not always enough.
-      kill: () => new Promise(resolve => {
-        const done = () => { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 }); resolve(); };
-        if (proc.exitCode !== null || proc.signalCode !== null) return done();
-        const hammer = setTimeout(() => proc.kill('SIGKILL'), 5000);
-        proc.once('exit', () => { clearTimeout(hammer); done(); });
-        proc.kill();
-      }),
+      // Its helper processes (zygote, GPU, network) can outlive the main
+      // process and keep writing into the profile, so the whole process group
+      // is killed before the profile goes; rm retries while the last of them
+      // dies, instead of failing with ENOTEMPTY.
+      kill: async () => {
+        if (proc.exitCode === null && proc.signalCode === null) {
+          const exit = new Promise(resolve => proc.once('exit', resolve));
+          const hammer = setTimeout(() => proc.kill('SIGKILL'), 5000);
+          proc.kill();
+          await exit;
+          clearTimeout(hammer);
+        }
+        try { process.kill(-proc.pid, 'SIGKILL'); } catch { /* group already gone */ }
+        await fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+      },
       pages: async () => (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).filter(t => t.type === 'page'),
     };
   }
