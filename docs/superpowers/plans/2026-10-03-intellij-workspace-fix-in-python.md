@@ -32,7 +32,8 @@ Every other option of the component (for example `myFormatOnlyChangedLines`) and
 
 ## Tasks
 
-- [ ] **1. RED.** Fixtures from the real IDE shapes: Go-restricted entries (`myAllFileTypesSelected=false`, `mySelectedFileTypes` holding `Go`), the all-file-types entry `netmon` has, an entry with a sibling `myFormatOnlyChangedLines`, absent components. Expected output per the target state above. Fails against the bash script.
-- [ ] **2. Rewrite** `executable_intellij-workspace-fix` in Python; delete the missing-`xmlstarlet` test and `needs_xmlstarlet`.
-- [ ] **3. CI.** Remove `xmlstarlet` from the `checks` (apt) and `macos` (brew) jobs in `.github/workflows/ci.yml`.
-- [ ] **4. Verify and ship.** Suite, `make lint`, inspections, code review on `fable`. Then the user's check: run `intellij-workspace-fix` on a project closed in the IDE, reopen it, confirm Actions on Save shows All file types, restart the IDE, confirm again.
+- [x] **1. RED.** Fixtures from the real IDE shapes: Go-restricted entries (`myAllFileTypesSelected=false`, `mySelectedFileTypes` holding `Go`), the all-file-types entry `netmon` has, an entry with a sibling `myFormatOnlyChangedLines`, absent components. Expected output per the target state above. Fails against the bash script.
+- [x] **2. Rewrite** `executable_intellij-workspace-fix` in Python; delete the missing-`xmlstarlet` test and `needs_xmlstarlet`.
+- [x] **3. CI.** Remove `xmlstarlet` from the `checks` (apt) and `macos` (brew) jobs in `.github/workflows/ci.yml`.
+- [x] **4. Review.** Code review on `fable` found four defects, all fixed test-first: overlapping option spans silently dropped siblings; `problem()` did not check that nothing else changed (it now compares both trees without the three options); non-UTF-8, read-only and CRLF files aborted the run or were mangled (now reported per file, atomic write); an existing backup was overwritten (now exclusive create). Siblings keep their position, so IDE-ordered files read "already fixed".
+- [ ] **5. Ship.** `chezmoi apply` dry run, then push, PR, squash-merge. The IDE round trip (reopen, restart) is assumed to work: the user cannot test it. Verified instead on 80 copies of real `workspace.xml` files: only lines added, second run "already fixed".
