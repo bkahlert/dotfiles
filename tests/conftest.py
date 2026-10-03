@@ -66,7 +66,8 @@ class Sandbox:
                         record=False)
 
     def run(self, name, *args, stdin=None, timeout=10):
-        return subprocess.run([name, *args], env=self.env, cwd=self.home, input=stdin,
+        feed = {"input": stdin} if stdin is not None else {"stdin": subprocess.DEVNULL}
+        return subprocess.run([name, *args], env=self.env, cwd=self.home, **feed,
                               capture_output=True, text=True, timeout=timeout)
 
     def zsh(self, snippet, *, function=None, modules=(), timeout=10):
