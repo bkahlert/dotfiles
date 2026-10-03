@@ -1,0 +1,46 @@
+# Files without a test, each with its reason. A "legacy" entry goes when the file's behaviour is
+# next changed: that change adds the test and removes the line. tests/test_conventions.py fails on
+# a missing entry, a stale entry and an empty reason.
+
+[bin]
+ansi-test = "legacy: test when next touched"
+box = "legacy: test when next touched"
+cert-get = "legacy: test when next touched"
+cert-print = "legacy: test when next touched"
+cleanup = "legacy: test when next touched"
+docker = "legacy: test when next touched"
+dscleanup = "legacy: test when next touched"
+explain = "legacy: test when next touched"
+flushdns = "legacy: test when next touched"
+gcloud-login = "legacy: test when next touched"
+gcloud-login-browser = "legacy: test when next touched"
+grepr = "legacy: test when next touched"
+idea = "legacy: test when next touched"
+idea-wait = "legacy: test when next touched"
+intellij-workspace-fix = "legacy: test when next touched"
+killport = "legacy: test when next touched"
+known-hosts-fix = "legacy: test when next touched"
+mir = "legacy: test when next touched"
+notify = "legacy: test when next touched"
+omlx = "legacy: test when next touched"
+op-agent = "legacy: test when next touched"
+pbcopy-dir = "legacy: test when next touched"
+pbpaste-dir = "legacy: test when next touched"
+pick-port = "legacy: test when next touched"
+print-port = "legacy: test when next touched"
+serve = "legacy: test when next touched"
+serve-live = "legacy: test when next touched"
+timeout = "legacy: test when next touched"
+upgrade-all = "legacy: test when next touched"
+
+[functions]
+
+[conf_d]
+08-print = "legacy: test when next touched"
+10-glab = "legacy: test when next touched"
+10-gradle = "legacy: test when next touched"
+10-granted = "legacy: test when next touched"
+10-italics = "legacy: test when next touched"
+10-nvm = "legacy: test when next touched"
+20-claude = "legacy: test when next touched"
+90-scratch = "legacy: test when next touched"
