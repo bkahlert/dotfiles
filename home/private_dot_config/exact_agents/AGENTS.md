@@ -38,7 +38,7 @@ optional. Skipping the read is a failure mode.
 | Authoring or editing a `Dockerfile` / `Containerfile` / OCI image build | [rules/docker.md](rules/docker.md) |
 | SVG files or inline SVG markup | [rules/svg.md](rules/svg.md) |
 | Writing or editing regular expressions in any language | [rules/regex.md](rules/regex.md) |
-| Writing Markdown, especially when referencing files | [rules/markdown.md](rules/markdown.md) |
+| Writing Markdown, especially when referencing files or including shell code blocks | [rules/markdown.md](rules/markdown.md) |
 | Writing or editing comments, KDoc/JSDoc/docstrings, or any code documentation | [rules/documentation.md](rules/documentation.md) |
 | Adding/removing a build dependency, BOM, or platform import (Gradle / Maven) — or looking for a dependency's source | [rules/dependencies.md](rules/dependencies.md) |
 | Running Gradle builds or tests, or diagnosing a Gradle failure | [rules/gradle.md](rules/gradle.md) |
