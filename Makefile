@@ -28,7 +28,7 @@ lint-workflows:
 
 unit:
 	uv run --locked pytest -m "not integration"
-	node --test tests/
+	node --test tests/*.test.js
 
 integration:
 	uv run --locked pytest tests/integration/test_apply_container.py
