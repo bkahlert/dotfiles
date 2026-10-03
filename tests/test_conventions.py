@@ -35,7 +35,7 @@ def subjects():
         found.append(Subject(area, key, source, (
             TESTS / area / f"test_{key.replace('-', '_')}.py",
             TESTS / f"{key}.test.js")))
-    for source in sorted(FUNCTIONS_SOURCE.iterdir()):
+    for source in sorted(FUNCTIONS_SOURCE.glob("[!.]*")):
         found.append(Subject("functions", source.name, source,
                              (TESTS / "functions" / f"test_{source.name.replace('-', '_')}.py",)))
     for source in sorted(CONF_D_SOURCE.rglob("*.zsh*")):
