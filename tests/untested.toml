@@ -3,7 +3,6 @@
 # a missing entry, a stale entry and an empty reason.
 
 [bin]
-flushdns = "legacy: test when next touched"
 
 [claude]
 
