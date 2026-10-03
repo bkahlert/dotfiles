@@ -62,8 +62,8 @@ if [[ $arg =~ ^[0-9]+$ ]]; then
   [[ -n $host ]] || { printf '%s: could not extract host from line %d\n' "${0##*/}" "$line" >&2; exit 1; }
 
   printf 'Line %d → host %s\n' "$line" "$host" >&2
-  exec ssh-keygen -R "$host"
+  exec ssh-keygen -R "$host" -f "$known_hosts"
 fi
 
 # Non-numeric: treat as hostname/IP directly.
-exec ssh-keygen -R "$arg"
+exec ssh-keygen -R "$arg" -f "$known_hosts"
