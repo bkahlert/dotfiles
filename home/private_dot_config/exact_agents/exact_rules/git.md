@@ -51,7 +51,6 @@ A breaking change (see Footers) is a major release whatever the type.
   not and drops the header's type.
 - Ticket: `Closes #42` / `Fixes #42` is parsed as a reference and closes the issue; `Refs: PROJ-123` stays a plain trailer. Here, not in the
   description, so the changelog line stays clean.
-- No AI-attribution trailers (`Co-Authored-By: Claude …`, `Generated with …`), in commits or PR descriptions.
 
 ```
 feat(auth): require PKCE for the authorization-code flow
