@@ -6,79 +6,6 @@ import pytest
 
 from repo import BIN_SOURCE
 
-# The state "Tools > Actions on Save > All file types" must end up in, as the IDE writes it, plus the explicit
-# `myRunOnSave` that keeps the entry independent of the plugins (the Go plugin's default is `true`, the platform's `false`).
-ALL_FILE_TYPES = """\
-    <option name="myAllFileTypesSelected" value="true" />
-    <option name="myRunOnSave" value="true" />
-    <option name="mySelectedFileTypes">
-      <set />
-    </option>
-"""
-
-# What the IDE wrote in a project after the dropdown was switched to "All file types" while the Go plugin was
-# installed: `myRunOnSave` equals the Go plugin's default and is therefore left out.
-IDE_ALL_FILE_TYPES = """\
-    <option name="myAllFileTypesSelected" value="true" />
-    <option name="mySelectedFileTypes">
-      <set />
-    </option>
-"""
-
-# What the previous version of the script wrote. Under the Go plugin's defaults it still means "Go files".
-RUN_ON_SAVE_ONLY = """\
-    <option name="myRunOnSave" value="true" />
-"""
-
-GO_FILES = """\
-    <option name="myAllFileTypesSelected" value="false" />
-    <option name="myRunOnSave" value="true" />
-    <option name="mySelectedFileTypes">
-      <set>
-        <option value="Go" />
-      </set>
-    </option>
-"""
-
-DISABLED = """\
-    <option name="myRunOnSave" value="false" />
-"""
-
-ONLY_CHANGED_LINES = """\
-    <option name="myFormatOnlyChangedLines" value="true" />
-"""
-
-GIT = """\
-  <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
-  </component>
-"""
-
-PROBLEMS = """\
-  <component name="ProblemsViewState">
-    <option name="selectedTabId" value="ProjectErrors" />
-  </component>
-"""
-
-
-def component(name, options):
-    return f'  <component name="{name}">\n{options}  </component>\n'
-
-
-def project(*components):
-    return '<?xml version="1.0" encoding="UTF-8"?>\n<project version="4">\n' + "".join(components) + "</project>\n"
-
-
-# The IDE writes the components sorted by name.
-WITHOUT_SAVE_OPTIONS = project(GIT, PROBLEMS)
-FIXED = project(
-    component("FormatOnSaveOptions", ALL_FILE_TYPES), GIT, component("OptimizeOnSaveOptions", ALL_FILE_TYPES), PROBLEMS)
-
-
-def with_save_options(options, format_extra=""):
-    return project(
-        component("FormatOnSaveOptions", format_extra + options), GIT, component("OptimizeOnSaveOptions", options), PROBLEMS)
-
 
 class TestIntellijWorkspaceFix:
     class TestOnWorkspaceWithoutTheSaveOptions:
@@ -291,3 +218,77 @@ def write(sandbox, relative, body):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body)
     return path
+
+
+# The state "Tools > Actions on Save > All file types" must end up in, as the IDE writes it, plus the explicit
+# `myRunOnSave` that keeps the entry independent of the plugins (the Go plugin's default is `true`, the platform's `false`).
+ALL_FILE_TYPES = """\
+    <option name="myAllFileTypesSelected" value="true" />
+    <option name="myRunOnSave" value="true" />
+    <option name="mySelectedFileTypes">
+      <set />
+    </option>
+"""
+
+# What the IDE wrote in a project after the dropdown was switched to "All file types" while the Go plugin was
+# installed: `myRunOnSave` equals the Go plugin's default and is therefore left out.
+IDE_ALL_FILE_TYPES = """\
+    <option name="myAllFileTypesSelected" value="true" />
+    <option name="mySelectedFileTypes">
+      <set />
+    </option>
+"""
+
+# What the previous version of the script wrote. Under the Go plugin's defaults it still means "Go files".
+RUN_ON_SAVE_ONLY = """\
+    <option name="myRunOnSave" value="true" />
+"""
+
+GO_FILES = """\
+    <option name="myAllFileTypesSelected" value="false" />
+    <option name="myRunOnSave" value="true" />
+    <option name="mySelectedFileTypes">
+      <set>
+        <option value="Go" />
+      </set>
+    </option>
+"""
+
+DISABLED = """\
+    <option name="myRunOnSave" value="false" />
+"""
+
+ONLY_CHANGED_LINES = """\
+    <option name="myFormatOnlyChangedLines" value="true" />
+"""
+
+GIT = """\
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+"""
+
+PROBLEMS = """\
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="ProjectErrors" />
+  </component>
+"""
+
+
+def component(name, options):
+    return f'  <component name="{name}">\n{options}  </component>\n'
+
+
+def project(*components):
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<project version="4">\n' + "".join(components) + "</project>\n"
+
+
+# The IDE writes the components sorted by name.
+WITHOUT_SAVE_OPTIONS = project(GIT, PROBLEMS)
+FIXED = project(
+    component("FormatOnSaveOptions", ALL_FILE_TYPES), GIT, component("OptimizeOnSaveOptions", ALL_FILE_TYPES), PROBLEMS)
+
+
+def with_save_options(options, format_extra=""):
+    return project(
+        component("FormatOnSaveOptions", format_extra + options), GIT, component("OptimizeOnSaveOptions", options), PROBLEMS)
