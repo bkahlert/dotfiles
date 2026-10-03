@@ -22,6 +22,11 @@ class TestSandbox:
             run("gh")
             assert calls("gh") == [["pr", "view", "--json", "title and body"], [""], []]
 
+        def test_should_record_an_argument_that_spans_lines(self, run, fake_bin, calls):
+            fake_bin("gh")
+            run("gh", "pr", "create", "--body", "line one\nline two")
+            assert calls("gh") == [["pr", "create", "--body", "line one\nline two"]]
+
         def test_should_return_the_canned_output_and_exit_code(self, run, fake_bin):
             fake_bin("gh", stdout="out", stderr="err", exit_code=3)
             result = run("gh")

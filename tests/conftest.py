@@ -10,7 +10,9 @@ from repo import BIN_SOURCE, FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module
 # under test can never call the real one; a test that needs one installs a fake with fake_bin.
 GUARDED = ("op", "keepassxc-cli", "gh", "glab", "gcloud", "idp", "curl", "wget", "ssh", "scp",
            "brew", "open", "osascript", "launchctl", "defaults", "sudo")
-ARG_SEPARATOR = "\x1f"
+# NUL cannot occur inside an argument, so it ends one; a record separator ends the call.
+ARG_SEPARATOR = "\0"
+RECORD_SEPARATOR = "\x1e"
 
 
 @pytest.fixture(scope="session")
@@ -81,11 +83,11 @@ class Sandbox:
         log = self.calls_dir / name
         if not log.exists():
             return []
-        return [line.split(ARG_SEPARATOR)[:-1] for line in log.read_text().split("\n")[:-1]]
+        return [record.split(ARG_SEPARATOR)[:-1] for record in log.read_text().split(RECORD_SEPARATOR)[:-1]]
 
     def _write(self, name, body, record=True):
         log = shlex.quote(str(self.calls_dir / name))
-        recorder = f"{{ (( $# )) && printf '%s\\x1f' \"$@\"; printf '\\n'; }} >> {log}\n" if record else ""
+        recorder = f"{{ (( $# )) && printf '%s\\0' \"$@\"; printf '\\036'; }} >> {log}\n" if record else ""
         path = self.fakes / name
         path.write_text(f"#!/usr/bin/env bash\n{recorder}{body}")
         path.chmod(0o755)
