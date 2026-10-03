@@ -45,6 +45,17 @@ class TestCleanup:
             assert not safe.exists() and not risky.exists()
             assert "ℹ auto-yes\n✔ Xcode Archives cleaned\n" in result.stdout
 
+        def test_should_skip_the_system_steps_when_sudo_is_denied(self, run, fake_bin, calls, sandbox):
+            blob = sandbox.home / "Dropbox/.dropbox.cache/blob"
+            blob.parent.mkdir(parents=True)
+            blob.write_bytes(b"x")
+            quiet_tools(fake_bin, sandbox)
+            result = run("cleanup", "--apply", "--yes", timeout=30)
+            assert blob.exists()
+            assert calls("sudo") == [["-v"]]
+            assert result.stdout.count("sudo not granted") == 1
+            assert "▪ Dropbox cache: needs sudo\n" in result.stdout
+
         def test_should_only_hand_system_logs_and_the_dropbox_cache_to_sudo(self, run, fake_bin, calls, sandbox):
             xcode_leftovers(sandbox)
             dropbox = sandbox.home / "Dropbox/.dropbox.cache"

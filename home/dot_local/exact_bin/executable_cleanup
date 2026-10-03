@@ -100,6 +100,7 @@ clean() {
   local existing=() p
   for p in "$@"; do [[ -e $p ]] && existing+=("$p"); done
   (( ${#existing[@]} )) || { skip "$label: nothing to clean"; return; }
+  if $use_sudo && ! $have_sudo; then skip "$label: needs sudo"; return; fi
   local bytes; bytes=$(size_of "${existing[@]}")
   info "$label: $(bytes_to_human "$bytes") across ${#existing[@]} path(s)"
   if $risky; then
@@ -131,8 +132,10 @@ else
   printf '%s%s↗ DRY-RUN — no files will be deleted (use --apply to clean)%s\n' "$c_bold" "$c_blue" "$c_reset"
 fi
 
+have_sudo=true
 if $apply; then
   if ! sudo -v; then
+    have_sudo=false
     warn 'sudo not granted; system-level steps will be skipped'
   else
     # Detached from stdout and stderr: a keepalive that inherits them keeps a pipe to the caller open.
