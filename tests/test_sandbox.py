@@ -14,6 +14,11 @@ class TestSandbox:
             assert result.returncode == 127
             assert result.stderr == "op: not faked in this test\n"
 
+        def test_should_guard_tools_that_change_local_state_too(self, run):
+            result = run("git", "--version")
+            assert result.returncode == 127
+            assert result.stderr == "git: not faked in this test\n"
+
     class TestFakeBin:
         def test_should_record_every_call_with_its_arguments(self, run, fake_bin, calls):
             fake_bin("gh")
