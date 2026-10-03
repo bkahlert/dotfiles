@@ -28,9 +28,8 @@ fi
 if command -v python3 &>/dev/null; then
   alias python=python3
 fi
-if command -v pip3 &>/dev/null; then
-  alias pip=pip3
-fi
+# Unguarded: pip3 may only reach PATH later (10-python adds the user bin dir).
+alias pip=pip3
 
 if [[ $OSTYPE == darwin* ]]; then
   # Drops .metadata_never_index in every node_modules/.git under the cwd
