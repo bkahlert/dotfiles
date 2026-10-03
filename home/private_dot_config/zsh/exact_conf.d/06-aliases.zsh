@@ -2,7 +2,6 @@
 alias -s {kt,java,gradle,bat,txt,md,json,yaml,yml}=idea
 
 # Git shortcuts
-alias alias-print='declare -f'
 alias git+x='git update-index --chmod=+x'
 
 # ls sorted by ctime: lsl = newest first, lsr = oldest first
