@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 
@@ -12,6 +14,18 @@ class TestSandbox:
             result = run("statusline", "--no-nerd-fonts", stdin="{}")
             assert result.returncode == 0
             assert result.stdout.endswith("0%\x1b[0m\n")
+
+        def test_should_give_the_child_no_stdin_even_when_the_parent_has_one(self, run):
+            read_end, write_end = os.pipe()
+            saved = os.dup(0)
+            os.dup2(read_end, 0)
+            try:
+                result = run("cat", timeout=3)
+            finally:
+                os.dup2(saved, 0)
+                for fd in (saved, read_end, write_end):
+                    os.close(fd)
+            assert result.stdout == ""
 
         def test_should_keep_the_real_home_out_of_reach(self, run, sandbox):
             result = run("sh", "-c", 'echo "$HOME" "$XDG_CONFIG_HOME"')

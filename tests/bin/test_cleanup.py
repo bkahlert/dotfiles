@@ -45,11 +45,20 @@ class TestCleanup:
             assert not safe.exists() and not risky.exists()
             assert "ℹ auto-yes\n✔ Xcode Archives cleaned\n" in result.stdout
 
-        def test_should_only_ever_hand_system_paths_to_sudo(self, run, fake_bin, calls, sandbox):
+        def test_should_only_hand_system_logs_and_the_dropbox_cache_to_sudo(self, run, fake_bin, calls, sandbox):
+            xcode_leftovers(sandbox)
+            dropbox = sandbox.home / "Dropbox/.dropbox.cache"
+            dropbox.mkdir(parents=True)
+            (dropbox / "blob").write_bytes(b"x")
             quiet_tools(fake_bin, sandbox)
-            run("cleanup", "--apply", timeout=30)
+            run("cleanup", "--apply", "--yes", timeout=30)
+            elevated = calls("sudo")[1:]
+            paths = [path for call in elevated for path in call[3:]]
+            allowed = ("/private/var/log/", "/Library/Logs/", f"{dropbox}/")
             assert calls("sudo")[0] == ["-v"]
-            assert all(call[:3] == ["-n", "rm", "-rf"] for call in calls("sudo")[1:])
+            assert str(dropbox / "blob") in paths
+            assert all(call[:3] == ["-n", "rm", "-rf"] for call in elevated)
+            assert [path for path in paths if not path.startswith(allowed)] == []
 
     @darwin
     class TestOnBadArguments:

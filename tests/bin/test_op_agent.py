@@ -12,14 +12,16 @@ class TestOpAgent:
             assert result.returncode == 0
             assert result.stdout == " s3cr=t\n two\n"
             assert calls("op") == [["read", "--no-newline", "op://Employee/item/password"]]
-            assert run("op-agent", "status").stdout.startswith("op-agent: running (pid ")
+            status = run("op-agent", "status")
+            assert status.stdout.startswith("op-agent: running (pid ")
 
         def test_should_reuse_the_running_daemon(self, run, fake_bin, calls, daemon):
             fake_bin("op", script=OP_SECRET)
             run("op-agent", "read", "op://Employee/item/password", timeout=30)
-            status = run("op-agent", "status").stdout
+            before = run("op-agent", "status")
             run("op-agent", "read", "op://Employee/other/password", timeout=30)
-            assert run("op-agent", "status").stdout == status
+            after = run("op-agent", "status")
+            assert after.stdout == before.stdout
             assert [call[-1] for call in calls("op")] == ["op://Employee/item/password", "op://Employee/other/password"]
 
         def test_should_relay_an_op_error_and_exit_1(self, run, fake_bin, daemon):
@@ -34,9 +36,11 @@ class TestOpAgent:
                 state.mkdir(parents=True)
                 os.mkfifo(state / "req", 0o600)
                 with subprocess.Popen(["sleep", "60"]) as foreign:
-                    (state / "pid").write_text(str(foreign.pid))
-                    result = run("op-agent", "read", "op://Employee/item/password", timeout=30)
-                    foreign.kill()
+                    try:
+                        (state / "pid").write_text(str(foreign.pid))
+                        result = run("op-agent", "read", "op://Employee/item/password", timeout=30)
+                    finally:
+                        foreign.kill()
                 assert result.returncode == 2
                 assert result.stderr == "op-agent: daemon did not accept the request (stale pid file removed — retry)\n"
                 assert not (state / "pid").exists()

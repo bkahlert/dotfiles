@@ -5,10 +5,13 @@ import subprocess
 class TestKillport:
     def test_should_terminate_the_listener_and_report_the_freed_port(self, run, fake_bin, calls):
         with subprocess.Popen(["sleep", "100"]) as listener:
-            fake_bin("sleep")
-            fake_bin("lsof", script=listing_once(listener.pid))
-            result = run("killport", "8080")
-            assert listener.wait(timeout=5) == -signal.SIGTERM
+            try:
+                fake_bin("sleep")
+                fake_bin("lsof", script=listing_once(listener.pid))
+                result = run("killport", "8080")
+                assert listener.wait(timeout=5) == -signal.SIGTERM
+            finally:
+                listener.kill()
         assert result.returncode == 0
         assert result.stdout == f"ℹ Killing 1 process(es) on port 8080: {listener.pid}\n✔ Port 8080 freed.\n"
         assert calls("lsof") == [["-t", "-iTCP:8080", "-sTCP:LISTEN"]] * 2
@@ -16,10 +19,13 @@ class TestKillport:
     class TestOnAListenerThatIgnoresSigterm:
         def test_should_escalate_to_sigkill(self, run, fake_bin):
             with subprocess.Popen(["sleep", "100"], preexec_fn=ignore_sigterm) as listener:
-                fake_bin("sleep")
-                fake_bin("lsof", stdout=f"{listener.pid}\n")
-                result = run("killport", "8080")
-                assert listener.wait(timeout=5) == -signal.SIGKILL
+                try:
+                    fake_bin("sleep")
+                    fake_bin("lsof", stdout=f"{listener.pid}\n")
+                    result = run("killport", "8080")
+                    assert listener.wait(timeout=5) == -signal.SIGKILL
+                finally:
+                    listener.kill()
             assert result.returncode == 0
             assert result.stdout == (f"ℹ Killing 1 process(es) on port 8080: {listener.pid}\n"
                                      f"! Forcing SIGKILL on: {listener.pid}\n✔ Port 8080 freed.\n")
