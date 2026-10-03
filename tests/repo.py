@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 HOME_SOURCE = ROOT / "home"
+CHEZMOISCRIPTS_SOURCE = HOME_SOURCE / ".chezmoiscripts"
 BIN_SOURCE = HOME_SOURCE / "dot_local" / "exact_bin"
 CLAUDE_SOURCE = HOME_SOURCE / "private_dot_claude"
 SCRIPT_SOURCES = (("bin", BIN_SOURCE), ("claude", CLAUDE_SOURCE))
