@@ -7,6 +7,6 @@
 # The generated script wraps `idp` in a function: `idp use` runs as a child
 # process, so the wrapper evals its `export KUBECONFIG=...` line into this
 # shell. It also registers tab completion via compdef, which needs compinit
-# (03-completions.zsh) to have run first.
+# (08-completions.zsh) to have run first.
 command -v idp &>/dev/null || return 0
 source <(idp completion zsh)
