@@ -1,3 +1,4 @@
+import os
 import re
 import shutil
 
@@ -5,40 +6,9 @@ import pytest
 
 from repo import BIN_SOURCE
 
-needs_xmlstarlet = pytest.mark.skipif(shutil.which("xmlstarlet") is None, reason="xmlstarlet is not installed")
-
-OTHER_ONLY = """<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="Other">
-    <option name="x" value="1" />
-  </component>
-</project>
-"""
-
-FIXED = """<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="Other">
-    <option name="x" value="1" />
-  </component>
-  <component name="OptimizeOnSaveOptions">
-    <option name="myRunOnSave" value="true" />
-  </component>
-  <component name="FormatOnSaveOptions">
-    <option name="myRunOnSave" value="true" />
-  </component>
-</project>
-"""
-
-DISABLED = """<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="FormatOnSaveOptions">
-    <option name="myRunOnSave" value="false" />
-  </component>
-  <component name="OptimizeOnSaveOptions">
-    <option name="myRunOnSave" value="false" />
-  </component>
-</project>
-"""
+needs_xmlstarlet = pytest.mark.skipif(
+    shutil.which("xmlstarlet") is None and not os.environ.get("CI"),
+    reason="xmlstarlet is not installed (CI installs it, so a missing one fails there)")
 
 
 class TestIntellijWorkspaceFix:
@@ -117,6 +87,40 @@ class TestIntellijWorkspaceFix:
             assert result.returncode == 0
             assert result.stdout.startswith("Purpose: Enable \"Reformat code\" and \"Optimize imports\" on save in every\n")
             assert "Usage:   intellij-workspace-fix [--dry-run]\n" in result.stdout
+
+
+OTHER_ONLY = """<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Other">
+    <option name="x" value="1" />
+  </component>
+</project>
+"""
+
+FIXED = """<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Other">
+    <option name="x" value="1" />
+  </component>
+  <component name="OptimizeOnSaveOptions">
+    <option name="myRunOnSave" value="true" />
+  </component>
+  <component name="FormatOnSaveOptions">
+    <option name="myRunOnSave" value="true" />
+  </component>
+</project>
+"""
+
+DISABLED = """<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="FormatOnSaveOptions">
+    <option name="myRunOnSave" value="false" />
+  </component>
+  <component name="OptimizeOnSaveOptions">
+    <option name="myRunOnSave" value="false" />
+  </component>
+</project>
+"""
 
 
 def write(sandbox, relative, body):

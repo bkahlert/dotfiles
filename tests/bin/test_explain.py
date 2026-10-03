@@ -2,7 +2,6 @@ import shutil
 
 from repo import BIN_SOURCE
 
-EXPLAIN = str(BIN_SOURCE / "executable_explain")
 URL = "https://explainshell.com/explain?cmd="
 
 
@@ -44,22 +43,22 @@ class TestExplain:
             fake_bin("open")
             fake_bin("xdg-open")
             path = path_with(sandbox, "open", "xdg-open")
-            result = run("env", f"PATH={path}", EXPLAIN, "ls")
+            result = run("env", f"PATH={path}", str(path / "explain"), "ls")
             assert result.returncode == 0
             assert (calls("open"), calls("xdg-open")) == ([[URL + "ls"]], [])
 
         def test_should_fall_back_to_xdg_open(self, run, fake_bin, calls, sandbox):
             fake_bin("xdg-open")
             path = path_with(sandbox, "xdg-open")
-            result = run("env", f"PATH={path}", EXPLAIN, "ls")
+            result = run("env", f"PATH={path}", str(path / "explain"), "ls")
             assert result.returncode == 0
             assert calls("xdg-open") == [[URL + "ls"]]
 
         def test_should_exit_1_and_name_the_openers_without_any(self, run, sandbox):
             path = path_with(sandbox)
-            result = run("env", f"PATH={path}", EXPLAIN, "ls")
+            result = run("env", f"PATH={path}", str(path / "explain"), "ls")
             assert result.returncode == 1
-            assert result.stderr == "executable_explain: no browser opener found (open, xdg-open)\n"
+            assert result.stderr == "explain: no browser opener found (open, xdg-open)\n"
 
     class TestOnBadArguments:
         def test_should_print_the_header_to_stderr_and_exit_2_without_a_command(self, run, fake_bin, calls):
@@ -86,6 +85,7 @@ def path_with(sandbox, *fakes):
     only = sandbox.home / "only-bin"
     only.mkdir()
     (only / "bash").symlink_to(shutil.which("bash"))
+    (only / "explain").symlink_to(BIN_SOURCE / "executable_explain")
     for name in fakes:
         (only / name).symlink_to(sandbox.fakes / name)
     return only

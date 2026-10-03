@@ -5,24 +5,6 @@ import pytest
 from repo import BIN_SOURCE
 
 
-@pytest.fixture
-def wrapper(tmp_path):
-    own = tmp_path / "own"
-    own.mkdir()
-    (own / "docker").symlink_to(BIN_SOURCE / "executable_docker")
-    return own / "docker"
-
-
-@pytest.fixture
-def bare_path(tmp_path, sandbox, wrapper):
-    tools = tmp_path / "tools"
-    tools.mkdir()
-    for name in ("env", "bash", "dirname"):
-        (tools / name).symlink_to(shutil.which(name))
-    sandbox.env["PATH"] = f"{wrapper.parent}:{tools}"
-    return sandbox.env["PATH"]
-
-
 class TestDocker:
     class TestOnDockerInstalled:
         def test_should_run_it_with_all_arguments_and_its_exit_code(self, run, fake_bin, calls, wrapper, sandbox):
@@ -47,3 +29,21 @@ class TestDocker:
             result = run(str(wrapper), "ps")
             assert (result.returncode, result.stdout) == (127, "")
             assert result.stderr == "docker: neither docker nor podman found on PATH\n"
+
+
+@pytest.fixture
+def wrapper(tmp_path):
+    own = tmp_path / "own"
+    own.mkdir()
+    (own / "docker").symlink_to(BIN_SOURCE / "executable_docker")
+    return own / "docker"
+
+
+@pytest.fixture
+def bare_path(tmp_path, sandbox, wrapper):
+    tools = tmp_path / "tools"
+    tools.mkdir()
+    for name in ("env", "bash", "dirname"):
+        (tools / name).symlink_to(shutil.which(name))
+    sandbox.env["PATH"] = f"{wrapper.parent}:{tools}"
+    return sandbox.env["PATH"]
