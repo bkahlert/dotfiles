@@ -1,4 +1,5 @@
 import shlex
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -69,6 +70,14 @@ class Sandbox:
         feed = {"input": stdin} if stdin is not None else {"stdin": subprocess.DEVNULL}
         return subprocess.run([name, *args], env=self.env, cwd=self.home, **feed,
                               capture_output=True, text=True, timeout=timeout)
+
+    def only_tools(self, *names):
+        """PATH becomes the fakes plus bash (which they run on) and the named real tools, so a glab, node or claude installed on the machine cannot leak in."""
+        bare = self.fakes.parent / "bare"
+        bare.mkdir(exist_ok=True)
+        for name in dict.fromkeys(("bash", *names)):
+            (bare / name).symlink_to(shutil.which(name))
+        self.env["PATH"] = f"{self.fakes}:{bare}"
 
     def zsh(self, snippet, *, function=None, modules=(), timeout=10):
         prelude = [f"fpath=({shlex.quote(str(FUNCTIONS_SOURCE))} $fpath)"]
