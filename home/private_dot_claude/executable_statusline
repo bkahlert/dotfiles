@@ -5,15 +5,24 @@
 # Usage: configured via settings.json as statusLine.command
 #        --nerd-fonts     force Nerd Font icons (overrides detection + NERD_FONTS)
 #        --no-nerd-fonts  force emoji fallbacks  (overrides detection + NERD_FONTS)
+#        --preview        read the sample input of tests/claude/test_statusline.py in the dotfiles
+#                         repo (chezmoi source-path) instead of stdin, e.g. `statusline --preview --nerd-fonts`
 # Requires: bash ≥ 4.2 (for $'\uXXXX'), jq
 
+preview=0
 while [[ $# -gt 0 ]]; do
   case $1 in
     --nerd-fonts)    NERD_FONTS=1 && shift ;;
     --no-nerd-fonts) NERD_FONTS=0 && shift ;;
+    --preview)       preview=1 && shift ;;
     *) break ;;
   esac
 done
+
+if (( preview )); then
+  source=$(chezmoi source-path) || exit 1
+  exec < <(cd "${source%/*}" && uv run --locked tests/claude/test_statusline.py --print-input)
+fi
 
 # ── Nerd Font detection ────────────────────────────────────
 # Result is cached in XDG_CACHE_HOME to avoid repeated filesystem probes.

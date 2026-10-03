@@ -1,4 +1,9 @@
 import json
+import shlex
+import subprocess
+import sys
+import time
+from pathlib import Path
 
 import pytest
 
@@ -64,7 +69,7 @@ class TestStatusline:
             assert f"{RED}◕ 75%{RESET}" in result.stdout
 
         def test_should_mark_an_expired_rate_limit_window(self, run, clock):
-            result = render(run, {"rate_limits": {"five_hour": {"used_percentage": 3, "resets_at": 1893399000}}})
+            result = render(run, {"rate_limits": {"five_hour": {"used_percentage": 3, "resets_at": FROZEN - 1000}}})
             assert link(LIMITS, f"{DIM}⏱︎ 3% ᵉˣᵖⁱʳᵉᵈ{RESET}") in result.stdout
 
     class TestOnSparseInput:
@@ -72,6 +77,25 @@ class TestStatusline:
             result = render(run, {})
             assert result.returncode == 0
             assert result.stdout == f"⚙︎ ? · {DIM}○ 0%{RESET}\n"
+
+    class TestOnPrintInput:
+        def test_should_print_the_sample_input_the_script_renders_as_the_golden(self, run):
+            printed = subprocess.run([sys.executable, __file__, "--print-input"],
+                                     capture_output=True, text=True, check=True).stdout
+            result = run("statusline", "--nerd-fonts", stdin=printed)
+            assert result.stdout == NERD
+
+    class TestOnPreview:
+        def test_should_render_the_sample_input_from_the_dotfiles_repo(self, run, fake_bin, calls, clock, sandbox):
+            (sandbox.home / "dotfiles/home").mkdir(parents=True)
+            fake_bin("chezmoi", stdout=f"{sandbox.home}/dotfiles/home")
+            fake_bin("uv", script=f'pwd > "$HOME/uv.cwd"\nprintf %s {shlex.quote(json.dumps(INPUT))}\n')
+            result = run("statusline", "--preview", "--nerd-fonts")
+            assert result.returncode == 0
+            assert result.stdout == NERD
+            assert calls("chezmoi") == [["source-path"]]
+            assert calls("uv") == [["run", "--locked", "tests/claude/test_statusline.py", "--print-input"]]
+            assert (sandbox.home / "uv.cwd").read_text() == f"{sandbox.home}/dotfiles\n"
 
 
 def render(run, fields):
@@ -93,56 +117,59 @@ def link(url, text):
     return f"\x1b]8;;{url}\x1b\\{text}\x1b]8;;\x1b\\"
 
 
+def sample(now):
+    return {
+        "cwd": ROOT,
+        "session_id": "abc123def456",
+        "session_name": "my-session",
+        "transcript_path": f"{HOME}/.claude/transcripts/abc123def456.jsonl",
+        "model": {"id": "claude-sonnet-4-6", "display_name": "Sonnet"},
+        "workspace": {"current_dir": ROOT, "project_dir": ROOT, "added_dirs": []},
+        "version": "2.1.90",
+        "output_style": {"name": "default"},
+        "cost": {
+            "total_cost_usd": 0.01234,
+            "total_duration_ms": 45000,
+            "total_api_duration_ms": 2300,
+            "total_lines_added": 156,
+            "total_lines_removed": 23,
+        },
+        "context_window": {
+            "total_input_tokens": 15234,
+            "total_output_tokens": 4521,
+            "context_window_size": 200000,
+            "used_percentage": 28,
+            "remaining_percentage": 92,
+            "current_usage": {
+                "input_tokens": 8500,
+                "output_tokens": 1200,
+                "cache_creation_input_tokens": 5000,
+                "cache_read_input_tokens": 2000,
+            },
+        },
+        "agent": {"name": "security-reviewer"},
+        "exceeds_200k_tokens": False,
+        "rate_limits": {
+            "five_hour": {"used_percentage": 28.5, "resets_at": now + 65000},
+            "seven_day": {"used_percentage": 92.2, "resets_at": now + 358400},
+        },
+    }
+
+
 @pytest.fixture
 def clock(fake_bin):
-    fake_bin("date", stdout="1893400000")
+    fake_bin("date", stdout=str(FROZEN))
 
 
 DIM, YELLOW, RED, RESET = "\x1b[2m", "\x1b[33m", "\x1b[31m", "\x1b[0m"
 LIMITS = "https://console.anthropic.com/settings/limits"
-TRANSCRIPT = "file:///Users/bkahlert/.claude/transcripts/abc123def456.jsonl"
+HOME = str(Path.home())
+ROOT = str(Path(__file__).resolve().parents[2])
+TRANSCRIPT = f"file://{HOME}/.claude/transcripts/abc123def456.jsonl"
+FROZEN = 1893400000
 EMPTY_SEGMENTS = "" * 6
 
-INPUT = {
-    "cwd": "/Users/bkahlert/Development/com.bkahlert/dotfiles",
-    "session_id": "abc123def456",
-    "session_name": "my-session",
-    "transcript_path": "/Users/bkahlert/.claude/transcripts/abc123def456.jsonl",
-    "model": {"id": "claude-sonnet-4-6", "display_name": "Sonnet"},
-    "workspace": {
-        "current_dir": "/Users/bkahlert/Development/com.bkahlert/dotfiles",
-        "project_dir": "/Users/bkahlert/Development/com.bkahlert/dotfiles",
-        "added_dirs": [],
-    },
-    "version": "2.1.90",
-    "output_style": {"name": "default"},
-    "cost": {
-        "total_cost_usd": 0.01234,
-        "total_duration_ms": 45000,
-        "total_api_duration_ms": 2300,
-        "total_lines_added": 156,
-        "total_lines_removed": 23,
-    },
-    "context_window": {
-        "total_input_tokens": 15234,
-        "total_output_tokens": 4521,
-        "context_window_size": 200000,
-        "used_percentage": 28,
-        "remaining_percentage": 92,
-        "current_usage": {
-            "input_tokens": 8500,
-            "output_tokens": 1200,
-            "cache_creation_input_tokens": 5000,
-            "cache_read_input_tokens": 2000,
-        },
-    },
-    "agent": {"name": "security-reviewer"},
-    "exceeds_200k_tokens": False,
-    "rate_limits": {
-        "five_hour": {"used_percentage": 28.5, "resets_at": 1893465000},
-        "seven_day": {"used_percentage": 92.2, "resets_at": 1893758400},
-    },
-}
+INPUT = sample(FROZEN)
 
 NERD = " · ".join([
     link(TRANSCRIPT, " abc123de:my-session"),
@@ -163,3 +190,9 @@ FALLBACK = " · ".join([
     link(LIMITS, f"{DIM}⏱︎ 28% ¹⁸·¹ʰ{RESET}"),
     link(LIMITS, f"{RED}⧗︎ 92% ⁴·¹ᵈ{RESET}"),
 ]) + "\n"
+
+
+if __name__ == "__main__":
+    if sys.argv[1:] != ["--print-input"]:
+        sys.exit(f"usage: {Path(sys.argv[0]).name} --print-input")
+    print(json.dumps(sample(int(time.time())), indent=2))
