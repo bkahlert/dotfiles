@@ -24,7 +24,6 @@ pbcopy-dir = "legacy: test when next touched"
 pbpaste-dir = "legacy: test when next touched"
 serve = "legacy: test when next touched"
 serve-live = "legacy: test when next touched"
-upgrade-all = "legacy: test when next touched"
 
 [claude]
 
