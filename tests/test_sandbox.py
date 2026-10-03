@@ -1,4 +1,5 @@
 import os
+import sys
 
 import pytest
 
@@ -84,10 +85,19 @@ class TestSandbox:
                 run("sh", "-c", "tool a one | tool b two")
             assert sorted(calls("tool")) == sorted([["a", "one"], ["b", "two"]] * 20)
 
+    class TestOnlyTools:
+        def test_should_keep_the_named_tools_and_hide_the_rest(self, sandbox, fake_bin):
+            fake_bin("faked", stdout="x")
+            sandbox.only_tools("zsh", "cat")
+            result = sandbox.zsh("print -r -- ${+commands[cat]}${+commands[faked]}${+commands[ls]}${+commands[bash]}")
+            assert result.stdout == "1101\n"
+
     class TestZsh:
-        def test_should_autoload_a_function_from_the_source_tree(self, zsh):
-            result = zsh("whence -w zsh-scratch", function="zsh-scratch")
-            assert result.stdout == "zsh-scratch: function\n"
+        def test_should_autoload_a_function_from_the_source_tree(self, zsh, sandbox, tmp_path, monkeypatch):
+            (tmp_path / "greet").write_text("print -r -- hello $1\n")
+            monkeypatch.setattr(sys.modules[type(sandbox).__module__], "FUNCTIONS_SOURCE", tmp_path)
+            result = zsh("greet world", function="greet")
+            assert result.stdout == "hello world\n"
 
         def test_should_source_a_module_from_the_source_tree(self, zsh):
             result = zsh("whence -w _dc_ok", modules=["ista/10-dev-chapter.zsh"])

@@ -6,7 +6,7 @@
 # `assume` must be sourced (not executed) so it can export AWS_* vars into the current shell.
 # The env var suppresses granted's "alias not configured" warning on every shell start.
 assume() {
-  if ! command -v assume &>/dev/null; then
+  if ! (( $+commands[assume] )); then
     if command -v brew &>/dev/null; then
       echo "granted not found — installing via Homebrew..."
       brew install common-fate/granted/granted || return 1

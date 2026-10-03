@@ -1,6 +1,7 @@
 import importlib.machinery
 import importlib.util
 import re
+import sys
 
 import pytest
 
@@ -186,7 +187,9 @@ class TestIntellijWorkspaceFix:
             assert (result.returncode, workspace.read_text()) == (1, "<settings />\n")
 
     class TestOnExistingBackup:
-        def test_should_not_overwrite_it(self, tmp_path):
+        def test_should_not_overwrite_it(self, tmp_path, monkeypatch):
+            # A .pyc next to the source would be applied into ~/.local/bin, chezmoi ignores .gitignore.
+            monkeypatch.setattr(sys, "dont_write_bytecode", True)
             source = str(BIN_SOURCE / "executable_intellij-workspace-fix")
             loader = importlib.machinery.SourceFileLoader("workspace_fix", source)
             module = importlib.util.module_from_spec(importlib.util.spec_from_loader("workspace_fix", loader))

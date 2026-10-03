@@ -13,13 +13,13 @@ chezmoi source root (`.chezmoiroot`), so chezmoi never sees them.
 | Symlink | Source | Holds |
 |---|---|---|
 | `quick-access/bin` | [home/dot_local/exact_bin/](../home/dot_local/exact_bin) | Shell-agnostic executables, mirrored to `~/.local/bin` |
-| `quick-access/functions` | [home/private_dot_config/zsh/exact_functions/](../home/private_dot_config/zsh/exact_functions) | Autoloaded zsh functions, one file per function |
+| `quick-access/functions` | [home/private_dot_config/zsh/exact_functions/](../home/private_dot_config/zsh/exact_functions) | Autoloaded zsh functions, one file per function (none right now; `.keep` holds the directory) |
 | `quick-access/completions` | [home/private_dot_config/zsh/exact_completions/](../home/private_dot_config/zsh/exact_completions) | Hand-written completions, for tools that ship none |
 | `quick-access/conf.d` | [home/private_dot_config/zsh/exact_conf.d/](../home/private_dot_config/zsh/exact_conf.d) | Zsh modules — env setup, tool init, **and inline functions** |
 | `quick-access/conf.d/exact_ista` | [.../exact_conf.d/exact_ista/](../home/private_dot_config/zsh/exact_conf.d/exact_ista) | Same, but only loaded when `$DOTFILES_CONTEXT` is set |
 | `quick-access/aliases.zsh` | [.../06-aliases.zsh](../home/private_dot_config/zsh/exact_conf.d/06-aliases.zsh) | Most aliases, incl. suffix aliases (`alias -s md=idea`) |
 | `quick-access/keybindings.zsh` | [.../04-keybindings.zsh](../home/private_dot_config/zsh/exact_conf.d/04-keybindings.zsh) | ZLE keybindings |
-| `quick-access/scratch.zsh` | [.../90-scratch.zsh](../home/private_dot_config/zsh/exact_conf.d/90-scratch.zsh) | Not-yet-organized customizations; edit with `ec`, reload with `sc` |
+| `quick-access/scratch.zsh` | [.../90-scratch.zsh](../home/private_dot_config/zsh/exact_conf.d/90-scratch.zsh) | Not-yet-organized customizations; edit with `ec`, reload with `sc` (both defined in [.../89-scratch-workflow.zsh](../home/private_dot_config/zsh/exact_conf.d/89-scratch-workflow.zsh)) |
 | `quick-access/plugins.toml` | [home/private_dot_config/sheldon/plugins.toml](../home/private_dot_config/sheldon/plugins.toml) | Sheldon plugins — they add commands and widgets too |
 | `quick-access/zshrc` | [home/private_dot_config/zsh/dot_zshrc](../home/private_dot_config/zsh/dot_zshrc) | The loader: autoload + `conf.d` sourcing |
 | `quick-access/zshenv` | [home/dot_zshenv](../home/dot_zshenv) | Runs for **every** zsh, including non-interactive ones |
@@ -143,6 +143,8 @@ forces it.
   09-path.zsh                   → $PATH, before anything resolves a command
   10-*.zsh                      → tool modules, one per tool
   20-claude.zsh                 → Claude CLI
+  89-scratch-workflow.zsh       → `ec` / `sc`, the scratch workflow
+  90-scratch.zsh                → drafts, loaded last
   conf.d/$DOTFILES_CONTEXT/     → context-specific modules (sourced last)
   .zshrc.local                  → machine-local, unmanaged
 ```

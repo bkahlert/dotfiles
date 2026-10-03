@@ -9,8 +9,4 @@
 [functions]
 
 [conf_d]
-10-glab = "legacy: test when next touched"
-10-granted = "legacy: test when next touched"
-10-nvm = "legacy: test when next touched"
-20-claude = "legacy: test when next touched"
-90-scratch = "legacy: test when next touched"
+90-scratch = "scratch space: its drafts are deliberately untested; the workflow is tested in tests/zsh/test_scratch_workflow.py, the syntax by make lint"
