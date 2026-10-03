@@ -19,7 +19,11 @@ def plugin_completion(sandbox, fake_bin):
     """What `sheldon source` emits for a plugin with `apply = ["fpath"]`: its directory put on $fpath."""
     plugin = sandbox.home / "plugin-src"
     plugin.mkdir()
+    # compinit refuses a group-writable $fpath directory or parent, which a umask of 002 would create.
+    for secured in (plugin, sandbox.home):
+        secured.chmod(0o755)
     (plugin / "_plugincmd").write_text("#compdef plugincmd\n_plugincmd() { :; }\n")
+    (plugin / "_plugincmd").chmod(0o644)
     fake_bin("sheldon", stdout=f"fpath=({plugin} $fpath)\n")
 
 
