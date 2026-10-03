@@ -3,7 +3,6 @@
 # a missing entry, a stale entry and an empty reason.
 
 [bin]
-intellij-workspace-fix = "legacy: being rewritten in Python, which brings its tests"
 
 [claude]
 
