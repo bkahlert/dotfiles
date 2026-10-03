@@ -5,8 +5,6 @@
 [bin]
 ansi-test = "legacy: test when next touched"
 box = "legacy: test when next touched"
-cert-get = "legacy: test when next touched"
-cert-print = "legacy: test when next touched"
 cleanup = "legacy: test when next touched"
 docker = "legacy: test when next touched"
 dscleanup = "legacy: test when next touched"
