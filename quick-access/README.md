@@ -35,11 +35,15 @@ Not symlinked, but worth knowing:
 - `~/.config/zsh/.zshrc.local` — machine-local overrides, sourced last, deliberately unmanaged.
 - [home/dot_bashrc](../home/dot_bashrc), [home/dot_bash_profile](../home/dot_bash_profile) — the bash side; only Ghostty integration and the prompt.
 - [home/.chezmoiscripts/](../home/.chezmoiscripts) — runs at `chezmoi apply` time, not at shell time.
-- **Agent skills** (Claude Code and friends) all live in `~/.agents/skills/<name>/SKILL.md`,
+- **Agent skills** (Claude Code and friends) have one canonical copy in `~/.agents/skills/<name>/SKILL.md`,
   with a symlink `~/.claude/skills/<name> -> ../../.agents/skills/<name>` so each agent finds them.
   Two mechanisms produce that layout:
   - third-party skills: [run_onchange_after_setup-skills.sh](../home/.chezmoiscripts/run_onchange_after_setup-skills.sh)
-    runs the `skills` CLI, which copies the skill and creates the symlinks itself (e.g. `grill-me`);
+    runs `skills add -g` (e.g. `grill-me`, `handoff`). The layout then depends on the agents requested: with a
+    universal agent (Gemini CLI, GitHub Copilot) in the list, the CLI writes the canonical copy and the symlink;
+    with `claude-code` alone (the `bkahlert` context) it copies straight into `~/.claude/skills/<name>`.
+    Without `-g` the CLI treats the working directory as a project and leaves a `skills-lock.json` in `$HOME`,
+    because chezmoi runs scripts there;
   - repo-owned skills: the SKILL.md sits in [home/dot_agents/skills/](../home/dot_agents/skills) and the
     symlink is a one-line `symlink_<name>` file in [home/private_dot_claude/skills/](../home/private_dot_claude/skills)
     (e.g. `gcloud-auth`). Chezmoi applies edits on the next apply; context-gating goes through `.chezmoiignore`.

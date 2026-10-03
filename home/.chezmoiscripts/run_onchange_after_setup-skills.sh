@@ -11,7 +11,7 @@ case "${DOTFILES_CONTEXT:-}" in
 esac
 
 # grill-me — Socratic quiz skill for learning topics interactively (mattpocock)
-npx --yes skills@latest add mattpocock/skills/skills/productivity/grill-me --agent "${agents[@]}" -y
+npx --yes skills@latest add -g mattpocock/skills/skills/productivity/grill-me --agent "${agents[@]}" -y
 
 # handoff — compact the conversation into a document a fresh session can continue from (mattpocock)
-npx --yes skills@latest add mattpocock/skills/skills/productivity/handoff --agent "${agents[@]}" -y
+npx --yes skills@latest add -g mattpocock/skills/skills/productivity/handoff --agent "${agents[@]}" -y
