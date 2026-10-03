@@ -9,7 +9,6 @@
 [functions]
 
 [conf_d]
-10-glab = "legacy: test when next touched"
 10-granted = "legacy: test when next touched"
 10-nvm = "legacy: test when next touched"
 20-claude = "legacy: test when next touched"
