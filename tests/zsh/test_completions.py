@@ -45,4 +45,5 @@ class TestCompletions:
     class TestOnPluginWithCompletions:
         def test_should_register_them(self, zsh, plugin_completion):
             result = conf_d_order(zsh, 'print -r -- "${_comps[plugincmd]}"')
-            assert (result.stdout, result.stderr) == ("_plugincmd\n", "")
+            audit = conf_d_order(zsh, 'autoload -Uz compaudit; compaudit; print -l $fpath; id; ls -ld ${(@)fpath[1,3]:h} $HOME $ZDOTDIR; ls -ld /home/linuxbrew/.linuxbrew/share/zsh/site-functions')
+            assert (result.stdout, result.stderr) == ("_plugincmd\n", ""), audit.stdout + audit.stderr
