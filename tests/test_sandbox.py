@@ -89,6 +89,6 @@ class TestSandbox:
             result = zsh("whence -w zsh-scratch", function="zsh-scratch")
             assert result.stdout == "zsh-scratch: function\n"
 
-        def test_should_source_modules_in_order(self, zsh):
-            result = zsh("whence -w printf_info", modules=["08-print.zsh"])
-            assert result.stdout == "printf_info: function\n"
+        def test_should_source_a_module_from_the_source_tree(self, zsh):
+            result = zsh("whence -w _dc_ok", modules=["ista/10-dev-chapter.zsh"])
+            assert result.stdout == "_dc_ok: function\n"

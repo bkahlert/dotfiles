@@ -21,6 +21,17 @@ readonly _DC_PULL_INTERVAL=$((7 * 24 * 60 * 60))
 #   ServerAlive*     cap a connection that stalls mid-transfer (~10 s)
 readonly _DC_GIT_SSH='ssh -o BatchMode=yes -o ConnectTimeout=5 -o ServerAliveInterval=5 -o ServerAliveCountMax=2'
 
+# Status lines in the style of the bin/ scripts: a glyph, coloured when the stream is a terminal.
+# Warnings and errors go to stderr, so a clean start stays silent on both streams.
+_dc_say() { # <fd> <tput colour> <glyph> <message>
+  local on='' off=''
+  [[ -t $1 ]] && { on=$(tput setaf $2); off=$(tput sgr0); }
+  printf '%s%s%s %s\n' "$on" "$3" "$off" "$4" >&$1
+}
+_dc_ok()   { _dc_say 1 2 ✔ "$1"; }
+_dc_warn() { _dc_say 2 3 '!' "$1"; }
+_dc_err()  { _dc_say 2 1 ✘ "$1"; }
+
 # Early exit if tools already in PATH
 if [[ ":$PATH:" == *":$DEV_CHAPTER_TOOLS:"* ]]; then
   return 0
@@ -36,14 +47,14 @@ if [[ ! -d "$DEV_CHAPTER_REPO" ]]; then
   local _dc_out
   if _dc_out=$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_DC_GIT_SSH" \
     git clone "$_DC_GIT_REMOTE" "$DEV_CHAPTER_REPO" 2>&1); then
-    printf_success "Repository cloned successfully"
+    _dc_ok "Repository cloned successfully"
     mkdir -p "$_DC_CACHE_DIR"
     date +%s > "$_DC_LAST_ATTEMPT_FILE"
   else
     # Surface the whole reason — a silent failure here is indistinguishable
     # from a hang, and git puts the actual cause on its *first* line.
-    printf_error "Failed to clone dev-chapter repository:"
-    printf_error "$_dc_out"
+    _dc_err "Failed to clone dev-chapter repository:"
+    _dc_err "$_dc_out"
     return 1
   fi
 fi
@@ -73,8 +84,8 @@ if [[ -d "$DEV_CHAPTER_REPO/.git" && -n "$SSH_AUTH_SOCK" ]]; then
     local _dc_out
     if ! _dc_out=$(GIT_TERMINAL_PROMPT=0 GIT_SSH_COMMAND="$_DC_GIT_SSH" \
       git -C "$DEV_CHAPTER_REPO" pull --autostash 2>&1); then
-      printf_warning "Failed to update dev-chapter repository:"
-      printf_warning "$_dc_out"
+      _dc_warn "Failed to update dev-chapter repository:"
+      _dc_warn "$_dc_out"
     fi
   fi
 fi
@@ -83,5 +94,5 @@ fi
 if [[ -d "$DEV_CHAPTER_TOOLS" ]]; then
   export PATH="$DEV_CHAPTER_TOOLS:$PATH"
 else
-  printf_warning "dev-chapter tools directory not found at $DEV_CHAPTER_TOOLS"
+  _dc_warn "dev-chapter tools directory not found at $DEV_CHAPTER_TOOLS"
 fi

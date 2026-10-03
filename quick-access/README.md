@@ -142,7 +142,6 @@ forces it.
   00-context.zsh                → stamps $DOTFILES_CONTEXT
   01–07                         → core (options, history, completions,
                                   keybindings, prompt, aliases, plugins)
-  08-print.zsh                  → printf_* helpers and die
   09-path.zsh                   → $PATH, before anything resolves a command
   10-*.zsh                      → tool modules, one per tool
   20-claude.zsh                 → Claude CLI

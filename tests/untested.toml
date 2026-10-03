@@ -27,7 +27,6 @@ serve-live = "legacy: test when next touched"
 [functions]
 
 [conf_d]
-08-print = "legacy: test when next touched"
 10-glab = "legacy: test when next touched"
 10-gradle = "legacy: test when next touched"
 10-granted = "legacy: test when next touched"
