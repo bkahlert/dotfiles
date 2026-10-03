@@ -96,6 +96,17 @@ class TestGcloudLogin:
                     "finish the login in the Chromium window or press Ctrl-C\n") in result.stderr
             assert result.stderr.endswith("✘ gcloud-login: browser flow timed out\n")
 
+        class TestOnAFailingChromiumInstall:
+            def test_should_say_so_and_exit_1(self, run, fake_bin, calls, sandbox):
+                fake_bin("gcloud", script=GCLOUD_BROWSER)
+                fake_bin("node")
+                fake_bin("npx", exit_code=1)
+                result = login(run, timeout=30)
+                assert result.returncode == 1
+                assert result.stderr.endswith("✘ gcloud-login: Chromium install failed\n")
+                assert calls("npx") == [["--yes", "@puppeteer/browsers", "install", "chromium@1702741",
+                                         "--path", f"{sandbox.home}/.cache/gcloud-login"]]
+
 
 GCLOUD_VALID = "\n".join([
     'case "$*" in',
