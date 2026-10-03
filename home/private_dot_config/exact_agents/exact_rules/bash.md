@@ -77,7 +77,7 @@ while (( $# )); do
   case $1 in
     -h|--help) usage; exit 0 ;;
     --verbose) verbose=true; shift ;;
-    --code)    code=${2?--code: missing value}; shift 2 ;;
+    --code)    (( $# > 1 )) || die "--code: missing value"; code=$2; shift 2 ;;
     --code=*)  code=${1#*=}; shift ;;
     --)        shift; args+=("$@"); break ;;
     -?*)       die "unknown option: $1" ;;

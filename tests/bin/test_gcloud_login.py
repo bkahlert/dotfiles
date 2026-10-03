@@ -17,6 +17,11 @@ class TestGcloudLogin:
             assert result.returncode == 1
             assert result.stderr.startswith("✘ gcloud-login: --timeout must be a positive integer")
 
+        def test_should_exit_2_on_a_missing_timeout_value(self, run):
+            result = login(run, "--timeout")
+            assert result.returncode == 2
+            assert result.stderr == "✘ gcloud-login: --timeout: missing value (see 'gcloud-login --help')\n"
+
         def test_should_exit_2_on_an_unknown_option(self, run):
             result = login(run, "--nope")
             assert result.returncode == 2

@@ -25,8 +25,21 @@ while (( $# )); do
 done
 (( $# )) || { usage >&2; exit 2; }
 
-cmd=$*
-url="https://explainshell.com/explain?cmd=${cmd// /+}"
+# Percent-encodes byte by byte; a space becomes `+`, a literal plus %2B. The mask is for bash 3.2,
+# which sign-extends bytes above 127.
+urlencode() {
+  local LC_ALL=C text=$1 char code i
+  for ((i = 0; i < ${#text}; i++)); do
+    char=${text:i:1}
+    case $char in
+      [A-Za-z0-9._~-]) printf '%s' "$char" ;;
+      ' ')             printf '+' ;;
+      *)               printf -v code '%d' "'$char"; printf '%%%02X' $((code & 255)) ;;
+    esac
+  done
+}
+
+url="https://explainshell.com/explain?cmd=$(urlencode "$*")"
 
 if command -v open >/dev/null; then
   open "$url"

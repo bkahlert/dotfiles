@@ -45,14 +45,26 @@ class TestCleanup:
             assert not safe.exists() and not risky.exists()
             assert "ℹ auto-yes\n✔ Xcode Archives cleaned\n" in result.stdout
 
+        def test_should_skip_the_system_steps_when_sudo_is_denied(self, run, fake_bin, calls, sandbox):
+            blob = sandbox.home / "Dropbox/.dropbox.cache/blob"
+            blob.parent.mkdir(parents=True)
+            blob.write_bytes(b"x")
+            quiet_tools(fake_bin, sandbox)
+            result = run("cleanup", "--apply", "--yes", timeout=30)
+            assert blob.exists()
+            assert calls("sudo") == [["-v"]]
+            assert result.stdout.count("sudo not granted") == 1
+            assert "▪ Dropbox cache: needs sudo\n" in result.stdout
+
         def test_should_only_hand_system_logs_and_the_dropbox_cache_to_sudo(self, run, fake_bin, calls, sandbox):
             xcode_leftovers(sandbox)
             dropbox = sandbox.home / "Dropbox/.dropbox.cache"
             dropbox.mkdir(parents=True)
             (dropbox / "blob").write_bytes(b"x")
             quiet_tools(fake_bin, sandbox)
+            fake_bin("sudo")
             run("cleanup", "--apply", "--yes", timeout=30)
-            elevated = calls("sudo")[1:]
+            elevated = [call for call in calls("sudo") if call[:2] == ["-n", "rm"]]
             paths = [path for call in elevated for path in call[3:]]
             allowed = ("/private/var/log/", "/Library/Logs/", f"{dropbox}/")
             assert calls("sudo")[0] == ["-v"]
@@ -71,6 +83,11 @@ class TestCleanup:
             result = run("cleanup", "x")
             assert result.returncode == 2
             assert result.stderr == "cleanup: unexpected argument: x\nSee 'cleanup --help'\n"
+
+        def test_should_reject_a_missing_sim_unused_value(self, run):
+            result = run("cleanup", "--sim-unused")
+            assert result.returncode == 2
+            assert result.stderr == "cleanup: --sim-unused: missing value\nSee 'cleanup --help'\n"
 
         def test_should_reject_a_non_numeric_sim_unused(self, run):
             result = run("cleanup", "--sim-unused", "abc")

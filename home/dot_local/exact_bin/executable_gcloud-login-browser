@@ -2,12 +2,33 @@
 # Purpose: Browser hook for gcloud-login. gcloud opens the OAuth URL through
 #          $BROWSER and waits for that command to exit, so this hook only
 #          records the URL for gcloud-login-driver and returns at once.
-# Usage:   BROWSER=gcloud-login-browser gcloud auth login …
-#          Requires GCLOUD_LOGIN_URL_FILE to point at the file to write.
+# Usage:   gcloud-login-browser <url>
+#
+# Arguments:
+#   <url>        The URL gcloud wants opened.
+#
+# Environment:
+#   GCLOUD_LOGIN_URL_FILE   File the URL is written to. Required.
+#
+# Examples:
+#   BROWSER=gcloud-login-browser gcloud auth login …
 
 set -euo pipefail
 
-url=${1?url not set}
-: "${GCLOUD_LOGIN_URL_FILE?GCLOUD_LOGIN_URL_FILE not set}"
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+die()   { printf '%s: %s\nSee '\''%s --help'\''\n' "${0##*/}" "$1" "${0##*/}" >&2; exit 2; }
 
-printf '%s' "$url" >"$GCLOUD_LOGIN_URL_FILE"
+args=()
+while (( $# )); do
+  case $1 in
+    -h|--help) usage; exit 0 ;;
+    --)        shift; args+=("$@"); break ;;
+    -?*)       die "unknown option: $1" ;;
+    *)         args+=("$1"); shift ;;
+  esac
+done
+(( ${#args[@]} )) || { usage >&2; exit 2; }
+(( ${#args[@]} == 1 )) || die "too many arguments"
+[[ -n ${GCLOUD_LOGIN_URL_FILE-} ]] || die "GCLOUD_LOGIN_URL_FILE not set"
+
+printf '%s' "${args[0]}" >"$GCLOUD_LOGIN_URL_FILE"

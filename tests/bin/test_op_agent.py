@@ -59,6 +59,12 @@ class TestOpAgent:
             result = run("op-agent", "status")
             assert (result.returncode, result.stdout) == (1, "op-agent: not running\n")
 
+    class TestOnReadWithoutReference:
+        def test_should_exit_2_with_a_hint(self, run):
+            result = run("op-agent", "read")
+            assert result.returncode == 2
+            assert result.stderr == "op-agent: read: reference not set (see 'op-agent --help')\n"
+
     class TestOnUnknownCommand:
         def test_should_exit_2(self, run):
             result = run("op-agent", "bogus")

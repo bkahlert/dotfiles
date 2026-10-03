@@ -54,7 +54,7 @@ while [ $# -gt 0 ]; do
     --admin) [[ $mode == adc ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode='admin' && shift ;;
     --adc) [[ $mode == admin ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode=adc && shift ;;
     --status) status=true && shift ;;
-    --timeout) timeout=${2?$1: parameter value not set} && shift 2 ;;
+    --timeout) (( $# > 1 )) || die "gcloud-login: --timeout: missing value (see 'gcloud-login --help')" 2; timeout=$2 && shift 2 ;;
     --timeout=*) timeout=${1#*=} && shift ;;
     *) die "gcloud-login: unknown option $1 (see 'gcloud-login --help')" 2 ;;
   esac

@@ -27,7 +27,7 @@ while (( $# )); do
   case $1 in
     -h|--help) usage; exit 0 ;;
     --here)    here=true; shift ;;
-    --image)   image=${2?--image: missing value}; shift 2 ;;
+    --image)   (( $# > 1 )) || die "--image: missing value"; image=$2; shift 2 ;;
     --image=*) image=${1#*=}; shift ;;
     --)        shift; break ;;
     -?*)       die "unknown option: $1" ;;
