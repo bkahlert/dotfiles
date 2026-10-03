@@ -167,7 +167,7 @@ Don't stack offers on follow-up turns; ask each one once, then drop it.
 | shellcheck, `zsh -n`, actionlint + zizmor | `make lint` |
 | pytest (tests/bin, tests/functions, tests/zsh, conventions, shims) + node driver test | `make unit` |
 | Apply all three contexts in a Fedora container, require a silent zsh (needs Podman) | `make integration` |
-| Same, into a temp HOME on this Mac; what CI's macOS job runs. Opt-in locally | `make integration-native` |
+| Same, into a temp HOME on this Mac, plus a check that every Brewfile package exists in Homebrew (network); what CI's macOS job runs. Opt-in locally | `make integration-native` |
 | Lint, unit and integration | `make ci` |
 | Preview changes to `$HOME` | `chezmoi diff` |
 | Dry run | `chezmoi apply -n` |
@@ -182,6 +182,7 @@ CI runs the same targets on every pull request and on `main`; the `ci` check is 
 | `private_dot_claude/executable_<name>` (`~/.claude/<name>`) | `tests/claude/test_<name>.py`, same sandbox; `run("<name>")` resolves it |
 | `functions/<name>` | `tests/functions/test_<name>.py` |
 | `conf.d/NN-<name>.zsh` that defines a function | `tests/zsh/test_<name>.py`; `conf.d/exact_ista/...` under `tests/zsh/ista/` |
+| `.chezmoiscripts/run_*_<name>` | `tests/chezmoiscripts/test_<name>.py`: the name without the `run_…` prefix, ordering digits and extension (`01-install-packages.sh` → `test_install_packages.py`) |
 | every `conf.d` module | loaded by the integration legs; a module that prints on a fresh machine fails them |
 
 `tests/test_conventions.py` fails when a script, function or function-defining module has neither a test nor an entry in `tests/untested.toml`, and when an entry is stale. A `"legacy: ..."` entry goes when the file's **behaviour** is next changed: that change adds the test and removes the line. Lint or formatting edits do not trigger it. A file with no logic of its own (a wrapper around `open`, `osascript`, `pbcopy`) keeps a permanent entry with that reason.
@@ -193,6 +194,7 @@ Fixtures in [tests/conftest.py](tests/conftest.py) run the real script or functi
 - `run("name", *args)` runs a `bin/` or `~/.claude` script by its target name in a sandbox: temp `HOME`, `XDG_*` and `TMPDIR`; `PATH` is fakes first, then the other `bin/` scripts, then system directories only.
 - `fake_bin("tool", stdout=..., exit_code=..., script=...)` puts a fake on `PATH`; `calls("tool")` returns its recorded argument lists.
 - `zsh("snippet", function="name")` or `zsh("snippet", modules=["ista/10-dev-chapter.zsh"])` runs `zsh -f` with the source tree's functions and modules.
+- `script("name", *args, uname="Darwin", env={...})` (in `tests/chezmoiscripts/`) runs a `.chezmoiscripts/` script by its key under the same sandbox, with a fake `uname` so either OS branch can be taken.
 - Network, vault, system-state and user-state tools (`op`, `gh`, `gcloud`, `curl`, `openssl`, `ssh-keygen`, `brew`, `git`, `chezmoi`, `podman`, `xcrun`, `open`, `osascript`, `launchctl`, `defaults`, `sudo`, `pbcopy`, `lsof`, `pkill`, ...) are guarded: calling one unfaked fails with exit 127. Fake what the subject needs; coreutils, `awk`, `sed`, `jq` are real.
 
 Classes nest as [testing.md](home/private_dot_config/exact_agents/exact_rules/testing.md) asks: `TestGhLatest` > `TestOnUnknownOption` > `test_should_exit_2_and_name_the_option`.

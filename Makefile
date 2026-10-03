@@ -34,7 +34,7 @@ integration:
 	uv run --locked pytest tests/integration/test_apply_container.py
 
 integration-native:
-	uv run --locked pytest tests/integration/test_apply_native.py
+	uv run --locked pytest tests/integration/test_apply_native.py tests/integration/test_brewfile.py
 
 image:
 	$(CONTAINER_ENGINE) build --target base -t $(IMAGE):base .

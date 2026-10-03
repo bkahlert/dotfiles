@@ -1,3 +1,4 @@
+import re
 import sys
 from pathlib import Path
 
@@ -44,3 +45,15 @@ def scripts() -> list[tuple[str, str, Path]]:
     return [(area, source.name.removeprefix("executable_"), source)
             for area, root in SCRIPT_SOURCES for source in sorted(root.iterdir())
             if source.name.startswith("executable_")]
+
+
+def chezmoiscripts() -> list[tuple[str, Path]]:
+    """Each script in .chezmoiscripts/ keyed by its name without the run_ prefix, ordering digits and extensions."""
+    return [(re.sub(r"^\d+-", "", re.sub(r"^run_(?:once|onchange)_(?:before|after)_|(?:\.sh)?(?:\.tmpl)?$", "", source.name)), source)
+            for source in sorted(CHEZMOISCRIPTS_SOURCE.iterdir())]
+
+
+def brewfile_lines() -> list[str]:
+    """The Brewfile heredoc of the package install script, one entry per line."""
+    source = dict(chezmoiscripts())["install-packages"].read_text()
+    return re.search(r"<<EOF\n(.*?)\nEOF\n", source, re.DOTALL).group(1).splitlines()
