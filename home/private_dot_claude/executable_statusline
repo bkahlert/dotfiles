@@ -24,32 +24,15 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from typing import Callable, NamedTuple
 
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
 SEPARATOR = " · "
 RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
-COST_WARN_CENTS = 500
-COST_ERR_CENTS = 1000
 
-# (Nerd Font glyph, text-variant fallback). The fallbacks use U+FE0E on characters listed in
-# Unicode's emoji-variation-sequences.txt, which keeps them monochrome.
-SESSION = ("", "#")
-MODEL = ("", "⚙︎")
-AGENT = ("\U000f06a9", "웃")
-TOKENS = ("", "")
-CLOCK = ("", "⏱︎")
-CALENDAR = ("", "⧗︎")
-RESTART = ("", "")
-
-# Context bar (Nerd Font): left cap, 8 middle segments, right cap, each as (empty, full).
-BAR_LEFT = ("\U0000ee00", "\U0000ee03")
-BAR_MIDDLE = ("\U0000ee01", "\U0000ee04")
-BAR_RIGHT = ("\U0000ee02", "\U0000ee05")
-BAR = [BAR_LEFT, *[BAR_MIDDLE] * 8, BAR_RIGHT]
-
-# Fallback circle by context usage: (upper bound exclusive, glyph).
-CIRCLES = [(12, "○"), (37, "◔"), (62, "◑"), (87, "◕")]
-CIRCLE_FULL = "●"
+# (warn, error) lower bounds
+USAGE_THRESHOLDS = (50, 75)
+COST_THRESHOLDS_CENTS = (500, 1000)
 
 SUPERSCRIPT = str.maketrans({
     **dict(zip("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")),
@@ -57,17 +40,58 @@ SUPERSCRIPT = str.maketrans({
 })
 
 
-def usage():
-    for line in Path(__file__).read_text().splitlines()[1:]:
-        if not line.startswith("#"):
-            break
-        print(line[2:] if line.startswith("# ") else line[1:])
+# ── Icons ──────────────────────────────────────────────────
+
+# Context bar: left cap, 8 middle segments, right cap, each as (empty, full).
+BAR = [("\uee00", "\uee03"), *[("\uee01", "\uee04")] * 8, ("\uee02", "\uee05")]
+
+# (upper bound exclusive, glyph)
+CIRCLES = [(12, "○"), (37, "◔"), (62, "◑"), (87, "◕"), (math.inf, "●")]
 
 
-def die(message):
-    name = Path(sys.argv[0]).name
-    print(f"{name}: {message}\nSee '{name} --help'", file=sys.stderr)
-    sys.exit(2)
+def bar(pct):
+    # each segment covers 10 points and fills at its midpoint
+    return "".join(full if pct >= 5 + 10 * i else empty for i, (empty, full) in enumerate(BAR))
+
+
+def circle(pct):
+    return next(glyph for bound, glyph in CIRCLES if pct < bound)
+
+
+class Icons(NamedTuple):
+    session: str
+    model: str
+    agent: str
+    gauge: Callable[[int], str]
+    tokens: str
+    clock: str
+    calendar: str
+    restart: str
+
+
+# tokens and restart are blank on purpose; their parts render without an icon.
+NERD_ICONS = Icons(
+    session="\uf292",
+    model="\ue28c",
+    agent="\U000f06a9",
+    gauge=bar,
+    tokens="",
+    clock="\uf017",
+    calendar="\uf272",
+    restart="",
+)
+
+# U+FE0E on characters listed in Unicode's emoji-variation-sequences.txt keeps them monochrome.
+TEXT_ICONS = Icons(
+    session="#",
+    model="⚙\ufe0e",
+    agent="웃",
+    gauge=circle,
+    tokens="",
+    clock="⏱\ufe0e",
+    calendar="⧗\ufe0e",
+    restart="",
+)
 
 
 # ── Nerd Font detection ────────────────────────────────────
@@ -105,10 +129,10 @@ def read_session(text):
     return session if isinstance(session, dict) else {}
 
 
-def field(session, *path):
+def field(value, *path):
     for key in path:
-        session = session.get(key) if isinstance(session, dict) else None
-    return session
+        value = value.get(key) if isinstance(value, dict) else None
+    return value
 
 
 def number(value):
@@ -128,12 +152,9 @@ def configured_model():
 
 # ── Formatting ─────────────────────────────────────────────
 
-def usage_style(pct):
-    return RED if pct >= 75 else YELLOW if pct >= 50 else DIM
-
-
-def superscript(text):
-    return text.translate(SUPERSCRIPT)
+def severity(value, thresholds):
+    warn, error = thresholds
+    return RED if value >= error else YELLOW if value >= warn else DIM
 
 
 def format_tokens(count):
@@ -145,19 +166,16 @@ def format_tokens(count):
 
 
 def resets_in(epoch):
-    epoch = number(epoch)
-    if epoch is None:
-        return ""
     delta = epoch - int(time.time())
     if delta <= 0:
-        raw = "expired"
+        text = "expired"
     elif delta < 3600:
-        raw = f"{int(delta // 60)}m"
+        text = f"{int(delta // 60)}m"
     elif delta < 172800:
-        raw = f"{delta / 3600:.1f}h"
+        text = f"{delta / 3600:.1f}h"
     else:
-        raw = f"{delta / 86400:.1f}d"
-    return superscript(raw)
+        text = f"{delta / 86400:.1f}d"
+    return text.translate(SUPERSCRIPT)
 
 
 def link(url, text):
@@ -166,46 +184,42 @@ def link(url, text):
 
 # ── Parts ──────────────────────────────────────────────────
 
-def part_session(session, icon):
+def part_session(session, icons):
     session_id = (field(session, "session_id") or "")[:8]
     if not session_id:
         return ""
     name = field(session, "session_name") or ""
-    text = f"{icon(SESSION)} {session_id}{':' + name if name else ''}"
+    text = f"{icons.session} {session_id}{':' + name if name else ''}"
     path = field(session, "transcript_path") or ""
     return link(f"file://{path}", text) if path else text
 
 
-def part_model(session, icon, configured):
+def part_model(session, icons, configured):
     model = field(session, "model", "id")
     model = "?" if model is None else model
-    style = ""
-    if configured:
-        # settings may use short names ("haiku") or full IDs ("claude-haiku-4-5"); match both ways
-        a, b = model.lower(), configured.lower()
-        style = DIM if a in b or b in a else YELLOW
-    return f"{style}{icon(MODEL)} {model}{RESET if style else ''}"
+    if not configured:
+        return f"{icons.model} {model}"
+    # settings may use short names ("haiku") or full IDs ("claude-haiku-4-5"); match both ways
+    a, b = model.lower(), configured.lower()
+    style = DIM if a in b or b in a else YELLOW
+    return f"{style}{icons.model} {model}{RESET}"
 
 
-def part_agent(session, icon):
+def part_agent(session, icons):
     name = field(session, "agent", "name") or ""
-    return f"{icon(AGENT)} {name}" if name else ""
+    return f"{icons.agent} {name}" if name else ""
 
 
-def part_context(session, icon, nerd):
-    used = number(field(session, "context_window", "used_percentage"))
-    pct = math.floor(used) if used is not None else 0
-    style = usage_style(pct)
-    if nerd:
-        # each segment covers 10 points and fills at its midpoint
-        glyph = "".join(full if pct >= 5 + 10 * i else empty for i, (empty, full) in enumerate(BAR))
-    else:
-        glyph = next((circle for bound, circle in CIRCLES if pct < bound), CIRCLE_FULL)
-    out = f"{style}{glyph} {pct}%{RESET}"
-    size = number(field(session, "context_window", "context_window_size"))
+def part_context(session, icons):
+    window = field(session, "context_window")
+    used = number(field(window, "used_percentage"))
+    pct = 0 if used is None else math.floor(used)
+    style = severity(pct, USAGE_THRESHOLDS)
+    out = f"{style}{icons.gauge(pct)} {pct}%{RESET}"
+    size = number(field(window, "context_window_size"))
     if size is not None:
-        tokens = icon(TOKENS)
-        out += f" {style}╱{format_tokens(size)}{' ' + tokens if tokens else ''}{RESET}"
+        tokens = f" {icons.tokens}" if icons.tokens else ""
+        out += f" {style}╱{format_tokens(size)}{tokens}{RESET}"
     return out
 
 
@@ -213,24 +227,55 @@ def part_cost(session):
     usd = number(field(session, "cost", "total_cost_usd"))
     if usd is None:
         return ""
-    cents = int(usd * 100)
-    style = RED if cents >= COST_ERR_CENTS else YELLOW if cents >= COST_WARN_CENTS else DIM
-    return f"{style}${usd:.2f}{RESET}"
+    return f"{severity(int(usd * 100), COST_THRESHOLDS_CENTS)}${usd:.2f}{RESET}"
 
 
-def part_rate_limit(session, window, glyphs, icon):
-    used = number(field(session, "rate_limits", window, "used_percentage"))
+def part_rate_limit(limit, icon, icons):
+    used = number(field(limit, "used_percentage"))
     if used is None:
         return ""
     pct = math.floor(used)
-    out = f"{usage_style(pct)}{icon(glyphs)} {pct}%"
-    reset = resets_in(field(session, "rate_limits", window, "resets_at"))
-    if reset:
-        out += f" {icon(RESTART)}{reset}"
+    out = f"{severity(pct, USAGE_THRESHOLDS)}{icon} {pct}%"
+    resets_at = number(field(limit, "resets_at"))
+    if resets_at is not None:
+        out += f" {icons.restart}{resets_in(resets_at)}"
     return link(RATE_LIMIT_URL, out + RESET)
 
 
 # ── Entry point ────────────────────────────────────────────
+
+def usage():
+    for line in Path(__file__).read_text().splitlines()[1:]:
+        if not line.startswith("#"):
+            break
+        print(line[2:] if line.startswith("# ") else line[1:])
+
+
+def die(message):
+    name = Path(sys.argv[0]).name
+    print(f"{name}: {message}\nSee '{name} --help'", file=sys.stderr)
+    sys.exit(2)
+
+
+def parse_args(args):
+    """Return the Nerd Font override ("0", "1" or None) and whether to preview."""
+    override, preview = None, False
+    for arg in args:
+        if arg in ("-h", "--help"):
+            usage()
+            sys.exit(0)
+        elif arg == "--nerd-fonts":
+            override = "1"
+        elif arg == "--no-nerd-fonts":
+            override = "0"
+        elif arg == "--preview":
+            preview = True
+        elif arg.startswith("-"):
+            die(f"unknown option: {arg}")
+        else:
+            die(f"unexpected argument: {arg}")
+    return override, preview
+
 
 def preview_input():
     source = subprocess.run(["chezmoi", "source-path"], capture_output=True, text=True)
@@ -243,35 +288,18 @@ def preview_input():
 
 
 def main(args):
-    override, preview = None, False
-    for arg in args:
-        if arg in ("-h", "--help"):
-            return usage()
-        elif arg == "--nerd-fonts":
-            override = "1"
-        elif arg == "--no-nerd-fonts":
-            override = "0"
-        elif arg == "--preview":
-            preview = True
-        elif arg.startswith("-"):
-            die(f"unknown option: {arg}")
-        else:
-            die(f"unexpected argument: {arg}")
-
+    override, preview = parse_args(args)
     session = read_session(preview_input() if preview else sys.stdin.read())
-    nerd = nerd_fonts_supported(override)
-
-    def icon(glyphs):
-        return glyphs[0] if nerd else glyphs[1]
-
+    icons = NERD_ICONS if nerd_fonts_supported(override) else TEXT_ICONS
+    limits = field(session, "rate_limits")
     parts = [
-        part_session(session, icon),
-        part_model(session, icon, configured_model()),
-        part_agent(session, icon),
-        part_context(session, icon, nerd),
+        part_session(session, icons),
+        part_model(session, icons, configured_model()),
+        part_agent(session, icons),
+        part_context(session, icons),
         part_cost(session),
-        part_rate_limit(session, "five_hour", CLOCK, icon),
-        part_rate_limit(session, "seven_day", CALENDAR, icon),
+        part_rate_limit(field(limits, "five_hour"), icons.clock, icons),
+        part_rate_limit(field(limits, "seven_day"), icons.calendar, icons),
     ]
     print(SEPARATOR.join(part for part in parts if part))
 
