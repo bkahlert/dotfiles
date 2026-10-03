@@ -12,6 +12,8 @@ brew "starship"                    # Cross-shell prompt; config in ~/.config/sta
 brew "zoxide"                      # Smarter cd that learns frecency; aliased to z in conf.d
 brew "bat"                         # cat replacement with syntax highlighting and git diff support
 brew "jq"                          # Command-line JSON processor; used by scripts and aliases
+brew "shellcheck"                  # Shell script linter; make lint runs it on every bash file
+brew "actionlint"                  # GitHub Actions workflow linter; make lint runs it on .github/workflows
 brew "btop"                        # Terminal resource monitor (CPU, memory, disk, network)
 brew "coreutils"                   # GNU core utilities as g-prefixed binaries; macOS ships no timeout, ~/.local/bin/timeout forwards to gtimeout
 cask "1password-cli"               # 1Password CLI (op); required by chezmoi to read secrets at apply time

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1003  # printf '\\' is the OSC 8 string terminator (ESC \), not an escaped quote
 # Status line script for Claude Code.
 # Reads session JSON from stdin and prints a single-line status string.
 # Usage: configured via settings.json as statusLine.command
@@ -26,7 +27,7 @@ _nf_detect() {
   esac
   # macOS: check user and system font directories for any Nerd Font file
   if [[ $(uname) == Darwin ]]; then
-    if ls ~/Library/Fonts/ /Library/Fonts/ 2>/dev/null | grep -qi "nerd"; then
+    if [[ -n $(find ~/Library/Fonts /Library/Fonts -maxdepth 1 -iname '*nerd*' -print -quit 2>/dev/null) ]]; then
       printf '1'; return
     fi
   fi
@@ -240,7 +241,8 @@ part_rate_limit_5h() {
   at=$(jq_field '.rate_limits.five_hour.resets_at // ""')
   local style reset=$'\033[0m'
   style="$(_pct_style "$pct")"
-  local out="${style}$(icon "$IC_CLOCK" "$IC_CLOCK_FB") ${pct}%"
+  local out
+  out="${style}$(icon "$IC_CLOCK" "$IC_CLOCK_FB") ${pct}%"
   local reset_str
   reset_str="$(resets_in "$at")"
   [[ -n "$reset_str" ]] && out+=" $(icon "$IC_RESTART" "$IC_RESTART_FB")${reset_str}"
@@ -255,7 +257,8 @@ part_rate_limit_7d() {
   at=$(jq_field '.rate_limits.seven_day.resets_at // ""')
   local style reset=$'\033[0m'
   style="$(_pct_style "$pct")"
-  local out="${style}$(icon "$IC_CAL" "$IC_CAL_FB") ${pct}%"
+  local out
+  out="${style}$(icon "$IC_CAL" "$IC_CAL_FB") ${pct}%"
   local reset_str
   reset_str="$(resets_in "$at")"
   [[ -n "$reset_str" ]] && out+=" $(icon "$IC_RESTART" "$IC_RESTART_FB")${reset_str}"
