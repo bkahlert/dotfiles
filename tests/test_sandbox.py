@@ -8,6 +8,11 @@ class TestSandbox:
             assert result.returncode == 0
             assert result.stdout.startswith("Purpose:")
 
+        def test_should_resolve_a_claude_script_by_its_target_name(self, run):
+            result = run("statusline", "--no-nerd-fonts", stdin="{}")
+            assert result.returncode == 0
+            assert result.stdout.endswith("0%\x1b[0m\n")
+
         def test_should_keep_the_real_home_out_of_reach(self, run, sandbox):
             result = run("sh", "-c", 'echo "$HOME" "$XDG_CONFIG_HOME"')
             assert result.stdout.split() == [str(sandbox.home), str(sandbox.home / ".config")]

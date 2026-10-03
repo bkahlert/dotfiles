@@ -33,6 +33,8 @@ serve-live = "legacy: test when next touched"
 timeout = "legacy: test when next touched"
 upgrade-all = "legacy: test when next touched"
 
+[claude]
+
 [functions]
 
 [conf_d]

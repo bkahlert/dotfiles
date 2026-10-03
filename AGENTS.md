@@ -183,6 +183,7 @@ CI runs the same targets on every pull request and on `main`; the `ci` check is 
 | Subject | Test |
 |---|---|
 | `bin/executable_<name>` | `tests/bin/test_<name>.py` (hyphens as underscores) |
+| `private_dot_claude/executable_<name>` (`~/.claude/<name>`) | `tests/claude/test_<name>.py`, same sandbox; `run("<name>")` resolves it |
 | `functions/<name>` | `tests/functions/test_<name>.py` |
 | `conf.d/NN-<name>.zsh` that defines a function | `tests/zsh/test_<name>.py`; `conf.d/exact_ista/...` under `tests/zsh/ista/` |
 | every `conf.d` module | loaded by the integration legs; a module that prints on a fresh machine fails them |
@@ -193,7 +194,7 @@ CI runs the same targets on every pull request and on `main`; the `ci` check is 
 
 Fixtures in [tests/conftest.py](tests/conftest.py) run the real script or function:
 
-- `run("name", *args)` runs a `bin/` script by its target name in a sandbox: temp `HOME`, `XDG_*` and `TMPDIR`; `PATH` is fakes first, then the other `bin/` scripts, then system directories only.
+- `run("name", *args)` runs a `bin/` or `~/.claude` script by its target name in a sandbox: temp `HOME`, `XDG_*` and `TMPDIR`; `PATH` is fakes first, then the other `bin/` scripts, then system directories only.
 - `fake_bin("tool", stdout=..., exit_code=..., script=...)` puts a fake on `PATH`; `calls("tool")` returns its recorded argument lists.
 - `zsh("snippet", function="name")` or `zsh("snippet", modules=["08-print.zsh"])` runs `zsh -f` with the source tree's functions and modules.
 - Network, vault, system-state and user-state tools (`op`, `gh`, `gcloud`, `curl`, `openssl`, `ssh-keygen`, `brew`, `git`, `chezmoi`, `podman`, `xcrun`, `open`, `osascript`, `launchctl`, `defaults`, `sudo`, `pbcopy`, `lsof`, `pkill`, ...) are guarded: calling one unfaked fails with exit 127. Fake what the subject needs; coreutils, `awk`, `sed`, `jq` are real.

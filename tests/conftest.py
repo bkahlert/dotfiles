@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from repo import BIN_SOURCE, FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path
+from repo import FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
 
 # Tools that reach the network, a vault, system state or the user's own state (repositories,
 # processes, the clipboard, container machines), or ignore `HOME` (`ssh-keygen -R` edits the
@@ -24,9 +24,8 @@ RECORD_SEPARATOR = "\x1e\0"
 @pytest.fixture(scope="session")
 def bin_links(tmp_path_factory):
     links = tmp_path_factory.mktemp("bin")
-    for source in BIN_SOURCE.iterdir():
-        if source.name.startswith("executable_"):
-            (links / source.name.removeprefix("executable_")).symlink_to(source)
+    for _, name, source in scripts():
+        (links / name).symlink_to(source)
     return links
 
 
