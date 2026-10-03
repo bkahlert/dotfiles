@@ -28,13 +28,17 @@ def bare(sandbox):
 
 @pytest.fixture
 def plugin_completion(sandbox, fake_bin):
-    """What `sheldon source` emits for a plugin with `apply = ["fpath"]`: its directory put on $fpath."""
+    """What `sheldon source` emits for a plugin with `apply = ["fpath"]`: its directory put on $fpath.
+
+    $fpath is cut down to the plugin and the directory holding compinit, so a host directory that
+    compinit deems insecure (GitHub's runners have one) cannot make it abort.
+    """
     plugin = sandbox.home / "plugin-src"
     plugin.mkdir()
     (plugin / "_plugincmd").write_text("#compdef plugincmd\n_plugincmd() { :; }\n")
     (plugin / "_plugincmd").chmod(0o644)
     secure(plugin, sandbox.home)
-    fake_bin("sheldon", stdout=f"fpath=({plugin} $fpath)\n")
+    fake_bin("sheldon", stdout=f"fpath=({plugin} ${{^fpath}}/compinit(N:h))\n")
 
 
 def conf_d_order(zsh, snippet):
@@ -45,5 +49,4 @@ class TestCompletions:
     class TestOnPluginWithCompletions:
         def test_should_register_them(self, zsh, plugin_completion):
             result = conf_d_order(zsh, 'print -r -- "${_comps[plugincmd]}"')
-            audit = conf_d_order(zsh, 'autoload -Uz compaudit; compaudit; print -l $fpath; id; ls -ld ${(@)fpath[1,3]:h} $HOME $ZDOTDIR; ls -ld /home/linuxbrew/.linuxbrew/share/zsh/site-functions')
-            assert (result.stdout, result.stderr) == ("_plugincmd\n", ""), audit.stdout + audit.stderr
+            assert (result.stdout, result.stderr) == ("_plugincmd\n", "")
