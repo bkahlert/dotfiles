@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from repo import BIN_SOURCE, CONF_D_SOURCE, FUNCTIONS_SOURCE, ROOT
+from repo import CONF_D_SOURCE, FUNCTIONS_SOURCE, ROOT, scripts
 
 TESTS = ROOT / "tests"
 ALLOWLIST = tomllib.loads((TESTS / "untested.toml").read_text())
@@ -31,12 +31,10 @@ class Subject:
 
 def subjects():
     found = []
-    for source in sorted(BIN_SOURCE.iterdir()):
-        if source.name.startswith("executable_"):
-            key = source.name.removeprefix("executable_")
-            found.append(Subject("bin", key, source, (
-                TESTS / "bin" / f"test_{key.replace('-', '_')}.py",
-                TESTS / f"{key}.test.js")))
+    for area, key, source in scripts():
+        found.append(Subject(area, key, source, (
+            TESTS / area / f"test_{key.replace('-', '_')}.py",
+            TESTS / f"{key}.test.js")))
     for source in sorted(FUNCTIONS_SOURCE.iterdir()):
         found.append(Subject("functions", source.name, source,
                              (TESTS / "functions" / f"test_{source.name.replace('-', '_')}.py",)))

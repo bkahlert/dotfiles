@@ -1,1 +1,3 @@
 .config/copy-password
+.claude/statusline-test
+.claude/statusline-input.json

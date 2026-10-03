@@ -4,27 +4,28 @@ from pathlib import Path
 
 import pytest
 
-from repo import BIN_SOURCE, FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path
+from repo import FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
 
 # Tools that reach the network, a vault, system state or the user's own state (repositories,
-# processes, the clipboard, container machines). A guard stands in for each so a subject under test
-# can never call the real one; a test that needs one installs a fake with fake_bin. `docker` is a
-# script under test here, so its podman fallback is what gets guarded.
-GUARDED = ("op", "keepassxc-cli", "gh", "glab", "gcloud", "idp", "curl", "wget", "ssh", "scp",
-           "brew", "open", "osascript", "launchctl", "defaults", "sudo",
-           "git", "chezmoi", "podman", "npm", "npx", "mas", "softwareupdate", "security",
-           "dscacheutil", "pbcopy", "pbpaste", "lsof", "killall", "pkill")
-# NUL cannot occur inside an argument, so it ends one; a record separator ends the call.
+# processes, the clipboard, container machines), or ignore `HOME` (`ssh-keygen -R` edits the
+# passwd-database home's known_hosts). A guard stands in for each so a subject under test can never
+# call the real one; a test that needs one installs a fake with fake_bin. `docker` is a script under
+# test here, so its podman fallback is what gets guarded.
+GUARDED = ("op", "keepassxc-cli", "gh", "glab", "gcloud", "idp", "curl", "wget", "ssh", "scp", "ssh-keygen",
+           "openssl", "brew", "open", "osascript", "launchctl", "defaults", "sudo", "xcrun",
+           "git", "chezmoi", "podman", "npm", "npx", "yarn", "composer", "gem", "uv",
+           "mas", "softwareupdate", "security", "dscacheutil", "pbcopy", "pbpaste", "lsof", "killall", "pkill")
+# A record is written by one printf, so two fakes in a pipeline cannot interleave their records.
+# NUL cannot occur inside an argument, so it ends one; a record ends with RS followed by NUL.
 ARG_SEPARATOR = "\0"
-RECORD_SEPARATOR = "\x1e"
+RECORD_SEPARATOR = "\x1e\0"
 
 
 @pytest.fixture(scope="session")
 def bin_links(tmp_path_factory):
     links = tmp_path_factory.mktemp("bin")
-    for source in BIN_SOURCE.iterdir():
-        if source.name.startswith("executable_"):
-            (links / source.name.removeprefix("executable_")).symlink_to(source)
+    for _, name, source in scripts():
+        (links / name).symlink_to(source)
     return links
 
 
@@ -91,7 +92,7 @@ class Sandbox:
 
     def _write(self, name, body, record=True):
         log = shlex.quote(str(self.calls_dir / name))
-        recorder = f"{{ (( $# )) && printf '%s\\0' \"$@\"; printf '\\036'; }} >> {log}\n" if record else ""
+        recorder = f"printf '%s\\0' \"$@\" $'\\036' >> {log}\n" if record else ""
         path = self.fakes / name
         path.write_text(f"#!/usr/bin/env bash\n{recorder}{body}")
         path.chmod(0o755)

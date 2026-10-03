@@ -111,7 +111,8 @@ chromium_bin() {
 ensure_chromium() {
   [[ -n "$(chromium_bin)" ]] && return 0
   info "Installing Chromium $CHROMIUM_BUILD (plain build, immune to the managed-profile interception)"
-  npx --yes @puppeteer/browsers install "chromium@$CHROMIUM_BUILD" --path "$CACHE_DIR" >/dev/null
+  npx --yes @puppeteer/browsers install "chromium@$CHROMIUM_BUILD" --path "$CACHE_DIR" >/dev/null \
+    || die "gcloud-login: Chromium install failed"
   [[ -n "$(chromium_bin)" ]] || die "gcloud-login: Chromium install failed"
 }
 

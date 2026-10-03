@@ -4,6 +4,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 HOME_SOURCE = ROOT / "home"
 BIN_SOURCE = HOME_SOURCE / "dot_local" / "exact_bin"
+CLAUDE_SOURCE = HOME_SOURCE / "private_dot_claude"
+SCRIPT_SOURCES = (("bin", BIN_SOURCE), ("claude", CLAUDE_SOURCE))
 FUNCTIONS_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_functions"
 CONF_D_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_conf.d"
 SHIMS = ROOT / "tests" / "shims"
@@ -35,3 +37,9 @@ def isolated_env(home: Path, path: list[str]) -> dict[str, str]:
         "TERM": "dumb",
         "LANG": "C.UTF-8",
     }
+
+
+def scripts() -> list[tuple[str, str, Path]]:
+    return [(area, source.name.removeprefix("executable_"), source)
+            for area, root in SCRIPT_SOURCES for source in sorted(root.iterdir())
+            if source.name.startswith("executable_")]

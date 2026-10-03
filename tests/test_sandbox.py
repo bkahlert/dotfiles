@@ -1,9 +1,17 @@
+import pytest
+
+
 class TestSandbox:
     class TestRun:
         def test_should_resolve_scripts_by_their_target_name(self, run):
             result = run("gh-latest", "--help")
             assert result.returncode == 0
             assert result.stdout.startswith("Purpose:")
+
+        def test_should_resolve_a_claude_script_by_its_target_name(self, run):
+            result = run("statusline", "--no-nerd-fonts", stdin="{}")
+            assert result.returncode == 0
+            assert result.stdout.endswith("0%\x1b[0m\n")
 
         def test_should_keep_the_real_home_out_of_reach(self, run, sandbox):
             result = run("sh", "-c", 'echo "$HOME" "$XDG_CONFIG_HOME"')
@@ -18,6 +26,15 @@ class TestSandbox:
             result = run("git", "--version")
             assert result.returncode == 127
             assert result.stderr == "git: not faked in this test\n"
+
+        @pytest.mark.parametrize("command", [
+            ["ssh-keygen", "-l", "-f", "/dev/null"], ["openssl", "version"], ["xcrun", "--version"],
+            ["gem", "--version"], ["uv", "--version"], ["yarn", "--version"], ["composer", "--version"],
+        ], ids=lambda command: command[0])
+        def test_should_guard_the_tools_the_script_tests_fake(self, run, command):
+            result = run(*command)
+            assert result.returncode == 127
+            assert result.stderr == f"{command[0]}: not faked in this test\n"
 
     class TestFakeBin:
         def test_should_record_every_call_with_its_arguments(self, run, fake_bin, calls):
@@ -46,6 +63,12 @@ class TestSandbox:
             fake_bin("curl", stdout="{}")
             result = run("curl", "https://example.test")
             assert result.returncode == 0
+
+        def test_should_keep_records_apart_when_two_fakes_share_a_pipeline(self, run, fake_bin, calls):
+            fake_bin("tool")
+            for _ in range(20):
+                run("sh", "-c", "tool a one | tool b two")
+            assert sorted(calls("tool")) == sorted([["a", "one"], ["b", "two"]] * 20)
 
     class TestZsh:
         def test_should_autoload_a_function_from_the_source_tree(self, zsh):
