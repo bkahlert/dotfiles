@@ -36,7 +36,8 @@ class TestOsx:
 
 @pytest.fixture
 def system_tools(fake_bin, sandbox):
-    for name in ("defaults", "osascript", "chflags", "killall"):
+    for name in ("osascript", "chflags", "killall"):
         fake_bin(name)
+    fake_bin("defaults", script='[[ $1 == import ]] && cat > /dev/null\nexit 0\n')
     fake_bin("plutil", stdout="<plist/>")
     fake_bin("mktemp", script='f="$TMPDIR/man-shortcuts-off.json"\n: > "$f"\nprintf "%s" "$f"\n')
