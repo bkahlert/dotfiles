@@ -36,7 +36,8 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
 
   after(async () => {
     // The server must close even if Chromium cleanup fails: an open listener keeps node alive forever.
-    try { await chromium.kill(); } finally { fixture.server.close(); }
+    // Either may be unset when `before` failed halfway.
+    try { await chromium?.kill(); } finally { fixture?.server.close(); }
   }, { timeout: 20_000 });
 
   describe('on identifier, chooser, password, oauth-signin-interstitial and consent pages', () => {
@@ -83,11 +84,46 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     });
   });
 
+  describe('on a browser that never writes its DevTools port', () => {
+    test('fails with its stderr and leaves no process behind', async () => {
+      const silent = fakeBrowser('echo oops >&2\nexec sleep 60');
+      const failure = await launchChromium({ bin: silent, timeoutMs: 500 }).then(() => null, e => e);
+      assert.match(failure?.message, /did not write DevToolsActivePort after \d+ ms/);
+      assert.match(failure.message, /oops/);
+      assert.equal(await isAlive(failure.pid), false);
+    });
+  });
+
+  describe('on a browser that exits at startup', () => {
+    test('fails at once with its exit code and stderr', async () => {
+      const crashing = fakeBrowser('echo boom >&2\nexit 7');
+      const started = Date.now();
+      const failure = await launchChromium({ bin: crashing, timeoutMs: 20_000 }).then(() => null, e => e);
+      assert.match(failure?.message, /exitCode 7/);
+      assert.match(failure.message, /boom/);
+      assert.ok(Date.now() - started < 5000, 'waited for the full timeout');
+    });
+  });
+
   // --- helpers -------------------------------------------------------------
 
-  async function launchChromium() {
+  function fakeBrowser(body) {
+    const bin = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'gcloud-login-driver-test-')), 'browser');
+    fs.writeFileSync(bin, `#!/bin/sh\n${body}\n`, { mode: 0o755 });
+    return bin;
+  }
+
+  async function isAlive(pid) {
+    for (let i = 0; i < 20; i++) {
+      try { process.kill(pid, 0); } catch { return false; }
+      await sleep(100);
+    }
+    return true;
+  }
+
+  async function launchChromium({ bin = CHROMIUM, timeoutMs = 30_000 } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gcloud-login-driver-test-'));
-    const proc = spawn(CHROMIUM, [
+    const proc = spawn(bin, [
       `--user-data-dir=${dir}`, '--remote-debugging-port=0', '--headless=new',
       '--no-first-run', '--no-default-browser-check',
       // This throwaway profile stores nothing worth encrypting, and without
@@ -97,33 +133,47 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
       // keychain item.
       '--use-mock-keychain', '--password-store=basic',
       'about:blank',
-    ], { stdio: 'ignore', detached: true });
+    ], { stdio: ['ignore', 'ignore', 'pipe'], detached: true });
+    let stderr = '';
+    proc.stderr.on('data', d => { stderr += d; });
+    // Remove the throwaway profile only after Chromium exited; it writes to
+    // the profile while shutting down and would recreate parts of it. On
+    // Linux Chromium may already be gone, and SIGTERM is not always enough.
+    // Its helper processes (zygote, GPU, network) can outlive the main
+    // process and keep writing into the profile, so the whole process group
+    // is killed before the profile goes; rm retries while the last of them
+    // dies, instead of failing with ENOTEMPTY.
+    const kill = async () => {
+      if (proc.exitCode === null && proc.signalCode === null) {
+        const exit = new Promise(resolve => proc.once('exit', resolve));
+        const hammer = setTimeout(() => proc.kill('SIGKILL'), 5000);
+        proc.kill();
+        await exit;
+        clearTimeout(hammer);
+      }
+      try { process.kill(-proc.pid, 'SIGKILL'); } catch { /* group already gone */ }
+      await fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    };
     const portFile = path.join(dir, 'DevToolsActivePort');
-    for (let i = 0; i < 100 && !fs.existsSync(portFile); i++) await sleep(100);
-    assert.ok(fs.existsSync(portFile), 'Chromium did not write DevToolsActivePort');
+    const started = Date.now();
+    while (!fs.existsSync(portFile)) {
+      const exited = proc.exitCode !== null || proc.signalCode !== null;
+      if (exited || Date.now() - started > timeoutMs) {
+        // A browser that stays behind keeps node, and so the CI job, alive.
+        await kill();
+        throw Object.assign(new Error(
+          `Chromium did not write DevToolsActivePort after ${Date.now() - started} ms `
+          + `(exitCode ${proc.exitCode}, signal ${proc.signalCode})\n${stderr.trim()}`,
+        ), { pid: proc.pid });
+      }
+      await sleep(100);
+    }
     const port = fs.readFileSync(portFile, 'utf8').split('\n')[0];
     return {
       portFile,
       pid: proc.pid,
       exited: new Promise(resolve => proc.once('exit', resolve)),
-      // Remove the throwaway profile only after Chromium exited; it writes to
-      // the profile while shutting down and would recreate parts of it. On
-      // Linux Chromium may already be gone, and SIGTERM is not always enough.
-      // Its helper processes (zygote, GPU, network) can outlive the main
-      // process and keep writing into the profile, so the whole process group
-      // is killed before the profile goes; rm retries while the last of them
-      // dies, instead of failing with ENOTEMPTY.
-      kill: async () => {
-        if (proc.exitCode === null && proc.signalCode === null) {
-          const exit = new Promise(resolve => proc.once('exit', resolve));
-          const hammer = setTimeout(() => proc.kill('SIGKILL'), 5000);
-          proc.kill();
-          await exit;
-          clearTimeout(hammer);
-        }
-        try { process.kill(-proc.pid, 'SIGKILL'); } catch { /* group already gone */ }
-        await fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
-      },
+      kill,
       pages: async () => (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).filter(t => t.type === 'page'),
     };
   }
