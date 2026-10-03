@@ -10,7 +10,7 @@
 
 1. `explain` percent-encodes nothing but spaces: `+7`, `&`, `#`, `%` and quotes reach explainshell.com raw, so the example in its own help opens a wrong URL.
 2. `${N?message}` makes bash print its own error with the script path and exit 1; `bash.md` wants the one-line `die` and exit 2. Scripts: `box` (`--image`), `notify` (`--title`, `--subtitle`, `--sound`), `gcloud-login-browser` (`url`), `cleanup` (`--sim-unused`), `gcloud-login` (`--timeout`), `op-agent` (`read`).
-3. `box` exits under `set -u` when `TERM` is unset (`-e "TERM=$TERM"`).
+3. ~~`box` exits under `set -u` when `TERM` is unset.~~ Not a defect: bash defaults an unset `TERM` to `dumb`, even under `set -u`. A test pins it.
 
 ## Global Constraints
 
@@ -24,9 +24,9 @@
 
 ## Tasks
 
-- [ ] **1. Wrappers and lookups:** `box` (+ defects 2, 3), `docker`, `idea`, `idea-wait`, `omlx`.
-- [ ] **2. Filesystem tools:** `dscleanup`, `grepr`, `mir`, `pbcopy-dir`, `pbpaste-dir`.
-- [ ] **3. Notifiers and openers:** `explain` (+ defect 1), `flushdns`, `notify` (+ defect 2), `gcloud-login-browser` (+ defect 2).
-- [ ] **4. Servers and reference card:** `serve`, `serve-live`, `ansi-test`, `intellij-workspace-fix` (+ `xmlstarlet` in CI).
-- [ ] **5. Remaining `${N?}` sites:** `cleanup --sim-unused`, `gcloud-login --timeout`, `op-agent read`.
+- [x] **1. Wrappers and lookups:** `box` (+ defect 2), `docker`, `idea`, `idea-wait`, `omlx`.
+- [x] **2. Filesystem tools:** `dscleanup`, `grepr`, `mir`, `pbcopy-dir`, `pbpaste-dir`.
+- [x] **3. Notifiers and openers:** `explain` (+ defect 1), `flushdns`, `notify` (+ defect 2), `gcloud-login-browser` (+ defect 2).
+- [x] **4. Servers and reference card:** `serve`, `serve-live`, `ansi-test`, `intellij-workspace-fix` (+ `xmlstarlet` in CI).
+- [x] **5. Remaining `${N?}` sites:** `cleanup --sim-unused`, `gcloud-login --timeout`, `op-agent read`.
 - [ ] **6. Verify and ship.** Suite, `make lint`, code review on `fable`, then the `chezmoi apply` offer.
