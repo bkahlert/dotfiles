@@ -33,6 +33,17 @@ class TestStatusline:
             result = run("statusline", stdin=json.dumps(INPUT))
             assert result.stdout == NERD
 
+        def test_should_ignore_a_trailing_newline_in_the_cache(self, run, sandbox):
+            cache_detection(sandbox, "1\n")
+            result = run("statusline", stdin=json.dumps(INPUT))
+            assert result.stdout == NERD
+
+        def test_should_still_render_when_the_cache_cannot_be_written(self, run, sandbox):
+            (sandbox.home / ".cache/claude").write_text("")
+            result = run("statusline", stdin=json.dumps(INPUT))
+            assert result.returncode == 0
+            assert result.stdout in (NERD, FALLBACK)
+
         def test_should_let_the_environment_override_the_cache(self, run, sandbox):
             cache_detection(sandbox, "1")
             result = run("env", "NERD_FONTS=0", "statusline", stdin=json.dumps(INPUT))
@@ -174,7 +185,7 @@ def sample(now):
         "agent": {"name": "security-reviewer"},
         "exceeds_200k_tokens": False,
         "rate_limits": {
-            "five_hour": {"used_percentage": 28.5, "resets_at": now + 65160},
+            "five_hour": {"used_percentage": 28.5, "resets_at": now + 65300},
             "seven_day": {"used_percentage": 92.2, "resets_at": now + 358400},
         },
     }

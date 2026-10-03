@@ -34,10 +34,7 @@ RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
 USAGE_THRESHOLDS = (50, 75)
 COST_THRESHOLDS_CENTS = (500, 1000)
 
-SUPERSCRIPT = str.maketrans({
-    **dict(zip("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")),
-    **dict(zip("dehimprx.", "ᵈᵉʰⁱᵐᵖʳˣ·")),
-})
+SUPERSCRIPT = str.maketrans("0123456789dehimprx.", "⁰¹²³⁴⁵⁶⁷⁸⁹ᵈᵉʰⁱᵐᵖʳˣ·")
 
 
 # ── Icons ──────────────────────────────────────────────────
@@ -102,10 +99,13 @@ def nerd_fonts_supported(override):
         if forced in ("0", "1"):
             return forced == "1"
     cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "claude" / "nerd-font-support"
-    if not cache.is_file():
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        cache.write_text("1" if nerd_fonts_installed() else "0")
-    return cache.read_text() == "1"
+    try:
+        if not cache.is_file():
+            cache.parent.mkdir(parents=True, exist_ok=True)
+            cache.write_text("1" if nerd_fonts_installed() else "0")
+        return cache.read_text().strip() == "1"
+    except OSError:
+        return nerd_fonts_installed()
 
 
 def nerd_fonts_installed():
@@ -230,7 +230,7 @@ def part_cost(session):
     return f"{severity(int(usd * 100), COST_THRESHOLDS_CENTS)}${usd:.2f}{RESET}"
 
 
-def part_rate_limit(limit, icon, icons):
+def part_rate_limit(limit, icon, restart):
     used = number(field(limit, "used_percentage"))
     if used is None:
         return ""
@@ -238,7 +238,7 @@ def part_rate_limit(limit, icon, icons):
     out = f"{severity(pct, USAGE_THRESHOLDS)}{icon} {pct}%"
     resets_at = number(field(limit, "resets_at"))
     if resets_at is not None:
-        out += f" {icons.restart}{resets_in(resets_at)}"
+        out += f" {restart}{resets_in(resets_at)}"
     return link(RATE_LIMIT_URL, out + RESET)
 
 
@@ -278,12 +278,12 @@ def parse_args(args):
 
 
 def preview_input():
-    source = subprocess.run(["chezmoi", "source-path"], capture_output=True, text=True)
+    source = subprocess.run(["chezmoi", "source-path"], stdout=subprocess.PIPE, text=True)
     if source.returncode:
         sys.exit(1)
     repo = Path(source.stdout.strip()).parent
     sample = subprocess.run(["uv", "run", "--locked", "tests/claude/test_statusline.py", "--print-input"],
-                            cwd=repo, capture_output=True, text=True)
+                            cwd=repo, stdout=subprocess.PIPE, text=True)
     return sample.stdout
 
 
@@ -298,8 +298,8 @@ def main(args):
         part_agent(session, icons),
         part_context(session, icons),
         part_cost(session),
-        part_rate_limit(field(limits, "five_hour"), icons.clock, icons),
-        part_rate_limit(field(limits, "seven_day"), icons.calendar, icons),
+        part_rate_limit(field(limits, "five_hour"), icons.clock, icons.restart),
+        part_rate_limit(field(limits, "seven_day"), icons.calendar, icons.restart),
     ]
     print(SEPARATOR.join(part for part in parts if part))
 
