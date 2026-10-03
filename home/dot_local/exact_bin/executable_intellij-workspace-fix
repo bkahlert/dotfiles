@@ -51,12 +51,23 @@ def component_pattern(name):
 
 
 def select_all_file_types(body):
-    """Write the three options as one block where the first of them was, in front if none was; leave every other option alone."""
-    spans = [found.span() for name, _ in OPTIONS if (found := option_pattern(name).search(body))]
-    start = min((begin for begin, _ in spans), default=0)
-    for begin, end in sorted(spans, reverse=True):
-        body = body[:begin] + body[end:]
-    return body[:start] + "".join(wanted for _, wanted in OPTIONS) + body[start:]
+    """Replace the three options where they are, add the missing ones next to them, leave every other option alone."""
+    spans = sorted(found.span() for name, _ in OPTIONS if (found := option_pattern(name).search(body)))
+    if any(previous[1] > following[0] for previous, following in zip(spans, spans[1:])):
+        raise ValueError("options with an unexpected layout")
+    first = spans[0][0] if spans else 0
+    position, in_front = None, ""
+    for name, wanted in OPTIONS:
+        found = option_pattern(name).search(body)
+        if found:
+            body = body[:found.start()] + wanted + body[found.end():]
+            position = found.start() + len(wanted)
+        elif position is None:
+            in_front += wanted
+        else:
+            body = body[:position] + wanted + body[position:]
+            position += len(wanted)
+    return body[:first] + in_front + body[first:]
 
 
 def insertion_point(text, name):
@@ -64,7 +75,10 @@ def insertion_point(text, name):
     for found in re.finditer(r'^  <component name="([^"]+)"', text, re.MULTILINE):
         if found.group(1) > name:
             return found.start()
-    return text.rindex("</project>")
+    end = text.rfind("</project>")
+    if end < 0:
+        raise ValueError("no </project> to add the components to")
+    return end
 
 
 def fix_component(text, name):
@@ -79,24 +93,51 @@ def fix_component(text, name):
     return text[:found.start()] + f'  <component name="{name}">\n{fixed}  </component>\n' + text[found.end():]
 
 
-def problem(text):
-    """Return why `text` is not a workspace with "All file types" in both components, or None."""
+def parse(text):
+    root = ElementTree.fromstring(text.encode("utf-8"))
+    if root.tag != "project":
+        raise ValueError(f"root element is <{root.tag}>, not <project>")
+    return root
+
+
+def without_save_options(root):
+    """The tree minus the three options, and minus the save components that hold nothing else, ignoring whitespace."""
+    names = {name for name, _ in OPTIONS}
+    for component in root.findall("component"):
+        if component.get("name") in COMPONENTS:
+            for option in component.findall("option"):
+                if option.get("name") in names:
+                    component.remove(option)
+            if not len(component) and not (component.text or "").strip() and list(component.attrib) == ["name"]:
+                root.remove(component)
+    for element in root.iter():
+        element.text, element.tail = (element.text or "").strip(), None
+    return ElementTree.tostring(root)
+
+
+def problem(original, fixed):
+    """Return why `fixed` is not `original` plus "All file types" in both components, or None."""
     try:
-        root = ElementTree.fromstring(text.encode("utf-8"))
-    except ElementTree.ParseError as error:
-        return f"not well-formed XML: {error}"
-    except ValueError as error:
-        return str(error)
+        root = parse(fixed)
+        before = parse(original)
+    except (ElementTree.ParseError, ValueError) as error:
+        return f"not a well-formed workspace: {error}"
     for name in COMPONENTS:
         components = root.findall(f"component[@name='{name}']")
         if len(components) != 1:
             return f"{len(components)} components named {name} after the edit"
-        values = {option.get("name"): option for option in components[0].findall("option")}
-        selected = values.get("mySelectedFileTypes")
-        if (values.get("myAllFileTypesSelected") is None or values["myAllFileTypesSelected"].get("value") != "true"
-                or values.get("myRunOnSave") is None or values["myRunOnSave"].get("value") != "true"
-                or selected is None or selected.find("set") is None or len(selected.find("set")) != 0):
+        options = components[0].findall("option")
+        for option_name, _ in OPTIONS:
+            count = sum(option.get("name") == option_name for option in options)
+            if count != 1:
+                return f"{count} options named {option_name} in {name} after the edit"
+        values = {option.get("name"): option for option in options}
+        selected = values["mySelectedFileTypes"].find("set")
+        if (values["myAllFileTypesSelected"].get("value") != "true" or values["myRunOnSave"].get("value") != "true"
+                or selected is None or len(selected)):
             return f"{name} does not hold All file types after the edit"
+    if without_save_options(root) != without_save_options(before):
+        return "the edit changed more than the save options"
     return None
 
 
@@ -153,29 +194,51 @@ def workspaces():
             yield os.path.join(directory, "workspace.xml")
 
 
+def fixed_text(original):
+    """Return the fixed workspace; raise ValueError when `original` cannot be edited safely."""
+    if "\r" in original:
+        raise ValueError("CRLF line endings are not supported")
+    fixed = fix(original)
+    reason = None if fixed == original else problem(original, fixed)
+    if reason:
+        raise ValueError(reason)
+    return fixed
+
+
+def replace_contents(path, text):
+    """Write next to `path`, then rename over it, so a crash never leaves a truncated workspace."""
+    temporary = path.with_name(path.name + ".tmp")
+    try:
+        temporary.write_bytes(text.encode("utf-8"))
+        shutil.copymode(path, temporary)
+        os.replace(temporary, path)
+    except BaseException:
+        temporary.unlink(missing_ok=True)
+        raise
+
+
 def fix_workspace(shown, dry_run, timestamp):
     """Report what happened to the workspace at `shown`; return False when it could not be fixed."""
     path = Path(shown)
-    original = path.read_bytes().decode("utf-8")
     try:
-        fixed = fix(original)
-    except ValueError as error:
+        raw = path.read_bytes()
+        original = raw.decode("utf-8")
+        fixed = fixed_text(original)
+        if fixed == original:
+            report("▪", GRAY, f"already fixed: {shown}")
+        elif dry_run:
+            report("ℹ", BLUE, f"would fix: {shown}")
+        else:
+            if not os.access(path, os.W_OK):
+                raise PermissionError("not writable")
+            backup = path.with_name(f"{path.stem}.{timestamp}{path.suffix}")
+            with open(backup, "xb") as file:
+                file.write(raw)
+            replace_contents(path, fixed)
+            report("✔", GREEN, f"fixed: {shown} (backup: {backup.name})")
+    except (OSError, ValueError) as error:
         report("✖", RED, f"failed: {shown}: {error}", sys.stderr)
         return False
-    if fixed == original:
-        report("▪", GRAY, f"already fixed: {shown}")
-        return True
-    reason = problem(fixed)
-    if reason:
-        report("✖", RED, f"failed: {shown}: {reason}", sys.stderr)
-        return False
-    if dry_run:
-        report("ℹ", BLUE, f"would fix: {shown}")
-        return True
-    backup = path.with_name(f"{path.stem}.{timestamp}{path.suffix}")
-    shutil.copy(path, backup)
-    path.write_bytes(fixed.encode("utf-8"))
-    report("✔", GREEN, f"fixed: {shown} (backup: {backup.name})")
     return True
 
 

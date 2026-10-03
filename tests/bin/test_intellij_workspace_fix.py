@@ -1,6 +1,10 @@
+import importlib.machinery
+import importlib.util
 import re
 
 import pytest
+
+from repo import BIN_SOURCE
 
 # The state "Tools > Actions on Save > All file types" must end up in, as the IDE writes it, plus the explicit
 # `myRunOnSave` that keeps the entry independent of the plugins (the Go plugin's default is `true`, the platform's `false`).
@@ -179,6 +183,93 @@ class TestIntellijWorkspaceFix:
             assert result.stderr.startswith("✖ failed: ./a/.idea/workspace.xml")
             assert broken.read_text() == "<project><component></project>\n"
             assert fine.read_text() == FIXED
+
+    class TestOnSiblingOrderAsTheIdeWritesIt:
+        def test_should_find_it_fixed_without_moving_the_sibling(self, run, sandbox):
+            ide_order = project(component("FormatOnSaveOptions", """\
+    <option name="myAllFileTypesSelected" value="true" />
+    <option name="myFormatOnlyChangedLines" value="true" />
+    <option name="myRunOnSave" value="true" />
+    <option name="mySelectedFileTypes">
+      <set />
+    </option>
+"""), GIT, component("OptimizeOnSaveOptions", ALL_FILE_TYPES), PROBLEMS)
+            write(sandbox, "app/.idea/workspace.xml", ide_order)
+            result = run("intellij-workspace-fix")
+            assert result.stdout == "▪ already fixed: ./app/.idea/workspace.xml\n"
+
+    class TestOnOptionsItCannotTell:
+        def test_should_leave_an_unusually_indented_option_and_its_siblings_alone(self, run, sandbox):
+            odd = project(component("FormatOnSaveOptions", """\
+    <option name="mySelectedFileTypes">
+      <set />
+      </option>
+    <option name="myRunOnSave" value="true" />
+    <option name="myKeep">
+      <list>
+        <option value="a" />
+      </list>
+    </option>
+    <option name="myOther" value="1" />
+"""), GIT, PROBLEMS)
+            workspace = write(sandbox, "app/.idea/workspace.xml", odd)
+            result = run("intellij-workspace-fix")
+            assert (result.returncode, workspace.read_text()) == (1, odd)
+            assert result.stderr.startswith("✖ failed: ./app/.idea/workspace.xml")
+
+        def test_should_not_add_a_second_copy_of_an_option_it_failed_to_match(self, run, sandbox):
+            odd = project(component("FormatOnSaveOptions", """\
+    <option value="true" name="myRunOnSave" />
+"""), GIT, PROBLEMS)
+            workspace = write(sandbox, "app/.idea/workspace.xml", odd)
+            result = run("intellij-workspace-fix")
+            assert (result.returncode, workspace.read_text()) == (1, odd)
+
+    class TestOnFilesItDoesNotUnderstand:
+        def test_should_leave_crlf_files_alone(self, run, sandbox):
+            crlf = WITHOUT_SAVE_OPTIONS.replace("\n", "\r\n").encode()
+            workspace = sandbox.home / "app/.idea/workspace.xml"
+            workspace.parent.mkdir(parents=True)
+            workspace.write_bytes(crlf)
+            result = run("intellij-workspace-fix")
+            assert (result.returncode, workspace.read_bytes()) == (1, crlf)
+
+        def test_should_leave_non_utf8_files_alone_and_fix_the_others(self, run, sandbox):
+            workspace = sandbox.home / "a/.idea/workspace.xml"
+            workspace.parent.mkdir(parents=True)
+            workspace.write_bytes(b"<project>caf\xe9</project>\n")
+            fine = write(sandbox, "b/.idea/workspace.xml", WITHOUT_SAVE_OPTIONS)
+            result = run("intellij-workspace-fix")
+            assert result.returncode == 1
+            assert result.stderr.startswith("✖ failed: ./a/.idea/workspace.xml")
+            assert workspace.read_bytes() == b"<project>caf\xe9</project>\n"
+            assert fine.read_text() == FIXED
+
+        def test_should_leave_read_only_files_alone_and_write_no_backup(self, run, sandbox):
+            workspace = write(sandbox, "app/.idea/workspace.xml", WITHOUT_SAVE_OPTIONS)
+            workspace.chmod(0o444)
+            result = run("intellij-workspace-fix")
+            assert result.returncode == 1
+            assert result.stderr.startswith("✖ failed: ./app/.idea/workspace.xml")
+            assert sorted(p.name for p in workspace.parent.iterdir()) == ["workspace.xml"]
+
+        def test_should_leave_a_file_without_a_project_root_alone(self, run, sandbox):
+            workspace = write(sandbox, "app/.idea/workspace.xml", "<settings />\n")
+            result = run("intellij-workspace-fix")
+            assert (result.returncode, workspace.read_text()) == (1, "<settings />\n")
+
+    class TestOnExistingBackup:
+        def test_should_not_overwrite_it(self, tmp_path):
+            source = str(BIN_SOURCE / "executable_intellij-workspace-fix")
+            loader = importlib.machinery.SourceFileLoader("workspace_fix", source)
+            module = importlib.util.module_from_spec(importlib.util.spec_from_loader("workspace_fix", loader))
+            loader.exec_module(module)
+            workspace = tmp_path / "workspace.xml"
+            workspace.write_text(WITHOUT_SAVE_OPTIONS)
+            backup = tmp_path / "workspace.1.xml"
+            backup.write_text("PRECIOUS")
+            assert module.fix_workspace(str(workspace), False, 1) is False
+            assert (backup.read_text(), workspace.read_text()) == ("PRECIOUS", WITHOUT_SAVE_OPTIONS)
 
     class TestOnBadArguments:
         def test_should_exit_2_on_an_unknown_argument(self, run):
