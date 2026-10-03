@@ -14,9 +14,10 @@ GUARDED = ("op", "keepassxc-cli", "gh", "glab", "gcloud", "idp", "curl", "wget",
            "brew", "open", "osascript", "launchctl", "defaults", "sudo",
            "git", "chezmoi", "podman", "npm", "npx", "mas", "softwareupdate", "security",
            "dscacheutil", "pbcopy", "pbpaste", "lsof", "killall", "pkill")
-# NUL cannot occur inside an argument, so it ends one; a record separator ends the call.
+# A record is written by one printf, so two fakes in a pipeline cannot interleave their records.
+# NUL cannot occur inside an argument, so it ends one; a record ends with RS followed by NUL.
 ARG_SEPARATOR = "\0"
-RECORD_SEPARATOR = "\x1e"
+RECORD_SEPARATOR = "\x1e\0"
 
 
 @pytest.fixture(scope="session")
@@ -91,7 +92,7 @@ class Sandbox:
 
     def _write(self, name, body, record=True):
         log = shlex.quote(str(self.calls_dir / name))
-        recorder = f"{{ (( $# )) && printf '%s\\0' \"$@\"; printf '\\036'; }} >> {log}\n" if record else ""
+        recorder = f"printf '%s\\0' \"$@\" $'\\036' >> {log}\n" if record else ""
         path = self.fakes / name
         path.write_text(f"#!/usr/bin/env bash\n{recorder}{body}")
         path.chmod(0o755)

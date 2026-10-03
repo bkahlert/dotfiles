@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestSandbox:
     class TestRun:
         def test_should_resolve_scripts_by_their_target_name(self, run):
@@ -46,6 +49,12 @@ class TestSandbox:
             fake_bin("curl", stdout="{}")
             result = run("curl", "https://example.test")
             assert result.returncode == 0
+
+        def test_should_keep_records_apart_when_two_fakes_share_a_pipeline(self, run, fake_bin, calls):
+            fake_bin("tool")
+            for _ in range(20):
+                run("sh", "-c", "tool a one | tool b two")
+            assert sorted(calls("tool")) == sorted([["a", "one"], ["b", "two"]] * 20)
 
     class TestZsh:
         def test_should_autoload_a_function_from_the_source_tree(self, zsh):
