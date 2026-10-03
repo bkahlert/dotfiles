@@ -7,7 +7,7 @@
 # `fzf --zsh` (fzf 0.48+) emits all integrations in one shot.
 if command -v fzf &>/dev/null; then
   if (( $+functions[zsh-defer] )); then
-    zsh-defer eval "$(fzf --zsh)"
+    zsh-defer -c 'eval "$(fzf --zsh)"'
   else
     eval "$(fzf --zsh)"
   fi
