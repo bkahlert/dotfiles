@@ -6,11 +6,11 @@ IMAGE := dotfiles-test
 CONTAINER_NAME := dotfiles-test
 VNC_PORT := 5901
 
-.PHONY: ci lint lint-shell lint-zsh unit integration integration-native image run vnc stop clean
+.PHONY: ci lint lint-shell lint-zsh lint-workflows unit integration integration-native image run vnc stop clean
 
 ci: lint unit integration
 
-lint: lint-shell lint-zsh
+lint: lint-shell lint-zsh lint-workflows
 
 # Every tracked file with a bash shebang or a .sh/.bash suffix. Templates are not shell before
 # rendering, and quick-access/ holds symlinks to files that are already covered.
@@ -21,6 +21,10 @@ lint-shell:
 
 lint-zsh:
 	git ls-files -z -- 'home/**/*.zsh' | xargs -0 -n 1 zsh -n
+
+lint-workflows:
+	actionlint
+	uvx zizmor==1.30.1 .github/workflows
 
 unit:
 	uv run --locked pytest -m "not integration"
