@@ -112,18 +112,21 @@ app preference chezmoi can't manage — set it up once per machine:
    when database is opened/unlocked"** (usually already set from the kdbx
    template).
 
-## Testing in a container
-
-Build and test with Podman:
+## Testing
 
 ```sh
-make build      # build Fedora + Ghostty + VNC image
-make validate   # apply dotfiles + verify zsh starts
-make run        # start container with VNC on :5901
-make vnc        # open VNC viewer
-make stop       # stop the container
-make clean      # remove the image
+make lint                # shellcheck, zsh -n, workflow lint
+make unit                # pytest unit tests + node driver test
+make integration         # apply all three contexts in a Fedora container (needs Podman)
+make integration-native  # same, natively into a temp HOME (macOS)
+make ci                  # lint unit integration
+make run                 # start the VNC inspection container on :5901
+make vnc                 # open a VNC viewer
+make stop                # stop it
+make clean               # remove the images
 ```
+
+CI runs the same targets on every pull request; `main` requires the `ci` check. Details in [AGENTS.md](AGENTS.md#testing).
 
 ## Repairing the startup LaunchAgent
 

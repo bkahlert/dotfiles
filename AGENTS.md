@@ -152,22 +152,57 @@ After the user confirms the applied change works, **then** offer the GitHub ship
 Default flow when accepted:
 1. `git push -u origin <branch>`
 2. `gh pr create` with a concise title and bulleted summary
-3. `gh pr merge <n> --squash --delete-branch`
-4. `git checkout main && git pull --ff-only`
+3. `gh pr checks <n> --watch --fail-fast` — the `ci` check is required; the merge is rejected while it runs
+4. `gh pr merge <n> --squash --delete-branch`
+5. `git checkout main && git pull --ff-only`
 
 ### When *not* to offer
 
 - Change is incomplete or under active iteration → skip both offers.
 - User has signaled they want to review on GitHub first ("let me look at the PR") → skip Offer 2; still safe to make Offer 1.
-- Change touches secrets, `.chezmoi.toml.tmpl`, or `run_once_*` install scripts that warrant a container test (`make build && make validate`) before applying to `$HOME` → mention this with Offer 1 so the user can pick container-test instead.
+- Change touches secrets, `.chezmoi.toml.tmpl`, or `run_once_*` install scripts that warrant a container test (`make integration`) before applying to `$HOME` → mention this with Offer 1 so the user can pick container-test instead.
 
 Don't stack offers on follow-up turns; ask each one once, then drop it.
 
 ## Testing
 
 ```sh
-chezmoi diff          # preview changes
-chezmoi apply -n      # dry run
-chezmoi apply         # apply to $HOME
-make build && make validate   # test in container
+make lint                # shellcheck, zsh -n, actionlint + zizmor
+make unit                # pytest (tests/bin, tests/functions, tests/zsh, conventions, shims) + node driver test
+make integration         # apply all three contexts in a Fedora container, require a silent zsh (needs Podman)
+make integration-native  # same, into a temp HOME on this Mac; what CI's macOS job runs. Opt-in locally.
+make ci                  # lint unit integration
+chezmoi diff             # preview changes to $HOME
+chezmoi apply -n         # dry run
 ```
+
+CI runs the same targets on every pull request and on `main`; the `ci` check is required to merge.
+
+### Where a test lives
+
+| Subject | Test |
+|---|---|
+| `bin/executable_<name>` | `tests/bin/test_<name>.py` (hyphens as underscores) |
+| `functions/<name>` | `tests/functions/test_<name>.py` |
+| `conf.d/NN-<name>.zsh` that defines a function | `tests/zsh/test_<name>.py`; `conf.d/exact_ista/...` under `tests/zsh/ista/` |
+| every `conf.d` module | loaded by the integration legs; a module that prints on a fresh machine fails them |
+
+`tests/test_conventions.py` fails when a script, function or function-defining module has neither a test nor an entry in `tests/untested.toml`, and when an entry is stale. A `"legacy: ..."` entry goes when the file's **behaviour** is next changed: that change adds the test and removes the line. Lint or formatting edits do not trigger it. A file with no logic of its own (a wrapper around `open`, `osascript`, `pbcopy`) keeps a permanent entry with that reason.
+
+### Writing a unit test
+
+Fixtures in [tests/conftest.py](tests/conftest.py) run the real script or function:
+
+- `run("name", *args)` runs a `bin/` script by its target name in a sandbox: temp `HOME`, `XDG_*` and `TMPDIR`; `PATH` is fakes first, then the other `bin/` scripts, then system directories only.
+- `fake_bin("tool", stdout=..., exit_code=..., script=...)` puts a fake on `PATH`; `calls("tool")` returns its recorded argument lists.
+- `zsh("snippet", function="name")` or `zsh("snippet", modules=["08-print.zsh"])` runs `zsh -f` with the source tree's functions and modules.
+- Network, vault and system-state tools (`op`, `gh`, `gcloud`, `curl`, `brew`, `open`, `osascript`, `launchctl`, `defaults`, `sudo`, ...) are guarded: calling one unfaked fails with exit 127. Fake what the subject needs; coreutils, `awk`, `sed`, `jq` are real.
+
+Classes nest as [testing.md](home/private_dot_config/exact_agents/exact_rules/testing.md) asks: `TestGhLatest` > `TestOnUnknownOption` > `test_should_exit_2_and_name_the_option`.
+
+### Integration legs
+
+Both legs write a chezmoi config with the context's `company`, apply the source tree with `tests/shims/op` and `tests/shims/keepassxc-cli` first on `PATH` and `--no-tty` with a dummy password on stdin, then run `zsh -li -c true` and require exit 0 and an empty stderr.
+
+- Container ([Containerfile](Containerfile) stage `base`, [entrypoint.sh](entrypoint.sh)): Fedora with chezmoi, sheldon, starship, zoxide. `make run` builds the `vnc` stage for manual inspection.
+- Native macOS: a temp home, `--exclude=scripts` (no `brew bundle`, no LaunchAgent, no `defaults write`), `sheldon lock` by hand, and a preflight that `chezmoi data` reports the temp home. Every path chezmoi and the startup files touch derives from `HOME`, `ZDOTDIR` or an `XDG_*` variable, which is why this is safe to run on a developer Mac. **Startup code must keep it that way: write only under those directories, and stay silent when a tool you wrap is absent.**

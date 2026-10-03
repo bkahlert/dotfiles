@@ -131,6 +131,7 @@ Adapt the syntax to the project's specific framework while maintaining the hiera
 - **Kotest (ShouldSpec)**: Use `context(...)` for nesting and `should(...)` for assertions.
 - **Jest/RSpec/Mocha**: Use `describe(...)` for subjects, `context(...)` for states, and `it(...)` for assertions.
 - **JUnit 5**: Use `@Nested` classes with `@DisplayName`.
+- **pytest**: a class per subject, nested classes for `On...` contexts, `test_should_...` methods for the claims.
 
 ## 10. Examples
 

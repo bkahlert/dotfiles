@@ -27,6 +27,9 @@ chezmoi source root (`.chezmoiroot`), so chezmoi never sees them.
 | `quick-access/startup` | [home/executable_dot_startup](../home/executable_dot_startup) | Runs at login via LaunchAgent, not at shell start |
 | `quick-access/git-aliases` | [home/dot_gitconfig.tmpl](../home/dot_gitconfig.tmpl) | `[alias]` section — `git …` subcommands typed like shell commands |
 
+Tests live beside the map: `bin` → `tests/bin/`, `functions` → `tests/functions/`, `conf.d` →
+`tests/zsh/` (`conf.d/exact_ista` → `tests/zsh/ista/`); see [AGENTS.md](../AGENTS.md#testing).
+
 Not symlinked, but worth knowing:
 
 - `~/.config/zsh/.zshrc.local` — machine-local overrides, sourced last, deliberately unmanaged.
@@ -59,6 +62,10 @@ Not symlinked, but worth knowing:
 4. **Work machine only?** → same rules, but under `conf.d/exact_ista/`. The
    directory is the conditional; no template needed.
 5. **Not sure yet?** → `scratch.zsh`, then promote it once it proves useful.
+6. **Whatever you add, its test goes with it**: `tests/bin/test_<name>.py` for a script,
+   `tests/functions/test_<name>.py` for a function, `tests/zsh/test_<name>.py` for a module that
+   defines functions. `make unit` tells you when one is missing; a file with no logic of its own is
+   listed in `tests/untested.toml` with the reason instead. See [AGENTS.md](../AGENTS.md#testing).
 
 Prefer `bin/` over a function when both would work: a script is testable on its
 own, works from any shell, and can't be shadowed by accident.
