@@ -28,6 +28,8 @@ fi
 
 # Clone repository if it doesn't exist
 if [[ ! -d "$DEV_CHAPTER_REPO" ]]; then
+  # The clone authenticates through the agent; without one a fresh machine stays quiet.
+  [[ -n "$SSH_AUTH_SOCK" ]] || return 0
   echo "Cloning dev-chapter repository to $DEV_CHAPTER_REPO..."
   mkdir -p "$(dirname "$DEV_CHAPTER_REPO")"
 
@@ -47,7 +49,7 @@ if [[ ! -d "$DEV_CHAPTER_REPO" ]]; then
 fi
 
 # Update repository if it's been more than a week
-if [[ -d "$DEV_CHAPTER_REPO/.git" ]]; then
+if [[ -d "$DEV_CHAPTER_REPO/.git" && -n "$SSH_AUTH_SOCK" ]]; then
   local should_pull=false
 
   if [[ ! -f "$_DC_LAST_ATTEMPT_FILE" ]]; then
