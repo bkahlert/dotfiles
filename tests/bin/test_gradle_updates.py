@@ -1,3 +1,5 @@
+import shutil
+
 from repo import BIN_SOURCE, HOME_SOURCE
 
 INIT_SCRIPT = "gradle-updates/gradle-versions-plugin.init.gradle.kts"
@@ -42,7 +44,9 @@ class TestGradleUpdates:
 
     class TestOnNeitherGradlewNorGradle:
         def test_should_exit_1_and_say_so(self, run, sandbox):
-            result = run("env", "PATH=/usr/bin:/bin", str(BIN_SOURCE / "executable_gradle-updates"))
+            nothing = sandbox.home / "empty"
+            nothing.mkdir()
+            result = run("env", f"PATH={nothing}", shutil.which("bash"), str(BIN_SOURCE / "executable_gradle-updates"))
             assert (result.returncode, result.stderr) == (1, "gradle-updates: neither ./gradlew nor gradle found\n")
 
     class TestOnHelp:
