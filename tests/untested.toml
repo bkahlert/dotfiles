@@ -3,7 +3,6 @@
 # a missing entry, a stale entry and an empty reason.
 
 [bin]
-ansi-test = "legacy: test when next touched"
 explain = "legacy: test when next touched"
 flushdns = "legacy: test when next touched"
 gcloud-login-browser = "legacy: test when next touched"
