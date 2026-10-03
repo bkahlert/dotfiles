@@ -15,6 +15,7 @@ class TestOp:
 
         def test_should_omit_the_newline_on_request(self):
             result = op("read", "--no-newline", "op://Employee/GitLab Token/credential")
+            assert result.returncode == 0
             assert result.stdout == "fake:GitLab Token/credential"
 
     class TestOnAnythingElse:

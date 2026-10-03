@@ -17,7 +17,7 @@ case ${1:-} in
     item=${ref#op://*/}
     item=${item%/*}
     printf 'fake:%s/%s' "$item" "${ref##*/}"
-    (( newline )) && printf '\n'
+    if (( newline )); then printf '\n'; fi
     ;;
   *) printf 'op: unsupported in tests: %s\n' "$*" >&2; exit 1 ;;
 esac
