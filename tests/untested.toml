@@ -6,7 +6,6 @@
 ansi-test = "legacy: test when next touched"
 box = "legacy: test when next touched"
 docker = "legacy: test when next touched"
-dscleanup = "legacy: test when next touched"
 explain = "legacy: test when next touched"
 flushdns = "legacy: test when next touched"
 gcloud-login-browser = "legacy: test when next touched"
