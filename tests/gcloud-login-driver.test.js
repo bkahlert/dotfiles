@@ -37,7 +37,7 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
   after(async () => {
     await chromium.kill();
     fixture.server.close();
-  });
+  }, { timeout: 20_000 });
 
   describe('on identifier, chooser, password, oauth-signin-interstitial and consent pages', () => {
     test('reaches the callback, closes its tab and exits 0', async () => {
@@ -73,6 +73,16 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     });
   });
 
+  describe('on a Chromium that exited on its own', () => {
+    test('kill() resolves instead of waiting for an exit that already happened', async () => {
+      const extra = await launchChromium();
+      process.kill(extra.pid);
+      await extra.exited;
+      const outcome = await Promise.race([extra.kill().then(() => 'resolved'), sleep(3000).then(() => 'hung')]);
+      assert.equal(outcome, 'resolved');
+    });
+  });
+
   // --- helpers -------------------------------------------------------------
 
   async function launchChromium() {
@@ -94,10 +104,16 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     const port = fs.readFileSync(portFile, 'utf8').split('\n')[0];
     return {
       portFile,
+      pid: proc.pid,
+      exited: new Promise(resolve => proc.once('exit', resolve)),
       // Remove the throwaway profile only after Chromium exited; it writes to
-      // the profile while shutting down and would recreate parts of it.
+      // the profile while shutting down and would recreate parts of it. On
+      // Linux Chromium may already be gone, and SIGTERM is not always enough.
       kill: () => new Promise(resolve => {
-        proc.once('exit', () => { fs.rmSync(dir, { recursive: true, force: true }); resolve(); });
+        const done = () => { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 3 }); resolve(); };
+        if (proc.exitCode !== null || proc.signalCode !== null) return done();
+        const hammer = setTimeout(() => proc.kill('SIGKILL'), 5000);
+        proc.once('exit', () => { clearTimeout(hammer); done(); });
         proc.kill();
       }),
       pages: async () => (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).filter(t => t.type === 'page'),
