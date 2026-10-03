@@ -101,8 +101,6 @@ chezmoi source-path "$(whence -p foo)"   # map a script back to its source file
   created directly in the target is removed. Always edit the source.
 - Editing through these symlinks edits the real source file, so `chezmoi apply`
   is still required. For `.tmpl` files use `chezmoi edit` instead.
-- `conf.d` sources `*.zsh` only, so non-zsh files can be colocated safely
-  (e.g. `gradle-versions-plugin.init.gradle.kts`).
 
 ## Completions
 

@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Purpose: List the dependency updates of a Gradle project, skipping unstable versions (RC, milestone) when the current one is stable.
+# Usage:   gradle-updates [<gradle-arg>...]
+#
+# Runs ./gradlew if it exists in the current directory, else the system gradle, with the
+# dependencyUpdates task and the versions-plugin init script. Every argument goes on to Gradle.
+#
+# Examples:
+#   gradle-updates
+#   gradle-updates --refresh-dependencies
+
+set -euo pipefail
+
+usage() { awk 'NR==1{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "${BASH_SOURCE[0]}"; }
+
+case ${1:-} in
+  -h|--help) usage; exit 0 ;;
+esac
+
+if [[ -x ./gradlew ]]; then
+  gradle=./gradlew
+elif command -v gradle >/dev/null 2>&1; then
+  gradle=gradle
+else
+  printf 'gradle-updates: neither ./gradlew nor gradle found\n' >&2
+  exit 1
+fi
+
+init_script=${XDG_DATA_HOME:-$HOME/.local/share}/gradle-updates/gradle-versions-plugin.init.gradle.kts
+
+exec "$gradle" dependencyUpdates --init-script "$init_script" "$@"
