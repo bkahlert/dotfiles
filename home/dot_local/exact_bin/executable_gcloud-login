@@ -51,7 +51,7 @@ timeout=120
 while [ $# -gt 0 ]; do
   case $1 in
     -h|--help) usage; exit 0 ;;
-    --admin) [[ $mode == adc ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode=admin && shift ;;
+    --admin) [[ $mode == adc ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode='admin' && shift ;;
     --adc) [[ $mode == admin ]] && die "gcloud-login: --admin and --adc are mutually exclusive"; mode=adc && shift ;;
     --status) status=true && shift ;;
     --timeout) timeout=${2?$1: parameter value not set} && shift 2 ;;
@@ -104,6 +104,7 @@ fi
 # --- Chromium -----------------------------------------------------------------
 
 chromium_bin() {
+  # shellcheck disable=SC2012  # the build directories are ours and newline-free; ls -d sorts them
   ls -d "$CACHE_DIR"/chromium/*-"$CHROMIUM_BUILD"/chrome-mac/Chromium.app/Contents/MacOS/Chromium 2>/dev/null | head -1
 }
 
@@ -140,6 +141,7 @@ start_chromium() {
 url_file=""
 gcloud_pid=""
 gcloud_log=""
+# shellcheck disable=SC2329  # invoked by the EXIT trap below
 cleanup() {
   [[ -n "$gcloud_pid" ]] && kill "$gcloud_pid" 2>/dev/null || true
   [[ -n "$chromium_pid" ]] && kill "$chromium_pid" 2>/dev/null || true
@@ -166,7 +168,7 @@ kill_gcloud() {
 }
 
 case $mode in
-  admin) email=$ADMIN_EMAIL; profile=admin;  gcloud_cmd=(gcloud auth login "$email" --quiet) ;;
+  admin) email=$ADMIN_EMAIL; profile='admin';  gcloud_cmd=(gcloud auth login "$email" --quiet) ;;
   adc)   email=$NORMAL_EMAIL; profile=normal; gcloud_cmd=(gcloud auth application-default login "$email" --quiet) ;;
   cli)   email=$NORMAL_EMAIL; profile=normal; gcloud_cmd=(gcloud auth login "$email" --quiet) ;;
 esac

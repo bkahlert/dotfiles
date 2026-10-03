@@ -36,7 +36,7 @@ while (( $# )); do
 done
 
 # Pick a sensible default shell when no command is given.
-default_shell=sh
+default_shell='sh'
 case "${image%%:*}" in
   ubuntu|debian|fedora|rockylinux|almalinux) default_shell=bash ;;
 esac
