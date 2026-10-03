@@ -4,7 +4,6 @@
 
 [bin]
 flushdns = "legacy: test when next touched"
-gcloud-login-browser = "legacy: test when next touched"
 
 [claude]
 
