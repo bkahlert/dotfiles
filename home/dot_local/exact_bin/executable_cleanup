@@ -34,7 +34,7 @@ while (( $# )); do
     -h|--help)      usage; exit 0 ;;
     --apply)        apply=true; shift ;;
     -y|--yes)       assume_yes=true; shift ;;
-    --sim-unused)   sim_unused=${2?--sim-unused: missing value}; shift 2 ;;
+    --sim-unused)   (( $# > 1 )) || die "--sim-unused: missing value"; sim_unused=$2; shift 2 ;;
     --sim-unused=*) sim_unused=${1#*=}; shift ;;
     -?*)            die "unknown option: $1" ;;
     *)              die "unexpected argument: $1" ;;

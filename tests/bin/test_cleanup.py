@@ -72,6 +72,11 @@ class TestCleanup:
             assert result.returncode == 2
             assert result.stderr == "cleanup: unexpected argument: x\nSee 'cleanup --help'\n"
 
+        def test_should_reject_a_missing_sim_unused_value(self, run):
+            result = run("cleanup", "--sim-unused")
+            assert result.returncode == 2
+            assert result.stderr == "cleanup: --sim-unused: missing value\nSee 'cleanup --help'\n"
+
         def test_should_reject_a_non_numeric_sim_unused(self, run):
             result = run("cleanup", "--sim-unused", "abc")
             assert result.returncode == 2
