@@ -36,10 +36,8 @@ Defined in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), prompted on `chezmoi i
 
 `conf.d/00-context.zsh.tmpl` stamps `$DOTFILES_CONTEXT` at apply time (`bkahlert`, `ista`). All runtime code should branch on `$DOTFILES_CONTEXT` instead of template conditionals:
 
-```zsh
-[[ -n "$DOTFILES_CONTEXT" ]] && ...   # any known context, personal included
-[[ "$DOTFILES_CONTEXT" == ista ]] && ... # business only — use this for work-only behaviour
-```
+- Any known context, personal included: `[[ -n "$DOTFILES_CONTEXT" ]] && ...`
+- Business only; use this for work-only behaviour: `[[ "$DOTFILES_CONTEXT" == ista ]] && ...`
 
 In shell scripts use the env var with a default:
 ```bash
@@ -113,11 +111,10 @@ Example: `brew "1password-cli" # 1Password CLI (op); required by chezmoi to read
 See [quick-access/README.md](quick-access/README.md) — it decides which of the locations applies and documents the conventions for each.
 
 **Add a macOS-only config:**
-```sh
-# Prefer a runtime check — avoid .tmpl:
-# In .zsh files:   [[ $OSTYPE == darwin* ]] || return 0
-# In .sh scripts:  [[ $(uname) == Darwin ]] || exit 0
-```
+Prefer a runtime check; avoid `.tmpl`.
+
+- In `.zsh` files: `[[ $OSTYPE == darwin* ]] || return 0`
+- In `.sh` scripts: `[[ $(uname) == Darwin ]] || exit 0`
 
 **Add a secret:**
 1. Store it in the vault of the context that needs it (1Password `Employee` on ista, KeePassXC otherwise); same title in both if both need it.
@@ -166,15 +163,15 @@ Don't stack offers on follow-up turns; ask each one once, then drop it.
 
 ## Testing
 
-```sh
-make lint                # shellcheck, zsh -n, actionlint + zizmor
-make unit                # pytest (tests/bin, tests/functions, tests/zsh, conventions, shims) + node driver test
-make integration         # apply all three contexts in a Fedora container, require a silent zsh (needs Podman)
-make integration-native  # same, into a temp HOME on this Mac; what CI's macOS job runs. Opt-in locally.
-make ci                  # lint unit integration
-chezmoi diff             # preview changes to $HOME
-chezmoi apply -n         # dry run
-```
+| What | How |
+|---|---|
+| shellcheck, `zsh -n`, actionlint + zizmor | `make lint` |
+| pytest (tests/bin, tests/functions, tests/zsh, conventions, shims) + node driver test | `make unit` |
+| Apply all three contexts in a Fedora container, require a silent zsh (needs Podman) | `make integration` |
+| Same, into a temp HOME on this Mac; what CI's macOS job runs. Opt-in locally | `make integration-native` |
+| Lint, unit and integration | `make ci` |
+| Preview changes to `$HOME` | `chezmoi diff` |
+| Dry run | `chezmoi apply -n` |
 
 CI runs the same targets on every pull request and on `main`; the `ci` check is required to merge.
 
