@@ -16,7 +16,6 @@ brew "shellcheck"                  # Shell script linter; make lint runs it on e
 brew "actionlint"                  # GitHub Actions workflow linter; make lint runs it on .github/workflows
 brew "btop"                        # Terminal resource monitor (CPU, memory, disk, network)
 brew "coreutils"                   # GNU core utilities as g-prefixed binaries; macOS ships no timeout, ~/.local/bin/timeout forwards to gtimeout
-brew "bash"                        # Bash 5; ~/.claude/statusline needs bash >= 4.2 (unicode escapes, case conversion), macOS ships 3.2
 cask "1password-cli"               # 1Password CLI (op); required by chezmoi to read secrets at apply time
 cask "keepassxc"                   # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent, and chezmoi reads personal secrets from its database at apply time
 cask "font-jetbrains-mono-nerd-font" # Nerd Font variant of JetBrains Mono; required by Starship glyphs
