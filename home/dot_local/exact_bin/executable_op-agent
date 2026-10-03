@@ -215,7 +215,7 @@ case ${1:-} in
   start) start ;;
   stop) stop ;;
   status) status ;;
-  read) read_secret "${2?op-agent read: reference not set}" ;;
+  read) (( $# > 1 )) || die "read: reference not set (see 'op-agent --help')" 2; read_secret "$2" ;;
   -h|--help) usage ;;
   *) die "unknown command: ${1:-<none>} (see 'op-agent --help')" 2 ;;
 esac
