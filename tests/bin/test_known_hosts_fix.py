@@ -59,12 +59,18 @@ class TestKnownHostsFix:
             assert result.returncode == 2
             assert result.stderr == "known-hosts-fix: unknown option: --nope\nSee 'known-hosts-fix --help'\n"
 
+    class TestOnThePassThroughFake:
+        def test_should_refuse_a_call_without_a_known_hosts_file(self, run, fake_bin):
+            fake_bin("ssh-keygen", script=REAL_SSH_KEYGEN)
+            result = run("ssh-keygen", "-R", "fake.invalid")
+            assert result.returncode == 99
+
 
 KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGRfYjWZcOhPaLmjKH3bTz3uY1H6Yk+3fBtYBgqd+8sW"
 PLAIN_A = f"a.test {KEY}\n"
 PLAIN_B = f"b.test,10.0.0.2 {KEY}\n"
 HASHED = f"|1|abcdefghijklmnopqrstuvwxyz0=|abcdefghijklmnopqrstuvwxyz0= {KEY}\n"
-REAL_SSH_KEYGEN = 'exec "$(command -pv ssh-keygen)" "$@"\n'
+REAL_SSH_KEYGEN = '[[ " $* " == *" -f "* ]] || exit 99\nexec "$(command -pv ssh-keygen)" "$@"\n'
 
 
 def write_known_hosts(sandbox):
