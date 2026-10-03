@@ -14,3 +14,10 @@ left running by a subagent. Concurrent builds corrupt each other's outputs in tw
 
 Run Gradle in the foreground, keep the IDE's Gradle idle during long CLI builds, and give parallel agents separate git worktrees, since each has its own
 `build/`.
+
+## Gradle JVM
+
+When IntelliJ reports "Incompatible Gradle JVM", or Gradle refuses to run on the JDK behind `JAVA_HOME`, pin the daemon JVM in the project instead of
+changing the IDE's project SDK: a handwritten `gradle/gradle-daemon-jvm.properties` containing only `toolchainVersion=<major>` makes Gradle 8.8+ pick a
+matching installed JDK, and IntelliJ 2025.1+ follows it for its Gradle JVM (needs Gradle 8.9+, so bump older wrappers first). `./gradlew updateDaemonJvm`
+generates the same file but refuses without a toolchain download repository; the minimal file works through JDK auto-detection.
