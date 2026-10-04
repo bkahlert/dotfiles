@@ -5,7 +5,17 @@ from pathlib import Path
 
 import pytest
 
-from repo import FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
+from repo import FUNCTIONS_SOURCE, isolated_env, module_path, scripts
+
+# The only real tools a subject can reach, besides the fakes and the other scripts under test: shells,
+# coreutils and text tools. Everything else (docker, aws, node, claude, a Homebrew package) is not on the
+# sandbox PATH at all, so an unfaked call fails whether or not the machine has the tool installed.
+# A new subject that needs another real tool adds it here.
+REAL_TOOLS = ("awk", "base64", "basename", "bash", "cat", "chmod", "cmp", "cp", "cut", "date", "diff", "dirname",
+              "env", "expr", "false", "find", "getconf", "grep", "gzip", "head", "hostname", "id", "jq", "kill",
+              "ln", "ls", "mkdir", "mkfifo", "mktemp", "mv", "nohup", "od", "perl", "ps", "python3", "readlink", "realpath",
+              "rm", "rmdir", "sed", "seq", "sh", "sleep", "sort", "stat", "tail", "tar", "tee", "test", "touch",
+              "tr", "true", "tty", "uname", "uniq", "wc", "which", "whoami", "xargs", "zsh")
 
 # Tools that reach the network, a vault, system state or the user's own state (repositories,
 # processes, the clipboard, container machines), or ignore `HOME` (`ssh-keygen -R` edits the
@@ -30,9 +40,19 @@ def bin_links(tmp_path_factory):
     return links
 
 
+@pytest.fixture(scope="session")
+def real_tools(tmp_path_factory):
+    """Symlinks to the REAL_TOOLS found on the machine's PATH (Homebrew's bash first: the scripts need 4.4)."""
+    links = tmp_path_factory.mktemp("real-tools")
+    for name in REAL_TOOLS:
+        if found := shutil.which(name):
+            (links / name).symlink_to(found)
+    return links
+
+
 @pytest.fixture
-def sandbox(tmp_path, bin_links):
-    return Sandbox(tmp_path / "home", tmp_path / "fakes", bin_links)
+def sandbox(tmp_path, bin_links, real_tools):
+    return Sandbox(tmp_path / "home", tmp_path / "fakes", bin_links, real_tools)
 
 
 @pytest.fixture
@@ -56,12 +76,12 @@ def zsh(sandbox):
 
 
 class Sandbox:
-    def __init__(self, home: Path, fakes: Path, bin_links: Path):
+    def __init__(self, home: Path, fakes: Path, bin_links: Path, real_tools: Path):
         self.home = home
         self.fakes = fakes
         self.calls_dir = fakes / ".calls"
         self.calls_dir.mkdir(parents=True)
-        self.env = isolated_env(home, [str(fakes), str(bin_links), *SYSTEM_PATH])
+        self.env = isolated_env(home, [str(fakes), str(bin_links), str(real_tools)])
         for name in GUARDED:
             self._write(name, "printf '%s: not faked in this test\\n' \"${0##*/}\" >&2\nexit 127\n",
                         record=False)
