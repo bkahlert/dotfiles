@@ -1,4 +1,5 @@
 import json
+import os
 import shlex
 import subprocess
 import sys
@@ -32,6 +33,17 @@ class TestStatusline:
             cache_detection(sandbox, "1")
             result = run("statusline", stdin=json.dumps(INPUT))
             assert result.stdout == NERD
+
+        def test_should_probe_again_once_a_font_was_installed_after_the_cache(self, run, sandbox, fake_bin):
+            cache = cache_detection(sandbox, "0")
+            fonts = sandbox.home / ("Library/Fonts" if sys.platform == "darwin" else ".local/share/fonts")
+            fonts.mkdir(parents=True)
+            (fonts / "JetBrainsMonoNerdFont-Regular.ttf").write_text("")
+            fake_bin("fc-list", stdout=f"{fonts}/JetBrainsMonoNerdFont-Regular.ttf: JetBrainsMono Nerd Font:style=Regular\n")
+            hour_ago = time.time() - 3600
+            os.utime(cache, (hour_ago, hour_ago))
+            result = run("statusline", stdin=json.dumps(INPUT))
+            assert (result.stdout, cache.read_text()) == (NERD, "1")
 
         def test_should_ignore_a_trailing_newline_in_the_cache(self, run, sandbox):
             cache_detection(sandbox, "1\n")
@@ -144,6 +156,7 @@ def cache_detection(sandbox, value):
     cache = sandbox.home / ".cache/claude/nerd-font-support"
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text(value)
+    return cache
 
 
 def configure_model(sandbox, name, model):
