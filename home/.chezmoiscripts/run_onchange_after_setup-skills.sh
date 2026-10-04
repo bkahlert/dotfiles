@@ -10,17 +10,11 @@ case "${DOTFILES_CONTEXT:-}" in
   *)        exit 0 ;;
 esac
 
-# npx is the default node's, which run_once_before_02-install-nvm installed. --no-use and an explicit `nvm use`:
-# loading alone would pick the version of an ~/.nvmrc (the script runs in $HOME) and, should that one not be
-# installed, fail without a word.
-export NVM_DIR="$HOME/.nvm"
-[[ -s $NVM_DIR/nvm.sh ]] || { printf 'nvm not found in %s; run_once_before_02-install-nvm installs it\n' "$NVM_DIR" >&2; exit 1; }
-# nvm.sh is not written for set -u.
-set +u
-# shellcheck source=/dev/null
-source "$NVM_DIR/nvm.sh" --no-use
-nvm use default >/dev/null
-set -u
+# npx is that of fnm's default Node.js (run_once_before_02-install-node). fnm is Homebrew's on macOS, whose bin a
+# fresh Mac has on no PATH yet, and in ~/.local/bin on Linux.
+PATH="$PATH:/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin"
+command -v fnm >/dev/null || { printf 'fnm not found; run_once_before_01-install-packages installs it\n' >&2; exit 1; }
+eval "$(fnm env --shell bash)"
 
 # grill-me — Socratic quiz skill for learning topics interactively (mattpocock)
 npx --yes skills add -g "mattpocock/skills/skills/productivity/grill-me" --agent "${agents[@]}" -y

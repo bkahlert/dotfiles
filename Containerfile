@@ -7,7 +7,7 @@ FROM docker.io/library/fedora:44@sha256:43b29f65a41eb9c35e1cd5323e3bdf3b655c2357
 # pipefail: a failed pipeline stage fails the build instead of passing on empty output.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN dnf install -y zsh git curl jq findutils procps-ng \
+RUN dnf install -y zsh git curl jq findutils procps-ng unzip \
     && dnf clean all
 
 # The tools below stay on latest: the weekly CI run exists to catch upstream drift.
@@ -26,6 +26,10 @@ RUN curl -fsSL --proto '=https' https://starship.rs/install.sh -o /tmp/install.s
 
 RUN curl -fsSL --proto '=https' https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh -o /tmp/install.sh \
     && sh /tmp/install.sh \
+    && rm /tmp/install.sh
+
+RUN curl -fsSL --proto '=https' https://fnm.vercel.app/install -o /tmp/install.sh \
+    && bash /tmp/install.sh --skip-shell --install-dir /usr/local/bin \
     && rm /tmp/install.sh
 
 RUN chsh -s /bin/zsh root

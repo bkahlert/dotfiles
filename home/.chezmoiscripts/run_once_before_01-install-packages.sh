@@ -17,6 +17,7 @@ if [[ $(uname) == Darwin ]]; then
 
   brew bundle --file=/dev/stdin <<EOF
 brew "uv"                          # Python package/project manager (replaces pip + venv + pyenv)
+brew "fnm"                         # Node.js version manager; run_once_before_02-install-node installs the default, conf.d/10-fnm.zsh puts it on PATH
 brew "sheldon"                     # Zsh plugin manager; config in ~/.config/sheldon/plugins.toml
 brew "starship"                    # Cross-shell prompt; config in ~/.config/starship.toml
 brew "zoxide"                      # Smarter cd that learns frecency; aliased to z in conf.d
@@ -55,6 +56,11 @@ else
   # Starship — cross-shell prompt; official installer handles version pinning and arch detection
   if ! command -v starship &>/dev/null; then
     run_installer sh https://starship.rs/install.sh --yes
+  fi
+
+  # fnm — Node.js version manager; its own installer puts it in ~/.local/bin, which .chezmoiignore keeps out of exact_bin
+  if ! command -v fnm &>/dev/null; then
+    run_installer bash https://fnm.vercel.app/install --skip-shell --install-dir ~/.local/bin
   fi
 
   # zoxide — frecency-based cd replacement; aliased to z in conf.d
