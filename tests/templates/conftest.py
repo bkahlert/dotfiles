@@ -19,20 +19,20 @@ class Chezmoi:
         self.env = isolated_env(home, [str(SHIMS), *SYSTEM_PATH])
         self.config_dir = config_dir
 
-    def run(self, *args, config=None, stdin="dummy-password\n"):
-        command = [CHEZMOI, *args, "--source", str(HOME_SOURCE), "--no-tty"]
+    def run(self, *args, config=None, source=HOME_SOURCE, stdin="dummy-password\n"):
+        command = [CHEZMOI, *args, "--source", str(source), "--no-tty"]
         if config:
             command += ["--config", str(config)]
         feed = {"input": stdin} if stdin is not None else {"stdin": subprocess.DEVNULL}
         return subprocess.run(command, env=self.env, **feed, capture_output=True, text=True, timeout=60)
 
-    def config(self, company):
-        """The chezmoi.toml that `chezmoi init` writes for the context, rendered from the real template."""
+    def config(self, company, *, source=HOME_SOURCE):
+        """The chezmoi.toml that `chezmoi init --source <source>` writes for the context, rendered from the real template."""
         template = (HOME_SOURCE / ".chezmoi.toml.tmpl").read_text()
         answers = {"Email address": "test@example.com", "Full name": "Test User",
                    "Context name (bkahlert, ista, or empty for none)": company}
         prompts = [arg for prompt, answer in answers.items() for arg in ("--promptString", f"{prompt}={answer}")]
-        result = self.run("execute-template", "--init", *prompts, template, stdin=None)
+        result = self.run("execute-template", "--init", *prompts, template, source=source, stdin=None)
         assert result.returncode == 0, result.stderr
         path = self.config_dir / f"{company or 'none'}.toml"
         path.write_text(result.stdout)
