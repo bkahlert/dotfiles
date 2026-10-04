@@ -43,6 +43,19 @@ class TestNvm:
             result = zsh(f"print -r -- ${{+functions[{tool}]}}", modules=[MODULE])
             assert result.stdout == "0\n"
 
+    class TestOnNodeElsewhereEarlierOnPath:
+        def test_should_put_the_default_node_of_nvm_first(self, zsh, sandbox):
+            """.zshenv adds nvm's bin, but the login files after it (path_helper, brew shellenv) put others ahead."""
+            nvm_bin = f"{sandbox.home}/.nvm/versions/node/v22.22.0/bin"
+            sandbox.env["PATH"] = f"/opt/homebrew/bin:{nvm_bin}:{sandbox.env['PATH']}"
+            result = zsh('print -rl -- $path[1,2]', modules=[MODULE])
+            assert result.stdout == f"{nvm_bin}\n/opt/homebrew/bin\n"
+
+        def test_should_leave_the_path_alone_without_an_nvm_node_on_it(self, zsh, sandbox):
+            before = sandbox.env["PATH"]
+            result = zsh('print -r -- "$PATH"', modules=[MODULE])
+            assert result.stdout == f"{before}\n"
+
     class TestOnNoNvm:
         def test_should_define_no_nvm_and_stay_silent(self, zsh):
             result = zsh("print -r -- ${+functions[nvm]}", modules=[MODULE])
