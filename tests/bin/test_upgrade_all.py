@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestUpgradeAll:
     def test_should_run_every_upgrader_and_report_success(self, run, fake_bin, calls):
         tooling(fake_bin)
@@ -20,6 +23,20 @@ class TestUpgradeAll:
             assert result.stdout.endswith("⚙ Summary\n  ✘ brew upgrade\n  ✘ mas upgrade\n  ! 2 step(s) failed\n")
 
     class TestOnHomebrew:
+        @pytest.mark.parametrize("failing,listed", [
+            ("update", "brew update"),
+            ("cleanup", "brew cleanup"),
+            ("upgrade --build-from-source", "brew upgrade --build-from-source"),
+        ], ids=["update", "cleanup", "build-from-source"])
+        def test_should_list_a_failing_brew_step_exit_1_and_carry_on(self, run, fake_bin, calls, failing, listed):
+            brew = f'case "$*" in "outdated --formula --quiet") echo foo ;; "{failing}"*) exit 1 ;; esac\nexit 0\n'
+            tooling(fake_bin, brew=brew)
+            result = run("upgrade-all")
+            assert result.returncode == 1
+            assert result.stdout.endswith(f"⚙ Summary\n  ✘ {listed}\n  ! 1 step(s) failed\n")
+            assert calls("npm") == [["update", "-g"]]
+            assert "all steps succeeded" not in result.stdout
+
         def test_should_untap_a_retired_tap(self, run, fake_bin, calls):
             tooling(fake_bin, brew='case $1 in tap) printf "homebrew/core\\nhomebrew/cask-fonts\\n" ;; esac\nexit 0\n')
             result = run("upgrade-all")
