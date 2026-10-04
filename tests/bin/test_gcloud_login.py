@@ -34,13 +34,20 @@ class TestGcloudLogin:
             assert result.stderr == "✘ gcloud-login: only available in the ista context\n"
 
     class TestOnStatus:
-        def test_should_report_both_identities_and_exit_0_when_valid(self, run, fake_bin, calls):
+        def test_should_report_both_identities_and_exit_0_when_valid(self, run, fake_bin):
             fake_bin("gcloud", script=GCLOUD_VALID)
             fake_bin("curl", stdout='{"email":"adc@ista-express.de"}')
             result = login(run, "--status")
             assert result.returncode == 0
             assert result.stdout == "CLI account:  me@ista-express.de (valid)\nADC identity: adc@ista-express.de (valid)\n"
-            assert calls("curl") == [["-fsS", "https://oauth2.googleapis.com/tokeninfo?access_token=tok"]]
+
+        def test_should_send_the_adc_token_on_stdin_and_keep_it_out_of_curls_argv(self, run, fake_bin, calls, sandbox):
+            fake_bin("gcloud", script=GCLOUD_VALID)
+            fake_bin("curl", script='cat > "$HOME/curl.stdin"\necho \'{"email":"adc@ista-express.de"}\'\n')
+            result = login(run, "--status")
+            assert result.returncode == 0
+            assert calls("curl") == [["-fsS", "--data-urlencode", "access_token@-", "https://oauth2.googleapis.com/tokeninfo"]]
+            assert (sandbox.home / "curl.stdin").read_text() == "tok"
 
         def test_should_exit_1_when_a_login_is_needed(self, run, fake_bin):
             fake_bin("gcloud", exit_code=1)
