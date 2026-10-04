@@ -18,5 +18,10 @@ fi
 
 if ! command -v brew &>/dev/null; then
   echo "Installing Homebrew..."
-  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  # Downloaded in full before it runs: `bash -c "$(curl …)"` runs an empty script on a failed download,
+  # and chezmoi would record this run_once script as done.
+  installer=$(mktemp)
+  trap 'rm -f "$installer"' EXIT
+  curl --proto '=https' --tlsv1.2 -fsSL --output "$installer" https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+  /bin/bash "$installer"
 fi
