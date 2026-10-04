@@ -7,6 +7,17 @@ AGENTS = {
     "ista": ["claude-code", "gemini-cli", "github-copilot"],
 }
 SKILLS = ("grill-me", "handoff")
+# nvm.sh as far as the script needs it: it puts the default node's bin on PATH, and, like the real one, does not
+# survive set -u.
+NVM_SH = 'export PATH="$HOME/node/bin:$PATH"\n: "$NVM_SH_NEEDS_UNSET_VARIABLES"\n'
+
+
+@pytest.fixture(autouse=True)
+def nvm(sandbox):
+    nvm_dir = sandbox.home / ".nvm"
+    nvm_dir.mkdir()
+    (nvm_dir / "nvm.sh").write_text(NVM_SH)
+    return nvm_dir
 
 
 class TestSetupSkills:
@@ -38,31 +49,25 @@ class TestSetupSkills:
             assert result.returncode == 1
             assert len(calls("npx")) == 1
 
-    class TestOnMissingNpx:
-        @pytest.mark.parametrize("context", AGENTS)
-        def test_should_skip_with_a_one_line_notice_and_exit_0(self, script, sandbox, context):
+    class TestOnNodeFromNvm:
+        def test_should_run_the_npx_of_nvm_s_default_node(self, script, sandbox):
             sandbox.only_tools()
-            (sandbox.fakes / "npx").unlink()
-            result = script("setup-skills", env={"DOTFILES_CONTEXT": context})
+            node_bin = sandbox.home / "node" / "bin"
+            node_bin.mkdir(parents=True)
+            (node_bin / "npx").write_text('#!/bin/sh\necho "$*" >> "$HOME/npx-calls"\n')
+            (node_bin / "npx").chmod(0o755)
+            result = script("setup-skills", env={"DOTFILES_CONTEXT": "bkahlert"})
             assert result.returncode == 0, result.stderr
-            assert result.stderr == "npx not available; skipping skills install\n"
+            assert len((sandbox.home / "npx-calls").read_text().splitlines()) == len(SKILLS)
 
-    class TestOnChangeDetection:
-        def test_should_rerun_once_npx_appears(self, rendered, sandbox, fake_bin):
-            sandbox.only_tools()
-            (sandbox.fakes / "npx").unlink()
-            without_npx = rendered("setup-skills")
+    class TestOnMissingNvm:
+        @pytest.mark.parametrize("context", AGENTS)
+        def test_should_fail_and_name_the_script_that_installs_it(self, script, fake_bin, calls, nvm, context):
             fake_bin("npx")
-            with_npx = rendered("setup-skills")
-            assert with_npx != without_npx
-
-        def test_should_render_the_same_script_while_npx_stays_as_it_is(self, rendered, sandbox):
-            sandbox.only_tools()
-            (sandbox.fakes / "npx").unlink()
-            assert rendered("setup-skills") == rendered("setup-skills")
-
-        def test_should_render_a_script_that_starts_with_the_shebang(self, rendered):
-            assert rendered("setup-skills").startswith("#!/usr/bin/env bash\n")
+            (nvm / "nvm.sh").unlink()
+            result = script("setup-skills", env={"DOTFILES_CONTEXT": context})
+            assert (result.returncode, calls("npx")) == (1, [])
+            assert result.stderr == f"nvm not found in {nvm}; run_once_before_02-install-nvm installs it\n"
 
     class TestPinning:
         def test_should_run_an_exact_version_of_the_skills_cli(self, script, fake_bin, calls):

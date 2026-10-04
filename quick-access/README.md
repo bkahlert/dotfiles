@@ -37,7 +37,7 @@ Not symlinked, but worth knowing:
 - **Agent skills** (Claude Code and friends) have one canonical copy in `~/.agents/skills/<name>/SKILL.md`,
   with a symlink `~/.claude/skills/<name> -> ../../.agents/skills/<name>` so each agent finds them.
   Two mechanisms produce that layout:
-  - third-party skills: [run_onchange_after_setup-skills.sh.tmpl](../home/.chezmoiscripts/run_onchange_after_setup-skills.sh.tmpl)
+  - third-party skills: [run_onchange_after_setup-skills.sh](../home/.chezmoiscripts/run_onchange_after_setup-skills.sh)
     runs `skills add -g` (e.g. `grill-me`, `handoff`). The layout then depends on the agents requested: with a
     universal agent (Gemini CLI, GitHub Copilot) in the list, the CLI writes the canonical copy and the symlink;
     with `claude-code` alone (the `bkahlert` context) it copies straight into `~/.claude/skills/<name>`.

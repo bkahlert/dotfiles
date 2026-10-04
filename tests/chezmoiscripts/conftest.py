@@ -1,22 +1,17 @@
-import re
-import shutil
 import subprocess
 
 import pytest
 
-from repo import HOME_SOURCE, chezmoiscripts
+from repo import chezmoiscripts
 
 SOURCES = dict(chezmoiscripts())
-
-# The sandbox guards `chezmoi`, so the real one is resolved here, before any sandbox PATH exists.
-CHEZMOI = shutil.which("chezmoi")
 
 
 HOMEBREW_PREFIXES = ("/opt/homebrew", "/usr/local")
 
 
 @pytest.fixture
-def script(sandbox, fake_bin, tmp_path):
+def script(sandbox, fake_bin):
     def run(key, *args, uname="Darwin", stdin=None, env=None, timeout=30, prefix_root=None):
         if uname:
             fake_bin("uname", stdout=f"{uname}\n")
@@ -24,30 +19,10 @@ def script(sandbox, fake_bin, tmp_path):
         if prefix_root:
             source = prefix_root / source.name
             source.write_text(rebased(SOURCES[key].read_text(), prefix_root))
-        elif source.suffix == ".tmpl":
-            source = tmp_path / source.name.removesuffix(".tmpl")
-            source.write_text(without_template_lines(SOURCES[key].read_text()))
         feed = {"input": stdin} if stdin is not None else {"stdin": subprocess.DEVNULL}
         return subprocess.run(["bash", str(source), *args], env={**sandbox.env, **(env or {})},
                               cwd=sandbox.home, **feed, capture_output=True, text=True, timeout=timeout)
     return run
-
-
-@pytest.fixture
-def rendered(sandbox, tmp_path):
-    """Renders a `.tmpl` script with the real chezmoi, seeing the sandbox PATH the way `lookPath` does at apply time."""
-    if CHEZMOI is None:
-        pytest.skip("chezmoi is not installed")
-
-    def render(key, *, company="ista"):
-        config = tmp_path / "chezmoi.toml"
-        config.write_text(f'[data]\n  email = "a@b.c"\n  name = "n"\n  company = "{company}"\n')
-        result = subprocess.run([CHEZMOI, "execute-template", "--config", str(config), "--source", str(HOME_SOURCE)],
-                                input=SOURCES[key].read_text(), env=sandbox.env, cwd=sandbox.home,
-                                capture_output=True, text=True, timeout=30)
-        assert result.returncode == 0, result.stderr
-        return result.stdout
-    return render
 
 
 @pytest.fixture
@@ -72,11 +47,6 @@ fi
         return root
 
     return install
-
-
-def without_template_lines(text):
-    """The comment lines that carry template actions removed, so the rest runs as bash without chezmoi."""
-    return "".join(line for line in text.splitlines(keepends=True) if not re.match(r"#.*\{\{.*\}\}$", line.rstrip("\n")))
 
 
 def rebased(text, root):

@@ -24,25 +24,21 @@ class TestSetupMcpServers:
             result = script("setup-mcp-servers")
             assert result.returncode == 1
 
-    class TestOnMissingClaude:
-        def test_should_skip_with_a_one_line_notice_and_exit_0(self, script, sandbox):
+    class TestOnClaudeOffPath:
+        def test_should_use_the_one_install_claude_put_in_local_bin(self, script, sandbox):
             sandbox.only_tools()
+            local_bin = sandbox.home / ".local" / "bin"
+            local_bin.mkdir(parents=True)
+            (local_bin / "claude").write_text('#!/bin/sh\necho "$*" >> "$HOME/claude-calls"\n')
+            (local_bin / "claude").chmod(0o755)
             result = script("setup-mcp-servers")
             assert result.returncode == 0, result.stderr
-            assert result.stderr == "claude not available; skipping MCP server setup\n"
-            assert result.stdout == ""
+            assert "mcp add --scope user --transport http idea http://127.0.0.1:64342/stream" in (
+                sandbox.home / "claude-calls").read_text().splitlines()
 
-    class TestOnChangeDetection:
-        def test_should_rerun_once_claude_appears(self, rendered, sandbox, fake_bin):
+    class TestOnMissingClaude:
+        def test_should_fail_and_name_the_script_that_installs_it(self, script, sandbox):
             sandbox.only_tools()
-            without_claude = rendered("setup-mcp-servers")
-            fake_bin("claude")
-            with_claude = rendered("setup-mcp-servers")
-            assert with_claude != without_claude
-
-        def test_should_render_the_same_script_while_claude_stays_as_it_is(self, rendered, sandbox):
-            sandbox.only_tools()
-            assert rendered("setup-mcp-servers") == rendered("setup-mcp-servers")
-
-        def test_should_render_a_script_that_starts_with_the_shebang(self, rendered):
-            assert rendered("setup-mcp-servers").startswith("#!/usr/bin/env bash\n")
+            result = script("setup-mcp-servers")
+            assert result.returncode == 1
+            assert result.stderr == "claude not found; run_once_before_03-install-claude installs it\n"
