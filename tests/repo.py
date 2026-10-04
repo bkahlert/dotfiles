@@ -42,9 +42,11 @@ def isolated_env(home: Path, path: list[str]) -> dict[str, str]:
 
 
 def scripts() -> list[tuple[str, str, Path]]:
+    """Every file in bin/, so one missing its `executable_` prefix is still a script, and each `executable_` file
+    in ~/.claude, which also holds CLAUDE.md, skills and a modify_ script."""
     return [(area, source.name.removeprefix("executable_"), source)
             for area, root in SCRIPT_SOURCES for source in sorted(root.iterdir())
-            if source.name.startswith("executable_")]
+            if source.is_file() and (area == "bin" or source.name.startswith("executable_"))]
 
 
 def chezmoiscripts() -> list[tuple[str, Path]]:
