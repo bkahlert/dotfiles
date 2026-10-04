@@ -67,11 +67,15 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     for (const [name, origin] of [
       ['an unrelated host', () => fixture.origin],
       ['a host that merely starts with the Google login host', () => fixture.lookalikeOrigin],
+      // Plain http://accounts.google.com cannot be tested: Chromium upgrades
+      // it to https (preloaded HSTS) before any page loads. The port is the
+      // part of the origin that can still differ on the real host.
+      ['the Google login host on another port', () => fixture.googleOtherPortOrigin],
     ]) {
       test(`exits 4, names the host and does not type the password on ${name}`, async () => {
         const result = await runDriver({ url: `${origin()}/password`, password: 'hunter2' });
         assert.equal(result.code, 4, result.stderr);
-        assert.match(result.stderr, new RegExp(`password page on unexpected host ${new URL(origin()).hostname.replaceAll('.', '\\.')}\\b`));
+        assert.match(result.stderr, new RegExp(`password page on unexpected host ${new URL(origin()).host.replaceAll('.', '\\.')}\\b`));
         assert.equal(fixture.seen().password, null);
       });
     }
@@ -251,6 +255,7 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
       origin,
       googleOrigin,
       lookalikeOrigin: `https://${LOOKALIKE_HOST}`,
+      googleOtherPortOrigin: `https://${GOOGLE_HOST}:${tlsServer.address().port}`,
       hostRules: `MAP ${GOOGLE_HOST} ${tlsTarget}, MAP ${LOOKALIKE_HOST} ${tlsTarget}`,
       close: () => { server.close(); tlsServer.close(); },
       seen: () => ({ ...seen }),

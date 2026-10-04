@@ -226,6 +226,16 @@ printf '%s' "$password" | gcloud-login-driver \
   --email "$email" --timeout "$timeout" || driver_status=$?
 unset password
 
+if (( driver_status == 4 )); then
+  # The driver refused to type the password on a page that is not Google's
+  # (it named the host above). Waiting for the user to finish by hand would
+  # invite typing it there, so end the run; the EXIT trap closes the browser.
+  kill_gcloud
+  cat "$gcloud_log" >&2
+  warn "gcloud-login: do NOT enter your password on that page"
+  die "gcloud-login: the sign-in was redirected to an unexpected host; login aborted"
+fi
+
 if (( driver_status != 0 )); then
   # Leave the page visible so the user can finish what the driver does not
   # handle, and give gcloud one more timeout window to receive the callback.

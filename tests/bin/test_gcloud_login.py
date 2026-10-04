@@ -1,3 +1,5 @@
+import time
+
 import pytest
 
 NORMAL = "bjoern.kahlert@ista-express.de"
@@ -130,6 +132,20 @@ class TestGcloudLogin:
             assert ("! gcloud-login: automation stopped (driver exit 2); "
                     "finish the login in the Chromium window or press Ctrl-C\n") in result.stderr
             assert result.stderr.endswith("✘ gcloud-login: browser flow timed out\n")
+
+        def test_should_abort_at_once_and_warn_when_the_driver_refuses_an_unexpected_host(self, run, fake_bin, sandbox):
+            browser_tools(fake_bin, sandbox)
+            fake_bin("gcloud-login-driver", script=(
+                "echo 'gcloud-login-driver: password page on unexpected host evil.test; "
+                "not typing the password (https://evil.test/login)' >&2\nexit 4\n"))
+            started = time.monotonic()
+            result = login(run, "--timeout", "30", timeout=60)
+            assert time.monotonic() - started < 15, "waited for the user to finish by hand"
+            assert result.returncode == 1
+            assert "password page on unexpected host evil.test" in result.stderr
+            assert "! gcloud-login: do NOT enter your password on that page\n" in result.stderr
+            assert "finish the login in the Chromium window" not in result.stderr
+            assert result.stderr.endswith("✘ gcloud-login: the sign-in was redirected to an unexpected host; login aborted\n")
 
         class TestOnAFailingChromiumInstall:
             def test_should_say_so_and_exit_1(self, run, fake_bin, calls, sandbox):
