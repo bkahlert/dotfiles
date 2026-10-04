@@ -13,7 +13,7 @@ echo "PROFILE=${PROFILE-unset}" >> "$HOME/installer-calls"
 mkdir -p "$NVM_DIR"
 cat > "$NVM_DIR/nvm.sh" <<'NVM'
 : "$NVM_SH_NEEDS_UNSET_VARIABLES"
-nvm() { echo "$*" >> "$HOME/nvm-calls"; }
+nvm() { echo "$*" >> "$HOME/nvm-calls"; [[ $1 != version ]] || echo v24.21.0; }
 NVM
 """
 
@@ -54,10 +54,12 @@ class TestInstallNvm:
             script("install-nvm")
             assert lines(sandbox.home / "installer-calls") == ["PROFILE=/dev/null"]
 
-        def test_should_install_the_latest_lts_node_and_make_it_the_default(self, script, sandbox):
+        def test_should_install_the_latest_lts_node_and_make_its_major_the_default(self, script, sandbox):
+            """A default of lts/* resolves through an alias nvm rewrites to the newest remote release, which may not be
+            installed; the major stays resolvable to the newest installed one."""
             fake_curl(sandbox)
             script("install-nvm")
-            assert lines(sandbox.home / "nvm-calls") == ["install --lts --no-progress", "alias default lts/*"]
+            assert lines(sandbox.home / "nvm-calls") == ["install --no-progress --lts", "version lts/*", "alias default 24"]
 
         def test_should_install_into_home_nvm(self, script, sandbox):
             fake_curl(sandbox)
@@ -86,7 +88,13 @@ class TestInstallNvm:
             (installed / "alias").mkdir()
             (installed / "alias" / "default").write_text("22\n")
             script("install-nvm")
-            assert lines(sandbox.home / "nvm-calls") == ["install 22 --no-progress"]
+            assert lines(sandbox.home / "nvm-calls") == ["install --no-progress 22"]
+
+        def test_should_leave_a_system_default_alone(self, script, sandbox, installed):
+            (installed / "alias").mkdir()
+            (installed / "alias" / "default").write_text("system\n")
+            result = script("install-nvm")
+            assert (result.returncode, lines(sandbox.home / "nvm-calls")) == (0, [])
 
     class TestOnFailedDownload:
         def test_should_fail_without_running_the_partial_installer(self, script, sandbox):
