@@ -1,26 +1,22 @@
 import json
 import re
-import shutil
 import subprocess
 
 import pytest
 
-from repo import HOME_SOURCE, SHIMS, SYSTEM_PATH, isolated_env
-
-# The sandbox guards `chezmoi` (calling it unfaked fails), so the real one is resolved here, before any
-# sandbox PATH exists. CI's macOS job installs it; the lint-and-unit job does not, and skips these.
-CHEZMOI = shutil.which("chezmoi")
+from repo import HOME_SOURCE, SHIMS, SYSTEM_PATH, isolated_env, require_chezmoi
 
 
 class Chezmoi:
     """The real chezmoi, run against the source tree with the op and keepassxc-cli shims as the vaults."""
 
-    def __init__(self, home, config_dir):
+    def __init__(self, executable, home, config_dir):
+        self.executable = executable
         self.env = isolated_env(home, [str(SHIMS), *SYSTEM_PATH])
         self.config_dir = config_dir
 
     def run(self, *args, config=None, source=HOME_SOURCE, stdin="dummy-password\n"):
-        command = [CHEZMOI, *args, "--source", str(source), "--no-tty"]
+        command = [self.executable, *args, "--source", str(source), "--no-tty"]
         if config:
             command += ["--config", str(config)]
         feed = {"input": stdin} if stdin is not None else {"stdin": subprocess.DEVNULL}
@@ -55,8 +51,6 @@ class Chezmoi:
 
 @pytest.fixture
 def chezmoi(sandbox, tmp_path):
-    if CHEZMOI is None:
-        pytest.skip("chezmoi is not installed")
     configs = tmp_path / "configs"
     configs.mkdir()
-    return Chezmoi(sandbox.home, configs)
+    return Chezmoi(require_chezmoi(), sandbox.home, configs)

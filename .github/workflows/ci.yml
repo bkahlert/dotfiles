@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '17 5 * * 1'  # weekly: the image and the macOS job install the latest chezmoi, sheldon, starship, zoxide
+    - cron: '17 5 * * 1'  # weekly: the jobs and the image install the latest chezmoi (and the image and the macOS job the latest sheldon, starship, zoxide)
   workflow_dispatch:
 
 permissions:
@@ -43,6 +43,14 @@ jobs:
           SUMS
           sudo tar -xJf "$tools/shellcheck.tar.xz" --strip-components=1 -C /usr/local/bin shellcheck-v0.11.0/shellcheck
           sudo tar -xzf "$tools/actionlint.tar.gz" -C /usr/local/bin actionlint
+      - name: Install chezmoi
+        # The template tests need it and fail rather than skip on CI without it. Latest, like the macOS job and the
+        # image: a version pinned here is one Dependabot cannot bump.
+        run: |
+          installer=$(mktemp)
+          curl -fsSL --proto '=https' -o "$installer" https://get.chezmoi.io
+          sudo sh "$installer" -b /usr/local/bin
+          rm "$installer"
       - run: make lint unit
         env:
           CHROMIUM_BIN: /usr/bin/google-chrome

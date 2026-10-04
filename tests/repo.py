@@ -1,6 +1,10 @@
+import os
 import re
+import shutil
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 HOME_SOURCE = ROOT / "home"
@@ -18,6 +22,17 @@ CONTEXTS = ("", "bkahlert", "ista")
 SYSTEM_PATH = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")
 if sys.platform == "darwin":
     SYSTEM_PATH = ("/opt/homebrew/bin", "/usr/local/bin", *SYSTEM_PATH)
+
+
+def require_chezmoi() -> str:
+    """The path of the real chezmoi, which the sandbox guards, so it is resolved from the caller's PATH. Missing,
+    a test skips on a developer machine and fails on CI, where a skip would hide that it never ran."""
+    path = shutil.which("chezmoi")
+    if path is None:
+        if os.environ.get("CI", "").lower() not in ("", "0", "false"):
+            pytest.fail("chezmoi is not installed; install it in the CI job instead of skipping", pytrace=False)
+        pytest.skip("chezmoi is not installed")
+    return path
 
 
 def module_path(name: str) -> Path:
