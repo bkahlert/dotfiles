@@ -2,10 +2,11 @@ name: dependabot-auto-merge
 
 # Dependabot's pull requests merge themselves once the required `ci` check passes; its cooldown in
 # dependabot.yml holds each release back for a few days first.
-# A merge made with github.token starts no workflow, so `ci` does not run on main afterwards. The
-# required check does not demand an up-to-date branch either: an update merged after another change
-# to main reaches the combined tree untested until the weekly scheduled run. Closing that gap needs a
-# GitHub App token here instead of github.token.
+# The merge uses a token of the bkahlert-dotfiles-automerge GitHub App, not github.token: a merge
+# made with github.token starts no workflow, so `ci` would not run on main after it. The required
+# check does not demand an up-to-date branch, so that run is what tests an update merged after
+# another change to main. The App's ID and private key are Dependabot secrets, the only secrets a
+# workflow Dependabot triggered can read.
 on:
   pull_request:
     branches: [main]
@@ -18,12 +19,17 @@ jobs:
     if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 2
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ secrets.AUTO_MERGE_APP_ID }}
+          private-key: ${{ secrets.AUTO_MERGE_APP_PRIVATE_KEY }}
+          # What enabling auto-merge takes; the token gets no more than this, whatever the App may do.
+          permission-contents: write
+          permission-pull-requests: write
       - name: Squash-merge once the required checks pass
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: gh pr merge --auto --squash "$PR_URL"
