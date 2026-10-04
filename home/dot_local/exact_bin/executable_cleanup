@@ -19,6 +19,10 @@
 #   cleanup --apply --yes              # delete everything without asking
 #   cleanup --apply --sim-unused 7     # also drop simulators idle for a week
 
+# macOS ships bash 3.2; this script needs 4.4 (see the bash entry in the Brewfile).
+(( BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 4) )) \
+  || { printf '%s: needs bash 4.4 or newer, found %s; install it with: brew install bash\n' "${0##*/}" "$BASH_VERSION" >&2; exit 1; }
+
 set -uo pipefail
 
 [[ $(uname) == Darwin ]] || { printf 'cleanup: macOS only\n' >&2; exit 1; }
