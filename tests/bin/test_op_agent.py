@@ -35,6 +35,18 @@ class TestOpAgent:
             assert result.returncode == 1
             assert result.stderr == "op-agent: [ERROR] no such item\n"
 
+        class TestOnAnUnusableStderrCapture:
+            def test_should_answer_with_an_error_and_keep_serving(self, run, fake_bin, sandbox, daemon):
+                fake_bin("op", script=OP_SECRET)
+                run("op-agent", "read", "op://Employee/item/password", timeout=30)
+                capture = sandbox.home / "Library/Application Support/op-agent/op.stderr"
+                capture.mkdir()
+                failed = run("op-agent", "read", "op://Employee/item/password", timeout=30)
+                capture.rmdir()
+                recovered = run("op-agent", "read", "op://Employee/item/password", timeout=30)
+                assert failed.returncode == 1
+                assert (recovered.returncode, recovered.stdout) == (0, " s3cr=t\n two\n")
+
         class TestOnAPidFileOfAForeignProcess:
             def test_should_give_up_after_the_write_timeout_and_drop_the_pid_file(self, run, sandbox):
                 state = sandbox.home / "Library/Application Support/op-agent"

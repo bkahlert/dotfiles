@@ -92,9 +92,11 @@ serve() {
         status=OK
       else
         status=ERR
-        payload=$(base64 <"$OP_STDERR" | tr -d '\n')
+        # An unusable capture file must not take the daemon down: fall back
+        # to an empty error message.
+        payload=$(base64 <"$OP_STDERR" 2>/dev/null | tr -d '\n') || payload=
       fi
-      rm -f "$OP_STDERR"
+      rm -f "$OP_STDERR" 2>/dev/null || true
       # Bound the response write: if the client died between writing its
       # request and here, opening $resp for write blocks forever (no reader
       # left) and would wedge every future request.
