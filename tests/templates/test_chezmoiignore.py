@@ -3,7 +3,8 @@ import pytest
 SOURCE = ".chezmoiignore"
 GCLOUD_SKILLS = [".agents/skills/gcloud-auth", ".agents/skills/gcloud-login-automation",
                  ".claude/skills/gcloud-auth", ".claude/skills/gcloud-login-automation"]
-INSTALLER_OWNED = [".local/bin/claude", ".local/bin/browser-harness", ".local/bin/browser-harness-mcp", ".local/bin/fnm"]
+INSTALLER_OWNED = [".local/bin/claude", ".local/bin/browser-harness", ".local/bin/browser-harness-mcp",
+                   ".local/bin/agy", ".local/bin/fnm"]
 MACOS_LIBRARY = "Library"
 ISTA_MODULES = ".config/zsh/conf.d/ista"
 NEVER_COMMITTED = [".aws/credentials", ".aws/sso/", ".aws/cli/cache/"]

@@ -7,6 +7,9 @@
 .local/bin/browser-harness
 .local/bin/browser-harness-mcp
 
+# Antigravity CLI (agy) — put there by its installer, which updates it.
+.local/bin/agy
+
 # fnm on Linux — put there by its installer (run_once_before_01-install-packages).
 .local/bin/fnm
 
