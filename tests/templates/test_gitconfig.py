@@ -16,6 +16,10 @@ class TestGitconfig:
         config = parse(chezmoi.render(TEMPLATE, company=company))
         assert dict(config["user"]) == {"name": "Test User", "email": "test@example.com"}
 
+    def test_should_leave_the_editor_to_visual_and_editor(self, chezmoi, tmp_path):
+        config = write_rendered(chezmoi, tmp_path)
+        assert git_config(config, "--get", "core.editor").returncode == 1
+
     class TestOnSettingsGitWouldIgnore:
         """Git skips an alias named like a built-in command and reads a key only in the section that owns it."""
 
