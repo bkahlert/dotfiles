@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
-# Purpose: Serve the current directory over HTTP, caching disabled.
+# Purpose: Serve the current directory over HTTP, caching disabled, on localhost
+#          unless an -a address is given.
 # Usage:   serve [<http-server-option>...]
+#
+# Examples:
+#   serve
+#   serve -a 0.0.0.0   # reachable from the LAN
 
 set -euo pipefail
 
+# http-server binds 0.0.0.0 by default, and a second -a turns its address into a list.
+address=(-a 127.0.0.1)
+for arg; do [[ $arg == -a ]] && address=(); done
+
 port=$(pick-port) || { printf 'serve: no port available\n' >&2; exit 1; }
 printf 'serve: http://localhost:%s\n' "$port" >&2
-exec npx http-server -c-1 -p "$port" "$@"
+exec npx http-server -c-1 -p "$port" "${address[@]}" "$@"
