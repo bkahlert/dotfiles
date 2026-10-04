@@ -5,12 +5,16 @@ export NVM_DIR="$HOME/.nvm"
 #   - Homebrew puts it at $HOMEBREW_PREFIX/opt/nvm/nvm.sh and expects
 #     $NVM_DIR to stay at ~/.nvm (pointing it at the cellar would wipe
 #     installed Node versions on every brew upgrade — see brew's caveat).
+# $HOMEBREW_PREFIX is exported by `brew shellenv` (.zprofile); a shell that did not inherit it takes
+# the prefix brew sits in (<prefix>/bin/brew), which needs no fork either.
+_brew_prefix=${HOMEBREW_PREFIX:-${commands[brew]:+${commands[brew]:h:h}}}
 _nvm_sh=
 if [ -s "$NVM_DIR/nvm.sh" ]; then
   _nvm_sh="$NVM_DIR/nvm.sh"
-elif [ -n "${HOMEBREW_PREFIX-}" ] && [ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ]; then
-  _nvm_sh="$HOMEBREW_PREFIX/opt/nvm/nvm.sh"
+elif [ -n "$_brew_prefix" ] && [ -s "$_brew_prefix/opt/nvm/nvm.sh" ]; then
+  _nvm_sh="$_brew_prefix/opt/nvm/nvm.sh"
 fi
+unset _brew_prefix
 
 # Lazy-load nvm only when actually installed; otherwise leave node/npm/npx
 # alone so brew-installed binaries (or anything else on PATH) keep working.

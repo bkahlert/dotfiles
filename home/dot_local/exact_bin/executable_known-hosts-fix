@@ -39,12 +39,14 @@ arg=${args[0]}
 
 # Branch on whether the arg is purely numeric (line) or anything else (host).
 if [[ $arg =~ ^[0-9]+$ ]]; then
-  line=$((10#$arg))
   [[ -f $known_hosts ]] || { printf '%s: %s does not exist\n' "${0##*/}" "$known_hosts" >&2; exit 1; }
 
   total=$(wc -l < "$known_hosts")
+  # Past 18 digits bash's 64-bit arithmetic wraps, so such a number is out of range before it is evaluated.
+  line=0
+  (( ${#arg} <= 18 )) && line=$((10#$arg))
   (( line >= 1 && line <= total )) || {
-    printf '%s: line %d is out of range (1..%d)\n' "${0##*/}" "$line" "$total" >&2
+    printf '%s: line %s is out of range (1..%d)\n' "${0##*/}" "$arg" "$total" >&2
     exit 1
   }
 

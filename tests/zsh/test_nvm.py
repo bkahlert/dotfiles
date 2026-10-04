@@ -90,3 +90,10 @@ class TestNvm:
         def test_should_create_nvm_dir_at_home_not_in_the_cellar(self, zsh, prefix, sandbox):
             zsh("true", modules=[MODULE])
             assert (sandbox.home / ".nvm").is_dir()
+
+        def test_should_find_the_brew_nvm_sh_under_the_prefix_brew_sits_in_on_unset_homebrew_prefix(self, zsh, uninherited_brew):
+            opt = uninherited_brew / "opt" / "nvm"
+            opt.mkdir(parents=True)
+            (opt / "nvm.sh").write_text('nvm() { echo brew-nvm "$@"; }\n')
+            result = zsh("nvm ls", modules=[MODULE])
+            assert (result.stdout, result.stderr) == ("brew-nvm ls\n", "")

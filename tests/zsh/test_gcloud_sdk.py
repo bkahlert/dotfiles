@@ -55,11 +55,17 @@ class TestGcloudSdk:
             assert calls("brew") == []
 
     class TestOnUnsetHomebrewPrefix:
-        def test_should_skip_the_homebrew_lookup_without_forking_brew(self, zsh, sandbox, sdk, calls):
+        def test_should_find_the_install_under_the_prefix_brew_sits_in_without_forking_it(self, zsh, sdk, uninherited_brew):
+            brewed = sdk(uninherited_brew / "share" / "google-cloud-sdk")
+            result = zsh(SHOW, modules=MODULES)
+            assert (result.stdout, result.stderr) == (f"{brewed}/bin\n{brewed}\n", "")
+
+        def test_should_skip_the_homebrew_lookup_without_brew(self, zsh, sandbox, sdk):
             brew_sdk(sandbox, sdk)
+            (sandbox.fakes / "brew").unlink()
             del sandbox.env["HOMEBREW_PREFIX"]
             result = zsh('print -r -- "${path[1]}"', modules=MODULES)
-            assert (result.stdout, result.stderr, calls("brew")) == (f"{sandbox.fakes}\n", "", [])
+            assert (result.stdout, result.stderr) == (f"{sandbox.fakes}\n", "")
 
     class TestOnBothInstalls:
         def test_should_use_the_tarball_only(self, zsh, sandbox, sdk):

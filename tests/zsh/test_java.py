@@ -79,6 +79,11 @@ class TestJava:
                 result = start(java_home=jdk("system"))
                 assert result.stdout == f"{brew_jdk}\n" * 2
 
+            def test_should_find_it_under_the_prefix_brew_sits_in_on_unset_homebrew_prefix(self, start, jdk, uninherited_brew):
+                brew_jdk = jdk(uninherited_brew.name, *BREW_JDK.split("/"))
+                result = start()
+                assert (result.stdout, result.stderr) == (f"{brew_jdk}\n" * 2, "")
+
         class TestOnNoHomebrewJdk:
             def test_should_export_what_java_home_finds_when_homebrew_has_no_openjdk(self, start, sandbox, jdk):
                 sandbox.env["HOMEBREW_PREFIX"] = str(sandbox.home / "prefix")

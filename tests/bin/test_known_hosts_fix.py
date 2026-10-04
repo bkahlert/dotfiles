@@ -58,6 +58,14 @@ class TestKnownHostsFix:
             assert result.returncode == 1
             assert result.stderr == "known-hosts-fix: line 9 is out of range (1..3)\n"
 
+        def test_should_reject_a_line_too_long_for_shell_arithmetic(self, run, fake_bin, calls, sandbox):
+            """2^64 + 2 wraps to 2 in bash's 64-bit arithmetic; it must not delete line 2."""
+            known_hosts = write_known_hosts(sandbox)
+            fake_bin("sed")
+            result = run("known-hosts-fix", "18446744073709551618")
+            assert (result.returncode, calls("sed"), known_hosts.read_text()) == (1, [], PLAIN_A + PLAIN_B + HASHED)
+            assert result.stderr == "known-hosts-fix: line 18446744073709551618 is out of range (1..3)\n"
+
         def test_should_fail_without_a_known_hosts_file(self, run, sandbox):
             result = run("known-hosts-fix", "1")
             assert result.returncode == 1

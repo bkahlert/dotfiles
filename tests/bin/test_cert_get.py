@@ -1,3 +1,9 @@
+import contextlib
+import os
+import signal
+import subprocess
+import time
+
 import pytest
 
 
@@ -43,6 +49,23 @@ class TestCertGet:
             run("cert-get", "--download", "example.test")
             assert sorted(path.name for path in sandbox.home.glob("example.test*")) == ["example.test.pem"]
 
+        def test_should_leave_nothing_behind_on_ctrl_c(self, fake_bin, sandbox):
+            fake_bin("openssl", script=OPENSSL_HANGING)
+            # Its own session, so the SIGINT goes to cert-get and its children the way Ctrl-C does, not to pytest.
+            with subprocess.Popen(["cert-get", "--download", "example.test"], env=sandbox.env, cwd=sandbox.home,
+                                  stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                  start_new_session=True) as cert_get:
+                try:
+                    deadline = time.monotonic() + 5
+                    while not list(sandbox.home.glob("example.test.pem.*")) and time.monotonic() < deadline:
+                        time.sleep(0.05)
+                    os.killpg(cert_get.pid, signal.SIGINT)
+                    cert_get.wait(timeout=5)
+                finally:
+                    with contextlib.suppress(ProcessLookupError):
+                        os.killpg(cert_get.pid, signal.SIGKILL)
+            assert list(sandbox.home.glob("example.test*")) == []
+
     class TestOnBadArguments:
         @pytest.mark.parametrize("flags", [(), ("--download",)], ids=["print", "download"])
         def test_should_reject_a_domain_with_a_slash(self, run, fake_bin, calls, sandbox, flags):
@@ -70,4 +93,6 @@ class TestCertGet:
 
 
 OPENSSL = 'case $1 in s_client) printf "CERT\\n" ;; x509) printf "PEM:"; cat ;; esac\nexit 0\n'
+# Blocks mid-download, as a slow handshake does.
+OPENSSL_HANGING = 'case $1 in s_client) printf "CERT\\n"; exec sleep 30 ;; x509) cat; exec sleep 30 ;; esac\n'
 OPENSSL_FAILING = 'case $1 in s_client) exit 1 ;; x509) printf "PEM:"; cat; exit 1 ;; esac\n'
