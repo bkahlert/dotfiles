@@ -65,7 +65,8 @@ class TestModifySettingsJson:
             result = modify(SCRIPT, json.dumps({"model": "opus", "effortLevel": "high"}), CHEZMOI_SOURCE_DIR=str(HOME_SOURCE))
             rendered = json.loads(result.stdout)
             assert (result.returncode, rendered["model"], rendered["effortLevel"]) == (0, "opus", "high")
-            assert rendered["statusLine"]["command"] == "~/.claude/statusline"
+            owned_by_the_repo = json.loads((HOME_SOURCE / ".chezmoitemplates" / "claude-settings.json").read_text())
+            assert rendered["statusLine"] == owned_by_the_repo["statusLine"]
 
 
 @pytest.fixture

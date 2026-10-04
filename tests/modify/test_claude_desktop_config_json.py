@@ -23,7 +23,7 @@ class TestModifyClaudeDesktopConfigJson:
             result = merge(cli={"docs": {"type": kind, "url": "https://example.com/mcp", "headers": {"X": "1"}}})
             assert result["mcpServers"]["docs"] == {"command": "npx", "args": ["-y", "mcp-remote", "https://example.com/mcp"]}
 
-        def test_should_allow_plain_http_only_for_http_urls(self, merge):
+        def test_should_add_allow_http_to_a_plain_http_url(self, merge):
             result = merge(cli={"local": {"type": "http", "url": "http://localhost:3000/mcp"}})
             assert result["mcpServers"]["local"]["args"] == ["-y", "mcp-remote", "http://localhost:3000/mcp", "--allow-http"]
 
