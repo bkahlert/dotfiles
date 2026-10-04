@@ -90,8 +90,11 @@ class TestStatusline:
             assert result.stdout == f"⚙︎ ? · {DIM}○ 0%{RESET}\n"
 
     class TestOnGuiLaunch:
-        def test_should_render_with_only_the_system_path(self, run):
-            result = run("env", "PATH=/usr/bin:/bin", SCRIPT, "--nerd-fonts",
+        def test_should_render_with_only_the_system_python(self, run, sandbox):
+            system = sandbox.fakes.parent / "system-python"
+            system.mkdir()
+            (system / "python3").symlink_to("/usr/bin/python3")
+            result = run("env", f"PATH={sandbox.fakes}:{system}", SCRIPT, "--nerd-fonts",
                          stdin=json.dumps(INPUT))
             assert result.returncode == 0
             assert result.stdout == NERD
