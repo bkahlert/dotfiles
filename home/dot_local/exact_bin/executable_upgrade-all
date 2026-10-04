@@ -159,7 +159,11 @@ else
 fi
 
 step "macOS system updates (listing only)"
-softwareupdate -l
+if command -v softwareupdate &>/dev/null; then
+  softwareupdate -l || fail 'softwareupdate -l'
+else
+  skip "softwareupdate not installed"
+fi
 
 step "Summary"
 if [ ${#failures[@]} -eq 0 ]; then

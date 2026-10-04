@@ -86,6 +86,21 @@ class TestUpgradeAll:
             assert "  ▪ no gems installed besides those shipped with Ruby\n" in result.stdout
             assert calls("gem") == []
 
+    class TestOnSoftwareUpdate:
+        def test_should_list_a_failing_listing_and_exit_1(self, run, fake_bin):
+            tooling(fake_bin)
+            fake_bin("softwareupdate", exit_code=1)
+            result = run("upgrade-all")
+            assert result.returncode == 1
+            assert result.stdout.endswith("⚙ Summary\n  ✘ softwareupdate -l\n  ! 1 step(s) failed\n")
+
+        def test_should_skip_where_it_is_missing(self, run, fake_bin, sandbox):
+            tooling(fake_bin)
+            (sandbox.fakes / "softwareupdate").unlink()
+            result = run("upgrade-all")
+            assert result.returncode == 0
+            assert "  ▪ softwareupdate not installed\n" in result.stdout
+
     class TestOnAnyArgument:
         def test_should_exit_2(self, run):
             result = run("upgrade-all", "x")
