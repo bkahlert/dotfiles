@@ -35,6 +35,7 @@ done
 (( ${#args[@]} )) || { usage >&2; exit 2; }
 (( ${#args[@]} <= 2 )) || die "too many arguments"
 domain=${args[0]}
+[[ $domain != */* ]] || die "domain must not contain '/': $domain"
 port=${args[1]:-443}
 
 fetch() {
@@ -43,7 +44,12 @@ fetch() {
 }
 
 if $download; then
-  fetch >"$domain.pem" && printf '%s\n' "$domain.pem"
+  # Renamed into place only on success, so a failed or interrupted fetch leaves no empty or partial file.
+  tmp="$domain.pem.$$"
+  trap 'rm -f -- "$tmp"' EXIT
+  fetch >"$tmp" || exit 1
+  mv -f -- "$tmp" "$domain.pem"
+  printf '%s\n' "$domain.pem"
 else
   fetch
 fi

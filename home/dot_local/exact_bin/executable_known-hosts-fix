@@ -39,12 +39,14 @@ arg=${args[0]}
 
 # Branch on whether the arg is purely numeric (line) or anything else (host).
 if [[ $arg =~ ^[0-9]+$ ]]; then
-  line=$arg
   [[ -f $known_hosts ]] || { printf '%s: %s does not exist\n' "${0##*/}" "$known_hosts" >&2; exit 1; }
 
   total=$(wc -l < "$known_hosts")
+  # Past 18 digits bash's 64-bit arithmetic wraps, so such a number is out of range before it is evaluated.
+  line=0
+  (( ${#arg} <= 18 )) && line=$((10#$arg))
   (( line >= 1 && line <= total )) || {
-    printf '%s: line %d is out of range (1..%d)\n' "${0##*/}" "$line" "$total" >&2
+    printf '%s: line %s is out of range (1..%d)\n' "${0##*/}" "$arg" "$total" >&2
     exit 1
   }
 
@@ -56,7 +58,8 @@ if [[ $arg =~ ^[0-9]+$ ]]; then
     # Note: the IP-vs-hostname twin (if any) is also hashed, so we can't fix
     # both atomically; the user may need a second invocation if a twin exists.
     printf 'Hashed entry; deleting line %d directly (twin entries, if any, will need separate handling).\n' "$line" >&2
-    sed -i.bak -e "${line}d" "$known_hosts"
+    sed -i.bak -e "${line}d" "$known_hosts" \
+      || { printf '%s: could not delete line %d from %s\n' "${0##*/}" "$line" "$known_hosts" >&2; exit 1; }
     exit 0
   fi
 

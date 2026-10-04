@@ -2,9 +2,10 @@
 _gcloud_sdk_dirs=(
   "$HOME/google-cloud-sdk"
 )
-if command -v brew &>/dev/null; then
-  _gcloud_sdk_dirs+=("$(brew --prefix)/share/google-cloud-sdk")
-fi
+# $HOMEBREW_PREFIX is exported by `brew shellenv` (.zprofile); a shell that did not inherit it takes
+# the prefix brew sits in (<prefix>/bin/brew), which needs no fork either.
+_brew_prefix=${HOMEBREW_PREFIX:-${commands[brew]:+${commands[brew]:h:h}}}
+[[ -n $_brew_prefix ]] && _gcloud_sdk_dirs+=("$_brew_prefix/share/google-cloud-sdk")
 
 for _gcloud_sdk_dir in "${_gcloud_sdk_dirs[@]}"; do
   [[ -d $_gcloud_sdk_dir ]] || continue
@@ -13,4 +14,4 @@ for _gcloud_sdk_dir in "${_gcloud_sdk_dirs[@]}"; do
   break
 done
 
-unset _gcloud_sdk_dirs _gcloud_sdk_dir
+unset _gcloud_sdk_dirs _gcloud_sdk_dir _brew_prefix

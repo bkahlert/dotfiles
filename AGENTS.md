@@ -86,7 +86,7 @@ Each package entry in install scripts must have an inline comment stating:
 1. What the tool does (one phrase)
 2. What requires it or why it's installed this way (e.g. "required by chezmoi secrets", "no distro package available")
 
-Example: `brew "1password-cli" # 1Password CLI (op); required by chezmoi to read secrets at apply time`
+Example: `cask "1password-cli" # 1Password CLI (op); required by chezmoi to read secrets at apply time`
 
 [.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`03` prefixes order the install scripts: Homebrew, packages, nvm with a default Node.js, Claude Code. A later script that needs one of these tools fails when it is missing instead of skipping. Only add `.tmpl` where the script itself needs a template value.
 

@@ -319,7 +319,7 @@ clean 'iOS DeviceSupport' true false "$HOME/Library/Developer/Xcode/iOS DeviceSu
 
 step 'Dropbox cache'
 if [[ -d "$HOME/Dropbox/.dropbox.cache" ]]; then
-  clean 'Dropbox cache' true true "$HOME/Dropbox/.dropbox.cache"/*
+  clean 'Dropbox cache' true false "$HOME/Dropbox/.dropbox.cache"/*
 else
   skip 'Dropbox not installed'
 fi

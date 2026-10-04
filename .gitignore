@@ -1,5 +1,3 @@
-# chezmoi
-home/.chezmoiexternal.toml.lock
 # serena (MCP server runtime data)
 .serena/
 # macOS

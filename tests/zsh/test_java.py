@@ -38,8 +38,10 @@ def start(zsh):
     return run
 
 
-def installed_brew_jdk(sandbox, fake_bin, jdk):
-    fake_bin("brew", stdout=str(sandbox.home / "prefix"))
+def installed_brew_jdk(sandbox, jdk):
+    sandbox.env["HOMEBREW_PREFIX"] = str(sandbox.home / "prefix")
+    # Answers like the real one and records, so a module that forks it shows in calls("brew").
+    sandbox.fake_bin("brew", stdout=str(sandbox.home / "prefix"))
     return jdk("prefix", *BREW_JDK.split("/"))
 
 
@@ -50,40 +52,49 @@ class TestJava:
             result = start(ostype="linux-gnu", java_home=jdk("system"))
             assert result.stdout == f"{sandbox.home}/deleted-jdk\n" * 2
 
-        def test_should_not_set_java_home(self, start, sandbox, fake_bin, jdk):
-            installed_brew_jdk(sandbox, fake_bin, jdk)
+        def test_should_not_set_java_home(self, start, sandbox, jdk):
+            installed_brew_jdk(sandbox, jdk)
             result = start(ostype="linux-gnu", java_home=jdk("system"))
             assert result.stdout == "unset\nunset\n"
 
     class TestOnMacOS:
         class TestOnWorkingJavaHome:
-            def test_should_keep_it_over_the_homebrew_jdk_without_asking_brew(self, start, sandbox, fake_bin, jdk, calls):
-                installed_brew_jdk(sandbox, fake_bin, jdk)
+            def test_should_keep_it_over_the_homebrew_jdk_without_asking_brew(self, start, sandbox, jdk, calls):
+                installed_brew_jdk(sandbox, jdk)
                 sandbox.env["JAVA_HOME"] = jdk("mine")
                 result = start(java_home=jdk("system"))
                 assert (result.stdout, result.stderr, calls("brew")) == (f"{sandbox.home}/mine\n" * 2, "", [])
 
         class TestOnHomebrewJdk:
-            def test_should_export_it(self, start, sandbox, fake_bin, jdk):
-                brew_jdk = installed_brew_jdk(sandbox, fake_bin, jdk)
+            def test_should_export_it(self, start, sandbox, jdk):
+                brew_jdk = installed_brew_jdk(sandbox, jdk)
                 result = start()
                 assert (result.stdout, result.stderr) == (f"{brew_jdk}\n" * 2, "")
 
-            def test_should_prefer_it_to_java_home(self, start, sandbox, fake_bin, jdk):
-                brew_jdk = installed_brew_jdk(sandbox, fake_bin, jdk)
+            def test_should_not_fork_brew_for_the_prefix(self, start, sandbox, jdk, calls):
+                installed_brew_jdk(sandbox, jdk)
+                start()
+                assert calls("brew") == []
+
+            def test_should_prefer_it_to_java_home(self, start, sandbox, jdk):
+                brew_jdk = installed_brew_jdk(sandbox, jdk)
                 result = start(java_home=jdk("system"))
                 assert result.stdout == f"{brew_jdk}\n" * 2
 
+            def test_should_find_it_under_the_prefix_brew_sits_in_on_unset_homebrew_prefix(self, start, jdk, uninherited_brew):
+                brew_jdk = jdk(uninherited_brew.name, *BREW_JDK.split("/"))
+                result = start()
+                assert (result.stdout, result.stderr) == (f"{brew_jdk}\n" * 2, "")
+
         class TestOnNoHomebrewJdk:
-            def test_should_export_what_java_home_finds_when_brew_has_no_openjdk(self, start, fake_bin, sandbox, jdk):
-                fake_bin("brew", stdout=str(sandbox.home / "prefix"))
+            def test_should_export_what_java_home_finds_when_homebrew_has_no_openjdk(self, start, sandbox, jdk):
+                sandbox.env["HOMEBREW_PREFIX"] = str(sandbox.home / "prefix")
                 result = start(java_home=jdk("system"))
                 assert (result.stdout, result.stderr) == (f"{sandbox.home}/system\n" * 2, "")
 
-            def test_should_export_what_java_home_finds_without_brew(self, start, sandbox, jdk):
-                (sandbox.fakes / "brew").unlink()
+            def test_should_export_what_java_home_finds_on_unset_homebrew_prefix_without_forking_brew(self, start, sandbox, jdk, calls):
                 result = start(java_home=jdk("system"))
-                assert (result.stdout, result.stderr) == (f"{sandbox.home}/system\n" * 2, "")
+                assert (result.stdout, result.stderr, calls("brew")) == (f"{sandbox.home}/system\n" * 2, "", [])
 
         class TestOnNoJdk:
             def test_should_export_nothing_and_stay_silent(self, start, sandbox):

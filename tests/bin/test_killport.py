@@ -21,7 +21,7 @@ class TestKillport:
             with subprocess.Popen(["sleep", "100"], preexec_fn=ignore_sigterm) as listener:
                 try:
                     fake_bin("sleep")
-                    fake_bin("lsof", stdout=f"{listener.pid}\n")
+                    fake_bin("lsof", script=listing_for(listener.pid, polls=5))
                     result = run("killport", "8080")
                     assert listener.wait(timeout=5) == -signal.SIGKILL
                 finally:
@@ -29,6 +29,19 @@ class TestKillport:
             assert result.returncode == 0
             assert result.stdout == (f"ℹ Killing 1 process(es) on port 8080: {listener.pid}\n"
                                      f"! Forcing SIGKILL on: {listener.pid}\n✔ Port 8080 freed.\n")
+
+        def test_should_exit_1_and_name_the_survivor_when_the_port_stays_taken(self, run, fake_bin):
+            with subprocess.Popen(["sleep", "100"], preexec_fn=ignore_sigterm) as listener:
+                try:
+                    fake_bin("sleep")
+                    fake_bin("lsof", stdout=f"{listener.pid}\n")
+                    result = run("killport", "8080")
+                finally:
+                    listener.kill()
+            assert result.returncode == 1
+            assert result.stdout == (f"ℹ Killing 1 process(es) on port 8080: {listener.pid}\n"
+                                     f"! Forcing SIGKILL on: {listener.pid}\n")
+            assert result.stderr == f"✘ Port 8080 is still in use by: {listener.pid}\n"
 
     class TestOnNoListener:
         def test_should_exit_1(self, run, fake_bin):
@@ -60,9 +73,13 @@ class TestKillport:
 
 
 def listing_once(pid):
+    return listing_for(pid, polls=1)
+
+
+def listing_for(pid, *, polls):
     return ('count=$(cat "$HOME/lsof.count" 2>/dev/null || echo 0)\n'
             'echo $((count + 1)) > "$HOME/lsof.count"\n'
-            f'(( count == 0 )) && echo {pid}\n'
+            f'(( count < {polls} )) && echo {pid}\n'
             'exit 0\n')
 
 

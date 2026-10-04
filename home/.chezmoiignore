@@ -10,6 +10,8 @@
 {{- if ne .chezmoi.os "darwin" }}
 # The timeout wrapper only stands in for the GNU timeout macOS lacks; here it would shadow the real one.
 .local/bin/timeout
+# macOS-only application support (key bindings, Claude Desktop config); Linux has no Library.
+Library
 {{- end }}
 
 # AWS — only config is managed; credentials and SSO token cache are never committed.
@@ -23,6 +25,8 @@
 .agents/skills/gcloud-login-automation
 .claude/skills/gcloud-auth
 .claude/skills/gcloud-login-automation
+# Only the ista context sources conf.d/ista (see dot_zshrc).
+.config/zsh/conf.d/ista/
 {{- end }}
 
 {{- if ne .company "ista" }}
