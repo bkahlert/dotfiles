@@ -184,9 +184,10 @@ CI runs the same targets on every pull request and on `main`; the `ci` check is 
 | `.chezmoiscripts/run_*_<name>` | `tests/chezmoiscripts/test_<name>.py`: the name without the `run_…` prefix, ordering digits and extension (`01-install-packages.sh` → `test_install_packages.py`) |
 | `modify_<name>` (anywhere under `home/`) | `tests/modify/test_<name>.py`, dots as underscores (`modify_settings.json` → `test_settings_json.py`) |
 | a `.tmpl` outside `.chezmoiscripts/`, and `.chezmoiignore` | `tests/templates/test_<name>.py`: the prefixes `modify_`, `executable_`, `private_`, `exact_`, `empty_` and `dot_`, ordering digits and `.tmpl` dropped, other non-alphanumerics as underscores (`private_conf.d/20-ista-1password.conf.tmpl` → `test_ista_1password_conf.py`, `.chezmoiignore` → `test_chezmoiignore.py`) |
+| behaviour spanning several files (a rule over every script, one pattern across modules), and the test harness itself | `tests/test_<topic>.py`, directly in `tests/` (or under `tests/integration/`); every other test file must be named after a subject |
 | every `conf.d` module | loaded by the integration legs; a module that prints on a fresh machine fails them |
 
-`tests/test_conventions.py` fails when a script, function, function-defining module, `modify_` script or template has neither a test nor an entry in `tests/untested.toml`, and when an entry is stale. A `"legacy: ..."` entry goes when the file's **behaviour** is next changed: that change adds the test and removes the line. Lint or formatting edits do not trigger it. A file with no logic of its own (a wrapper around `open`, `osascript`, `pbcopy`) keeps a permanent entry with that reason.
+`tests/test_conventions.py` fails when a script, function, function-defining module, `modify_` script or template has neither a test nor an entry in `tests/untested.toml`, when its test file defines no test that runs (none, or only skipped ones), when an entry is stale or gives a reason of under three words, and when a test file belongs to no subject. A `"legacy: ..."` entry goes when the file's **behaviour** is next changed: that change adds the test and removes the line. Lint or formatting edits do not trigger it. A file with no logic of its own (a wrapper around `open`, `osascript`, `pbcopy`) keeps a permanent entry with that reason.
 
 ### Writing a unit test
 
