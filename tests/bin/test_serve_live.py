@@ -1,3 +1,11 @@
+import subprocess
+
+import pytest
+
+SYSTEM_BASH_MAJOR = int(subprocess.run(["/bin/bash", "-c", "echo ${BASH_VERSINFO[0]}"],
+                                        capture_output=True, text=True).stdout)
+
+
 class TestServeLive:
     def test_should_serve_localhost_on_the_picked_port_without_opening_a_browser(self, run, fake_bin, calls):
         fake_bin("pick-port", stdout="4321")
@@ -24,6 +32,13 @@ class TestServeLive:
             fake_bin("npx")
             run("serve-live", "--host=0.0.0.0")
             assert calls("npx") == [["live-server", "--port=4321", "--no-browser", "--host=0.0.0.0"]]
+
+        @pytest.mark.skipif(SYSTEM_BASH_MAJOR >= 4, reason="this system's /bin/bash is new enough")
+        def test_should_run_on_the_system_bash(self, run, bin_links, fake_bin, calls):
+            fake_bin("pick-port", stdout="4321")
+            fake_bin("npx")
+            result = run("/bin/bash", str(bin_links / "serve-live"), "--host=0.0.0.0")
+            assert (result.returncode, calls("npx")) == (0, [["live-server", "--port=4321", "--no-browser", "--host=0.0.0.0"]])
 
     class TestOnNoFreePort:
         def test_should_exit_1_with_a_message_and_start_no_server(self, run, fake_bin, calls):
