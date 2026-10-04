@@ -27,6 +27,26 @@ class TestCleanup:
             assert safe.exists() and risky.exists()
 
     @darwin
+    class TestOnDryRunWithEveryToolPresent:
+        @pytest.mark.parametrize("args", [(), ("--yes",)], ids=["plain", "with --yes"])
+        def test_should_announce_each_tool_command_and_run_none_of_them(self, run, fake_bin, calls, sandbox, args):
+            busy_tools(fake_bin, sandbox)
+            result = run("cleanup", *args, timeout=30)
+            assert result.returncode == 0
+            for announced in ("composer clearcache", "brew cleanup --prune=all -s", "gem cleanup",
+                              "npm cache clean --force", "yarn cache clean --force", "uv cache clean",
+                              "docker system prune -f", "docker volume prune -f", "xcrun simctl delete unavailable"):
+                assert f"ℹ would run: {announced}\n" in result.stdout
+            assert "ℹ would run: empty_trash\n" in result.stdout
+            for tool in ("composer", "gem", "npm", "yarn", "uv"):
+                assert calls(tool) == [], tool
+            assert calls("brew") == [["--cache"]]
+            assert calls("docker") == [["info"], ["system", "df"]]
+            assert calls("xcrun") == [["simctl", "list", "devices", "-j"], ["simctl", "runtime", "list", "-j"]]
+            assert calls("osascript") == [["-e", "tell application \"Finder\" to count items of trash"]]
+            assert calls("sudo") == []
+
+    @darwin
     class TestOnApply:
         def test_should_remove_safe_items_and_keep_risky_ones_without_a_terminal(self, run, fake_bin, sandbox):
             safe, risky = xcode_leftovers(sandbox)
@@ -120,6 +140,24 @@ def quiet_tools(fake_bin, sandbox):
     for tool in ("composer", "gem", "npm", "yarn", "uv", "docker", "plutil"):
         fake_bin(tool, exit_code=1)
 
+
+def busy_tools(fake_bin, sandbox):
+    """Every tool cleanup drives is installed and has something to clean: a dry run must still not call them."""
+    fake_bin("osascript", stdout="3")
+    fake_bin("sudo", exit_code=1)
+    fake_bin("getconf", stdout=str(sandbox.home / "tmp/T"))
+    fake_bin("xcrun", script=SIMCTL_UNAVAILABLE)
+    fake_bin("brew", script='[[ $1 == --cache ]] && exit 1\nexit 0\n')
+    fake_bin("docker", script='[[ $1 == system && $2 == df ]] && echo "Images 1 1 1GB"\nexit 0\n')
+    for tool in ("composer", "gem", "npm", "yarn", "uv", "plutil"):
+        fake_bin(tool)
+
+
+SIMCTL_UNAVAILABLE = "\n".join([
+    'case "$*" in',
+    '  "simctl list devices -j") printf \'{"devices":{"r":[{"isAvailable":false,"dataPathSize":4096}]}}\' ;;',
+    '  "simctl runtime list -j") printf "[]" ;;',
+    "esac", "exit 0", ""])
 
 SIMCTL_EMPTY = "\n".join([
     'case "$*" in',
