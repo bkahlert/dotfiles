@@ -43,6 +43,17 @@ class TestDocker:
                 assert (result.stdout, result.returncode) == ("real\n", 0)
                 assert calls("docker") == [["ps"]]
 
+        class TestOnSecondCopyOnPath:
+            def test_should_skip_that_copy_too(self, run, fake_bin, calls, wrapper, sandbox, tmp_path):
+                fake_bin("docker", stdout="real\n")
+                copy = tmp_path / "copy"
+                copy.mkdir()
+                shutil.copy(wrapper, copy / "docker")
+                sandbox.env["PATH"] = f"{wrapper.parent}:{copy}:{sandbox.env['PATH']}"
+                result = run(str(wrapper), "ps", timeout=3)
+                assert (result.stdout, result.returncode) == ("real\n", 0)
+                assert calls("docker") == [["ps"]]
+
     class TestOnlyPodmanInstalled:
         def test_should_fall_back_to_podman(self, run, fake_bin, calls, wrapper, sandbox, bare_path):
             fake_bin("podman", stdout="from podman\n")

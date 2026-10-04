@@ -13,10 +13,6 @@
 #   known-hosts-fix 192.168.1.10
 #   known-hosts-fix 42                 # from "Offending key in known_hosts:42"
 
-# macOS ships bash 3.2; this script needs 4.4 (see the bash entry in the Brewfile).
-(( BASH_VERSINFO[0] > 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] >= 4) )) \
-  || { printf '%s: needs bash 4.4 or newer, found %s; install it with: brew install bash\n' "${0##*/}" "$BASH_VERSION" >&2; exit 1; }
-
 set -uo pipefail
 
 readonly known_hosts="${HOME}/.ssh/known_hosts"
@@ -41,7 +37,8 @@ arg=${args[0]}
 if [[ $arg =~ ^[0-9]+$ ]]; then
   [[ -f $known_hosts ]] || { printf '%s: %s does not exist\n' "${0##*/}" "$known_hosts" >&2; exit 1; }
 
-  total=$(wc -l < "$known_hosts")
+  # awk, not wc -l: a last line without a newline still counts.
+  total=$(awk 'END { print NR }' "$known_hosts")
   # Past 18 digits bash's 64-bit arithmetic wraps, so such a number is out of range before it is evaluated.
   line=0
   (( ${#arg} <= 18 )) && line=$((10#$arg))

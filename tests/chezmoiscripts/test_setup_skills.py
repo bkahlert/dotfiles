@@ -5,9 +5,13 @@ AGENTS = {
     "ista": ["claude-code", "gemini-cli", "github-copilot"],
 }
 SKILLS = ("grill-me", "handoff")
-# nvm.sh as far as the script needs it: it puts the default node's bin on PATH, and, like the real one, does not
-# survive set -u.
-NVM_SH = 'export PATH="$HOME/node/bin:$PATH"\n: "$NVM_SH_NEEDS_UNSET_VARIABLES"\n'
+# nvm.sh as far as the script needs it: `nvm use default` puts the default node's bin on PATH, and, like the real
+# one, it does not survive set -u and fails to load on an ~/.nvmrc naming an uninstalled version unless told --no-use.
+NVM_SH = """\
+: "$NVM_SH_NEEDS_UNSET_VARIABLES"
+[[ " $* " == *" --no-use "* || ! -f $HOME/.nvmrc ]] || return 3
+nvm() { [[ "$*" == "use default" ]] && export PATH="$HOME/node/bin:$PATH"; }
+"""
 
 
 @pytest.fixture(autouse=True)
@@ -54,6 +58,17 @@ class TestSetupSkills:
             node_bin.mkdir(parents=True)
             (node_bin / "npx").write_text('#!/bin/sh\necho "$*" >> "$HOME/npx-calls"\n')
             (node_bin / "npx").chmod(0o755)
+            result = script("setup-skills", env={"DOTFILES_CONTEXT": "bkahlert"})
+            assert result.returncode == 0, result.stderr
+            assert len((sandbox.home / "npx-calls").read_text().splitlines()) == len(SKILLS)
+
+        def test_should_use_the_default_on_an_nvmrc_naming_an_uninstalled_version(self, script, sandbox):
+            sandbox.only_tools()
+            node_bin = sandbox.home / "node" / "bin"
+            node_bin.mkdir(parents=True)
+            (node_bin / "npx").write_text('#!/bin/sh\necho "$*" >> "$HOME/npx-calls"\n')
+            (node_bin / "npx").chmod(0o755)
+            (sandbox.home / ".nvmrc").write_text("18\n")
             result = script("setup-skills", env={"DOTFILES_CONTEXT": "bkahlert"})
             assert result.returncode == 0, result.stderr
             assert len((sandbox.home / "npx-calls").read_text().splitlines()) == len(SKILLS)

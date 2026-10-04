@@ -4,18 +4,24 @@
 
 set -euo pipefail
 
-# Print the first executable <name> on PATH that is not this script. Compared by
-# file identity (-ef), so a trailing slash, a relative entry or a symlinked
-# directory cannot make the wrapper pick itself and re-exec forever.
+# Every copy of this wrapper run so far, this one included: a second copy on PATH
+# (another ~/.local/bin, say) would otherwise exec this one back, forever.
+export DOCKER_WRAPPERS="${DOCKER_WRAPPERS:+$DOCKER_WRAPPERS:}$0"
+
+# Print the first executable <name> on PATH that is none of those wrappers.
+# Compared by file identity (-ef), so a trailing slash, a relative entry or a
+# symlinked directory cannot make the wrapper pick itself either.
 find_other() {
-  local dir candidate
+  local dir candidate wrapper
   local IFS=:
   for dir in $PATH; do
     candidate="${dir:-.}/$1"
-    if [[ -f "$candidate" && -x "$candidate" && ! "$candidate" -ef "$0" ]]; then
-      printf '%s\n' "$candidate"
-      return 0
-    fi
+    [[ -f "$candidate" && -x "$candidate" ]] || continue
+    for wrapper in $DOCKER_WRAPPERS; do
+      [[ "$candidate" -ef "$wrapper" ]] && continue 2
+    done
+    printf '%s\n' "$candidate"
+    return 0
   done
   return 1
 }
