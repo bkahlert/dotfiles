@@ -127,21 +127,3 @@ make clean               # remove the images
 ```
 
 CI runs the same targets on every pull request; `main` requires the `ci` check. Details in [AGENTS.md](AGENTS.md#testing).
-
-## Repairing the startup LaunchAgent
-
-The `~/.startup` script runs at login via a LaunchAgent. If it stops working:
-
-```sh
-# Re-run the chezmoi setup script
-chezmoi apply --force
-```
-
-Or manually recreate:
-
-```sh
-launchctl unload ~/Library/LaunchAgents/com.user.startup.plist 2>/dev/null
-chezmoi state delete-bucket --bucket=scriptState
-chezmoi apply
-```
-
