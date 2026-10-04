@@ -5,7 +5,7 @@ import pytest
 
 from repo import brewfile_lines
 
-ENTRY = re.compile(r'(brew|cask) "[a-z0-9@._+/-]+"(, trusted: true)? +# \S.*')
+ENTRY = re.compile(r'(brew|cask) "[a-z0-9@._+-]+" +# \S.*')
 LINUX_INSTALLERS = {
     "sheldon": "https://rossmacarthur.github.io/install/crate.sh",
     "starship": "https://starship.rs/install.sh",
