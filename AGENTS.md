@@ -183,9 +183,11 @@ CI runs the same targets on every pull request and on `main`; the `ci` check is 
 | `functions/<name>` | `tests/functions/test_<name>.py` |
 | `conf.d/NN-<name>.zsh` that defines a function | `tests/zsh/test_<name>.py`; `conf.d/exact_ista/...` under `tests/zsh/ista/` |
 | `.chezmoiscripts/run_*_<name>` | `tests/chezmoiscripts/test_<name>.py`: the name without the `run_…` prefix, ordering digits and extension (`01-install-packages.sh` → `test_install_packages.py`) |
+| `modify_<name>` (anywhere under `home/`) | `tests/modify/test_<name>.py`, dots as underscores (`modify_settings.json` → `test_settings_json.py`) |
+| a `.tmpl` outside `.chezmoiscripts/` | `tests/templates/test_<name>.py`: chezmoi attributes, ordering digits and `.tmpl` dropped, other non-alphanumerics as underscores (`private_conf.d/20-ista-1password.conf.tmpl` → `test_ista_1password_conf.py`) |
 | every `conf.d` module | loaded by the integration legs; a module that prints on a fresh machine fails them |
 
-`tests/test_conventions.py` fails when a script, function or function-defining module has neither a test nor an entry in `tests/untested.toml`, and when an entry is stale. A `"legacy: ..."` entry goes when the file's **behaviour** is next changed: that change adds the test and removes the line. Lint or formatting edits do not trigger it. A file with no logic of its own (a wrapper around `open`, `osascript`, `pbcopy`) keeps a permanent entry with that reason.
+`tests/test_conventions.py` fails when a script, function, function-defining module, `modify_` script or template has neither a test nor an entry in `tests/untested.toml`, and when an entry is stale. A `"legacy: ..."` entry goes when the file's **behaviour** is next changed: that change adds the test and removes the line. Lint or formatting edits do not trigger it. A file with no logic of its own (a wrapper around `open`, `osascript`, `pbcopy`) keeps a permanent entry with that reason.
 
 ### Writing a unit test
 
@@ -195,6 +197,8 @@ Fixtures in [tests/conftest.py](tests/conftest.py) run the real script or functi
 - `fake_bin("tool", stdout=..., exit_code=..., script=...)` puts a fake on `PATH`; `calls("tool")` returns its recorded argument lists.
 - `zsh("snippet", function="name")` or `zsh("snippet", modules=["ista/10-dev-chapter.zsh"])` runs `zsh -f` with the source tree's functions and modules.
 - `script("name", *args, uname="Darwin", env={...})` (in `tests/chezmoiscripts/`) runs a `.chezmoiscripts/` script by its key under the same sandbox, with a fake `uname` so either OS branch can be taken.
+- `chezmoi.render("dot_npmrc.tmpl", company="ista", os="darwin")`, `chezmoi.config(company)` and `chezmoi.ignored(company)` (in `tests/templates/`) run the real `chezmoi` against the source tree with the `op` and `keepassxc-cli` shims as vaults, so a secret renders as a placeholder that names its backend. They skip where `chezmoi` is not installed (the lint-and-unit CI job); the macOS job runs them.
+- `modify(script, current, **env)` (in `tests/modify/`) runs a `modify_` script the way chezmoi does: the current target on stdin, the new content on stdout.
 - Network, vault, system-state and user-state tools (`op`, `gh`, `gcloud`, `curl`, `openssl`, `ssh-keygen`, `brew`, `git`, `chezmoi`, `podman`, `xcrun`, `open`, `osascript`, `launchctl`, `defaults`, `sudo`, `pbcopy`, `lsof`, `pkill`, ...) are guarded: calling one unfaked fails with exit 127. Fake what the subject needs; coreutils, `awk`, `sed`, `jq` are real.
 
 Classes nest as [testing.md](home/private_dot_config/exact_agents/exact_rules/testing.md) asks: `TestGhLatest` > `TestOnUnknownOption` > `test_should_exit_2_and_name_the_option`.

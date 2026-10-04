@@ -53,6 +53,25 @@ def chezmoiscripts() -> list[tuple[str, Path]]:
             for source in sorted(CHEZMOISCRIPTS_SOURCE.iterdir())]
 
 
+def target_key(name: str) -> str:
+    """A source file's name as a test file stem: chezmoi attributes, a leading dot or ordering digits and the
+    template suffix dropped, other non-alphanumerics as underscores (`private_dot_x.tmpl` -> `x`)."""
+    name = re.sub(r"\.tmpl$", "", name)
+    name = re.sub(r"^(?:(?:modify|executable|private|exact|empty|dot)_)+", "", name)
+    return re.sub(r"[^A-Za-z0-9]+", "_", re.sub(r"^\.?(?:\d+-)?", "", name))
+
+
+def modify_scripts() -> list[tuple[str, Path]]:
+    """Every modify_ script, wherever it sits (`modify_settings.json` -> `settings_json`)."""
+    return [(target_key(source.name), source) for source in sorted(HOME_SOURCE.rglob("modify_*")) if source.is_file()]
+
+
+def templates() -> list[tuple[str, Path]]:
+    """Every template that is not a .chezmoiscripts/ script (`dot_gitconfig.tmpl` -> `gitconfig`)."""
+    return [(target_key(source.name), source) for source in sorted(HOME_SOURCE.rglob("*.tmpl"))
+            if source.is_file() and CHEZMOISCRIPTS_SOURCE not in source.parents]
+
+
 def brewfile_lines() -> list[str]:
     """The Brewfile heredoc of the package install script, one entry per line."""
     source = dict(chezmoiscripts())["install-packages"].read_text()
