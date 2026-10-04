@@ -180,6 +180,7 @@ CI runs the same targets on every pull request and on `main`; the `ci` check is 
 | `bin/executable_<name>` | `tests/bin/test_<name>.py` (hyphens as underscores) |
 | `private_dot_claude/executable_<name>` (`~/.claude/<name>`) | `tests/claude/test_<name>.py`, same sandbox; `run("<name>")` resolves it |
 | `functions/<name>` | `tests/functions/test_<name>.py` |
+| `~/.zshenv` ([dot_zshenv](home/dot_zshenv)), which runs for every zsh | `tests/zsh/test_zshenv.py` |
 | `conf.d/NN-<name>.zsh` that defines a function | `tests/zsh/test_<name>.py`; `conf.d/exact_ista/...` under `tests/zsh/ista/` |
 | `.chezmoiscripts/run_*_<name>` | `tests/chezmoiscripts/test_<name>.py`: the name without the `run_…` prefix, ordering digits and extension (`01-install-packages.sh` → `test_install_packages.py`) |
 | `modify_<name>` (anywhere under `home/`) | `tests/modify/test_<name>.py`, dots as underscores (`modify_settings.json` → `test_settings_json.py`) |
