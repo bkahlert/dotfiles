@@ -1,4 +1,5 @@
 import re
+import shlex
 
 import pytest
 
@@ -8,7 +9,7 @@ ENTRY = re.compile(r'(brew|cask) "[a-z0-9@._+-]+" +# \S.*')
 LINUX_INSTALLERS = {
     "sheldon": "https://rossmacarthur.github.io/install/crate.sh",
     "starship": "https://starship.rs/install.sh",
-    "zoxide": "https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh",
+    "zoxide": "https://raw.githubusercontent.com/ajeetdsouza/zoxide/v0.10.0/install.sh",
 }
 
 
@@ -35,29 +36,80 @@ class TestInstallPackages:
             assert sorted(names) == sorted(set(names))
 
     class TestOnLinux:
-        def test_should_run_each_installer_for_a_missing_tool(self, script, sandbox, fake_bin, calls):
-            sandbox.only_tools("sh")
-            fake_bin("curl", stdout="exit 0\n")
+        def test_should_run_each_installer_for_a_missing_tool(self, script, linux, calls):
             result = script("install-packages", uname="Linux")
             assert result.returncode == 0, result.stderr
             assert [urls(call) for call in calls("curl")] == [[url] for url in LINUX_INSTALLERS.values()]
 
         @pytest.mark.parametrize("installed", LINUX_INSTALLERS)
-        def test_should_skip_an_installed_tool(self, script, sandbox, fake_bin, calls, installed):
-            sandbox.only_tools("sh")
-            fake_bin("curl", stdout="exit 0\n")
+        def test_should_skip_an_installed_tool(self, script, linux, fake_bin, calls, installed):
             fake_bin(installed)
             result = script("install-packages", uname="Linux")
             assert result.returncode == 0, result.stderr
             assert [urls(call) for call in calls("curl")] == [
                 [url] for tool, url in LINUX_INSTALLERS.items() if tool != installed]
 
-        def test_should_not_call_brew(self, script, sandbox, fake_bin, calls):
-            sandbox.only_tools("sh")
-            fake_bin("curl", stdout="exit 0\n")
+        def test_should_not_call_brew(self, script, linux, fake_bin, calls):
             fake_bin("brew")
             script("install-packages", uname="Linux")
             assert calls("brew") == []
+
+        def test_should_download_over_tls_and_fail_on_http_errors(self, script, linux, calls):
+            script("install-packages", uname="Linux")
+            for call in calls("curl"):
+                assert call[:4] == ["--proto", "=https", "--tlsv1.2", "-fsSL"], call
+
+        def test_should_pin_the_zoxide_installer_to_a_release_tag(self):
+            assert re.fullmatch(r"https://raw\.githubusercontent\.com/ajeetdsouza/zoxide/v\d+\.\d+\.\d+/install\.sh",
+                                LINUX_INSTALLERS["zoxide"])
+
+        def test_should_hand_starship_and_sheldon_their_options(self, script, linux, sandbox):
+            script("install-packages", uname="Linux")
+            ran = (sandbox.home / "ran").read_text().splitlines()
+            assert ran == [
+                f"{LINUX_INSTALLERS['sheldon']} --repo rossmacarthur/sheldon --to {sandbox.home}/.local/bin",
+                f"{LINUX_INSTALLERS['starship']} --yes",
+                f"{LINUX_INSTALLERS['zoxide']} ",
+            ]
+
+        class TestOnFailedDownload:
+            @pytest.mark.parametrize("failing", LINUX_INSTALLERS)
+            def test_should_fail_without_running_the_partial_script(self, script, linux, sandbox, failing):
+                fake_curl(sandbox, fail_for=LINUX_INSTALLERS[failing])
+                result = script("install-packages", uname="Linux")
+                assert result.returncode == 22
+                assert not (sandbox.home / "partial").exists()
+
+        def test_should_fail_when_an_installer_fails(self, script, linux, sandbox):
+            fake_curl(sandbox, body="exit 3")
+            assert script("install-packages", uname="Linux").returncode == 3
+
+        def test_should_remove_the_downloaded_installers(self, script, linux, sandbox):
+            script("install-packages", uname="Linux")
+            assert list((sandbox.home / "tmp").iterdir()) == []
+
+
+@pytest.fixture
+def linux(sandbox):
+    sandbox.only_tools("sh", "mktemp", "rm")
+    fake_curl(sandbox)
+
+
+def fake_curl(sandbox, body=None, fail_for=None):
+    """Writes the installer to the ``--output`` file. ``body`` defaults to one that records its URL and arguments in ``~/ran``; a download of ``fail_for`` leaves a partial script and exits 22."""
+    installer = (f"printf '%s\\n' {shlex.quote(body)} > \"$out\"" if body
+                 else "printf 'echo \"%s $*\" >> \"$HOME/ran\"\\n' \"$url\" > \"$out\"")
+    sandbox.fake_bin("curl", script=f"""\
+out=/dev/stdout
+while (( $# )); do
+  case $1 in -o|--output) out=$2; shift 2 ;; *) url=$1; shift ;; esac
+done
+if [[ $url == {shlex.quote(fail_for or "")} ]]; then
+  echo 'echo > "$HOME/partial"' > "$out"
+  exit 22
+fi
+{installer}
+""")
 
 
 def urls(call):
