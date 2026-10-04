@@ -5,8 +5,8 @@ name: dependabot-auto-merge
 # The merge uses a token of the bkahlert-dotfiles-automerge GitHub App, not github.token: a merge
 # made with github.token starts no workflow, so `ci` would not run on main after it. The required
 # check does not demand an up-to-date branch, so that run is what tests an update merged after
-# another change to main. The App's ID and private key are Dependabot secrets, the only secrets a
-# workflow Dependabot triggered can read.
+# another change to main. The App's private key is a Dependabot secret, the only kind a workflow
+# Dependabot triggered can read; its client ID is public.
 on:
   pull_request:
     branches: [main]
@@ -23,7 +23,7 @@ jobs:
       - id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.AUTO_MERGE_APP_ID }}
+          client-id: Iv23liMWKkSFmQmkAT5H
           private-key: ${{ secrets.AUTO_MERGE_APP_PRIVATE_KEY }}
           # What enabling auto-merge takes; the token gets no more than this, whatever the App may do.
           permission-contents: write
