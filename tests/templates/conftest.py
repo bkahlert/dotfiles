@@ -42,9 +42,10 @@ class Chezmoi:
         # execute-template prints keepassxc's password prompt to stdout; apply writes it to the terminal.
         return re.sub(r"Enter password to unlock [^\n]*?\.kdbx: ", "", result.stdout)
 
-    def ignored(self, company):
-        """The target paths .chezmoiignore drops in the context."""
-        result = self.run("ignored", config=self.config(company), stdin=None)
+    def ignored(self, company, *, os=None):
+        """The target paths .chezmoiignore drops in the context, on this OS or the given one."""
+        override = ("--override-data", json.dumps({"chezmoi": {"os": os}})) if os else ()
+        result = self.run("ignored", *override, config=self.config(company), stdin=None)
         assert result.returncode == 0, result.stderr
         return result.stdout.split()
 

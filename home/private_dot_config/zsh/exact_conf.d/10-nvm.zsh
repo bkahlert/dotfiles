@@ -1,5 +1,7 @@
-# nvm comes from run_once_before_02-install-nvm. node, npm and npx need no nvm.sh: .zshenv puts the default
-# version's bin on PATH for every shell. Only nvm itself does, and its ~200 ms load waits for the first call.
+# nvm comes from run_once_before_02-install-nvm, which leaves an nvm.sh already there alone: on machines set up
+# before it, Homebrew's symlink, so uninstalling Homebrew's nvm needs that script rerun. node, npm and npx need no
+# nvm.sh: .zshenv puts the default version's bin on PATH for every shell. Only nvm itself does, and its ~200 ms
+# load waits for the first call.
 export NVM_DIR="$HOME/.nvm"
 
 # .zshenv put the default version's bin on PATH, but the login files after it (path_helper, brew shellenv) put

@@ -5,7 +5,7 @@ GCLOUD_SKILLS = [".agents/skills/gcloud-auth", ".agents/skills/gcloud-login-auto
                  ".claude/skills/gcloud-auth", ".claude/skills/gcloud-login-automation"]
 INSTALLER_OWNED = [".local/bin/claude", ".local/bin/browser-harness", ".local/bin/browser-harness-mcp"]
 MACOS_LIBRARY = "Library"
-ISTA_MODULES = ".config/zsh/conf.d/ista/"
+ISTA_MODULES = ".config/zsh/conf.d/ista"
 NEVER_COMMITTED = [".aws/credentials", ".aws/sso/", ".aws/cli/cache/"]
 
 
@@ -44,15 +44,15 @@ class TestChezmoiignore:
 
     class TestMacosLibrary:
         def test_should_be_dropped_on_linux_where_there_is_no_library_directory(self, chezmoi):
-            assert MACOS_LIBRARY in patterns(chezmoi, os="linux")
+            assert MACOS_LIBRARY in chezmoi.ignored("bkahlert", os="linux")
 
         def test_should_be_applied_on_macos(self, chezmoi):
-            assert MACOS_LIBRARY not in patterns(chezmoi, os="darwin")
+            assert MACOS_LIBRARY not in chezmoi.ignored("bkahlert", os="darwin")
 
     class TestIstaModules:
         def test_should_be_applied_on_ista_where_the_loader_sources_them(self, chezmoi):
-            assert ISTA_MODULES not in patterns(chezmoi, company="ista")
+            assert ISTA_MODULES not in chezmoi.ignored("ista")
 
         @pytest.mark.parametrize("company", ("", "bkahlert"), ids=("none", "bkahlert"))
         def test_should_be_dropped_elsewhere_because_nothing_sources_them(self, chezmoi, company):
-            assert ISTA_MODULES in patterns(chezmoi, company=company)
+            assert ISTA_MODULES in chezmoi.ignored(company)

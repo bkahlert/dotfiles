@@ -4,7 +4,7 @@ import pytest
 
 # macOS ships bash 3.2 and the Brewfile installs a newer one; a script that needs it must say so
 # instead of dying on an unbound array or an unknown option halfway through.
-NEEDS_BASH_4_4 = ("cleanup", "gcloud-login", "known-hosts-fix", "op-agent")
+NEEDS_BASH_4_4 = ("cleanup", "gcloud-login", "op-agent")
 SYSTEM_BASH = "/bin/bash"
 
 

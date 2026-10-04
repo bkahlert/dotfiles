@@ -52,6 +52,21 @@ class TestKnownHostsFix:
             assert result.stderr.endswith(f"known-hosts-fix: could not delete line 3 from {known_hosts}\n")
             assert known_hosts.read_text() == PLAIN_A + PLAIN_B + HASHED
 
+        def test_should_count_a_last_line_without_a_newline(self, run, fake_bin, calls, sandbox):
+            known_hosts = write_known_hosts(sandbox)
+            known_hosts.write_text(PLAIN_A + PLAIN_B.rstrip("\n"))
+            fake_bin("ssh-keygen")
+            result = run("known-hosts-fix", "2")
+            assert result.returncode == 0, result.stderr
+            assert calls("ssh-keygen") == [["-R", "b.test", "-f", str(known_hosts)]]
+
+        def test_should_run_under_the_system_bash_macos_ships(self, run, fake_bin, calls, sandbox, bin_links):
+            known_hosts = write_known_hosts(sandbox)
+            fake_bin("ssh-keygen")
+            result = run(SYSTEM_BASH, str(bin_links / "known-hosts-fix"), "2")
+            assert (result.returncode, result.stderr) == (0, "Line 2 → host b.test\n")
+            assert calls("ssh-keygen") == [["-R", "b.test", "-f", str(known_hosts)]]
+
         def test_should_reject_a_line_out_of_range(self, run, sandbox):
             write_known_hosts(sandbox)
             result = run("known-hosts-fix", "9")
@@ -94,6 +109,7 @@ class TestKnownHostsFix:
             assert result.returncode == 99
 
 
+SYSTEM_BASH = "/bin/bash"
 KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGRfYjWZcOhPaLmjKH3bTz3uY1H6Yk+3fBtYBgqd+8sW"
 PLAIN_A = f"a.test {KEY}\n"
 PLAIN_B = f"b.test,10.0.0.2 {KEY}\n"

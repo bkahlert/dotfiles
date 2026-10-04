@@ -2,6 +2,10 @@ name: dependabot-auto-merge
 
 # Dependabot's pull requests merge themselves once the required `ci` check passes; its cooldown in
 # dependabot.yml holds each release back for a few days first.
+# A merge made with github.token starts no workflow, so `ci` does not run on main afterwards. The
+# required check does not demand an up-to-date branch either: an update merged after another change
+# to main reaches the combined tree untested until the weekly scheduled run. Closing that gap needs a
+# GitHub App token here instead of github.token.
 on:
   pull_request:
     branches: [main]
