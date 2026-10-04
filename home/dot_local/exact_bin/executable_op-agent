@@ -25,6 +25,7 @@ readonly STATE_DIR="$HOME/Library/Application Support/op-agent"
 readonly REQ="$STATE_DIR/req"
 readonly PID_FILE="$STATE_DIR/pid"
 readonly LOG="$STATE_DIR/agent.log"
+readonly OP_STDERR="$STATE_DIR/op.stderr"
 readonly KEEPALIVE_SECONDS=300
 readonly READ_TIMEOUT=90   # op's own prompt times out after 60 s
 readonly MAX_LIFETIME_SECONDS=43200   # 12 h — 1Password's hard authorization limit
@@ -84,9 +85,18 @@ serve() {
       # all of which a line-based protocol would mangle. op's output is piped
       # straight into base64 — a command substitution would strip a trailing
       # newline before it could be encoded. PIPESTATUS[0] carries op's status
-      # out of the pipeline.
-      status=OK
-      payload=$(op read --no-newline "$ref" 2>&1 | base64 | tr -d '\n'; exit "${PIPESTATUS[0]}") || status=ERR
+      # out of the pipeline. On success the payload is op's stdout alone, so a
+      # warning on stderr (an update notice, say) cannot corrupt the secret;
+      # on failure it is op's stderr, which the client shows as the error.
+      if payload=$(op read --no-newline "$ref" 2>"$OP_STDERR" | base64 | tr -d '\n'; exit "${PIPESTATUS[0]}"); then
+        status=OK
+      else
+        status=ERR
+        # An unusable capture file must not take the daemon down: fall back
+        # to an empty error message.
+        payload=$(base64 <"$OP_STDERR" 2>/dev/null | tr -d '\n') || payload=
+      fi
+      rm -f "$OP_STDERR" 2>/dev/null || true
       # Bound the response write: if the client died between writing its
       # request and here, opening $resp for write blocks forever (no reader
       # left) and would wedge every future request.

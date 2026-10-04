@@ -15,6 +15,11 @@ class TestOpAgent:
             status = run("op-agent", "status")
             assert status.stdout.startswith("op-agent: running (pid ")
 
+        def test_should_leave_an_op_warning_on_stderr_out_of_the_secret(self, run, fake_bin, daemon):
+            fake_bin("op", script='printf "[WARNING] update available\\n" >&2\nprintf "s3cret"\nexit 0\n')
+            result = run("op-agent", "read", "op://Employee/item/password", timeout=30)
+            assert (result.returncode, result.stdout) == (0, "s3cret")
+
         def test_should_reuse_the_running_daemon(self, run, fake_bin, calls, daemon):
             fake_bin("op", script=OP_SECRET)
             run("op-agent", "read", "op://Employee/item/password", timeout=30)
@@ -29,6 +34,18 @@ class TestOpAgent:
             result = run("op-agent", "read", "op://Employee/missing/password", timeout=30)
             assert result.returncode == 1
             assert result.stderr == "op-agent: [ERROR] no such item\n"
+
+        class TestOnAnUnusableStderrCapture:
+            def test_should_answer_with_an_error_and_keep_serving(self, run, fake_bin, sandbox, daemon):
+                fake_bin("op", script=OP_SECRET)
+                run("op-agent", "read", "op://Employee/item/password", timeout=30)
+                capture = sandbox.home / "Library/Application Support/op-agent/op.stderr"
+                capture.mkdir()
+                failed = run("op-agent", "read", "op://Employee/item/password", timeout=30)
+                capture.rmdir()
+                recovered = run("op-agent", "read", "op://Employee/item/password", timeout=30)
+                assert failed.returncode == 1
+                assert (recovered.returncode, recovered.stdout) == (0, " s3cr=t\n two\n")
 
         class TestOnAPidFileOfAForeignProcess:
             def test_should_give_up_after_the_write_timeout_and_drop_the_pid_file(self, run, sandbox):
