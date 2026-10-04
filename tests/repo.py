@@ -13,8 +13,8 @@ CONF_D_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_conf.d"
 SHIMS = ROOT / "tests" / "shims"
 CONTEXTS = ("", "bkahlert", "ista")
 
-# Only system tools (coreutils, awk, sed, jq) are reachable; the user's own PATH is not, so a
-# subject that reaches for an unfaked tool fails instead of touching the real one.
+# The directories of the tests that run the real chezmoi, which lives in Homebrew's. The unit-test
+# sandbox does not use them: it exposes only the REAL_TOOLS of conftest.py.
 SYSTEM_PATH = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")
 if sys.platform == "darwin":
     SYSTEM_PATH = ("/opt/homebrew/bin", "/usr/local/bin", *SYSTEM_PATH)

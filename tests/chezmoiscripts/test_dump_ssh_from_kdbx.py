@@ -131,8 +131,7 @@ def rendered(sandbox, tmp_path):
         config = tmp_path / f"{company or 'none'}.toml"
         config.write_text(f'[data]\n  email = "a@b.c"\n  name = "n"\n  company = "{company}"\n')
         return subprocess.run([chezmoi, "execute-template", "--config", str(config), "--source", str(HOME_SOURCE)],
-                              input=template.read_text(), env={**sandbox.env, "PATH": f"/usr/bin:/bin:{sandbox.env['PATH']}"},
-                              cwd=sandbox.home, capture_output=True, text=True, timeout=30)
+                              input=template.read_text(), env=sandbox.env, cwd=sandbox.home, capture_output=True, text=True, timeout=30)
     return run
 
 

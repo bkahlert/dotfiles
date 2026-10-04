@@ -16,7 +16,7 @@ def system_bash_major():
 class TestOnOldBash:
     @pytest.mark.parametrize("name", NEEDS_BASH_4_4)
     def test_should_exit_1_and_name_the_fix(self, run, bin_links, name):
-        result = run("env", "-i", "PATH=/usr/bin:/bin", SYSTEM_BASH, str(bin_links / name), "--help")
+        result = run(SYSTEM_BASH, str(bin_links / name), "--help")
         assert result.returncode == 1
         assert result.stdout == ""
         assert result.stderr.startswith(f"{name}: needs bash 4.4 or newer, found 3.")

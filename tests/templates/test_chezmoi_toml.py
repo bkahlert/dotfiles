@@ -2,6 +2,8 @@ import tomllib
 
 import pytest
 
+from repo import HOME_SOURCE
+
 TEMPLATE = ".chezmoi.toml.tmpl"
 
 
@@ -10,6 +12,22 @@ class TestChezmoiToml:
     def test_should_record_the_answers_as_template_data(self, chezmoi, company):
         data = tomllib.loads(chezmoi.config(company).read_text())["data"]
         assert data == {"email": "test@example.com", "name": "Test User", "company": company}
+
+    class TestOnAnySourceLocation:
+        @pytest.fixture(params=("in the default location", "in a clone elsewhere"))
+        def source(self, request, tmp_path):
+            """A source directory as `chezmoi init --source` takes it, and where the source state is read from."""
+            if request.param == "in the default location":
+                return HOME_SOURCE, HOME_SOURCE
+            clone = tmp_path / "clone" / "dotfiles"
+            (clone / "home").mkdir(parents=True)
+            (clone / ".chezmoiroot").write_text("home\n")
+            return clone, clone / "home"
+
+        def test_should_keep_reading_the_source_state_where_init_found_it(self, chezmoi, source):
+            init_source, source_state = source
+            config = tomllib.loads(chezmoi.config("", source=init_source).read_text())
+            assert config["sourceDir"] == str(source_state.resolve())
 
     class TestOnIsta:
         def test_should_read_secrets_from_1password_without_signing_in_before_each_read(self, chezmoi):

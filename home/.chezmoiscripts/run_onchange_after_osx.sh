@@ -397,8 +397,14 @@ defaults write com.apple.messageshelper.MessageController SOInputLineSettings -d
 ###############################################################################
 
 # Restart affected applications if `--no-restart` flag is not present.
+# Terminal is left alone when it hosts this run: killing it would kill chezmoi
+# and skip every script that sorts after this one.
 if [[ ! ($* == *--no-restart*) ]]; then
   for app in "cfprefsd" "Dock" "Finder" "Mail" "SystemUIServer" "Terminal"; do
+    if [[ "${app}" == Terminal && "${TERM_PROGRAM:-}" == Apple_Terminal ]]; then
+      printf 'Not restarting Terminal, as it runs this script. Please restart it yourself.\n' >&2
+      continue
+    fi
     killall "${app}" >/dev/null 2>&1 || printf 'Failed to kill "%s". Is it running?\n' "${app}" >&2 || true
   done
 fi

@@ -28,6 +28,8 @@
 {{- if ne .company "ista" }}
 # The GitLab token only exists in the work vault.
 .local/share/secrets/gitlab_token
+# The registry tokens too; the file holds nothing else.
+.npmrc
 {{- end }}
 {{- if not .company }}
 # No password manager without a context (the test container).
