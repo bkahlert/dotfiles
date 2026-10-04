@@ -1,4 +1,6 @@
-sourceDir = "{{ .chezmoi.homeDir }}/Development/com.bkahlert/dotfiles/home"
+{{- /* Keep the source directory this init ran with, so a clone outside the
+       author's ~/Development layout is not replaced by a path that is not there. */}}
+sourceDir = {{ .chezmoi.sourceDir | quote }}
 
 [data]
     email = {{ promptStringOnce . "email" "Email address" | quote }}
