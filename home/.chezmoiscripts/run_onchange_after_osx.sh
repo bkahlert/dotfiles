@@ -299,7 +299,7 @@ defaults write com.apple.finder FXInfoPanesExpanded -dict \
 # Dock, Dashboard, and hot corners                                            #
 ###############################################################################
 
-# Don't authide dock
+# Don't autohide dock
 defaults write com.apple.dock autohide -bool false
 
 # Set the icon size of Dock items to 23 pixels
@@ -369,10 +369,10 @@ defaults write com.apple.SoftwareUpdate CriticalUpdateInstall -int 1
 # Don't Automatically download apps purchased on other Macs
 defaults write com.apple.SoftwareUpdate ConfigDataInstall -int 0
 
-# Turn on app auto-update
+# Turn off app auto-update
 defaults write com.apple.commerce AutoUpdate -bool false
 
-# Deactivate automatic reboot on macOS updates
+# Allow automatic reboot on macOS updates
 defaults write com.apple.commerce AutoUpdateRestartRequired -bool true
 
 ###############################################################################
