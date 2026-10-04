@@ -53,6 +53,7 @@ def subjects():
         for key, source in files:
             found.append(Subject(section, key, source, (TESTS / section / f"test_{key}.py",)))
     found.append(Subject("startup", "zshenv", HOME_SOURCE / "dot_zshenv", (TESTS / "zsh" / "test_zshenv.py",)))
+    found.append(Subject("startup", "bashrc", HOME_SOURCE / "dot_bashrc", (TESTS / "zsh" / "test_bashrc.py",)))
     for source in conf_d_modules():
         if DEFINES_A_FUNCTION.search(source.read_text()):
             found.append(Subject("conf_d", conf_d_key(source), source, (conf_d_test(source),)))
