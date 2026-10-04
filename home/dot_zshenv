@@ -1,8 +1,8 @@
 export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
 
-# Put nvm's default node on PATH for every shell, including non-interactive
-# ones (MCP servers, GUI apps) that never source .zshrc and so never hit
-# conf.d/10-nvm.zsh's lazy-loaded node/npm/npx functions. Resolves the default
+# Put nvm's default node on PATH for every shell, interactive or not (MCP
+# servers, GUI apps never source .zshrc): this is where node, npm and npx come
+# from, while conf.d/10-nvm.zsh only loads nvm itself on demand. Resolves the default
 # the way nvm stores it (alias files, then the installed versions) with zsh
 # globbing alone: no nvm.sh, no forks, and nothing printed when it resolves to
 # nothing.
