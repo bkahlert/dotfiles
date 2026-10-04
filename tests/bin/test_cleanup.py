@@ -35,9 +35,12 @@ class TestCleanup:
             assert result.returncode == 0
             for announced in ("composer clearcache", "brew cleanup --prune=all -s", "gem cleanup",
                               "npm cache clean --force", "yarn cache clean --force", "uv cache clean",
-                              "docker system prune -f", "docker volume prune -f", "xcrun simctl delete unavailable"):
+                              "xcrun simctl delete unavailable"):
                 assert f"ℹ would run: {announced}\n" in result.stdout
-            assert "ℹ would run: empty_trash\n" in result.stdout
+            for asked in ("Trash: would ask", "Containers: would ask", "Volumes: would ask"):
+                assert f"▪ {asked}\n" in result.stdout
+            assert "would run: docker" not in result.stdout
+            assert "would run: empty_trash" not in result.stdout
             for tool in ("composer", "gem", "npm", "yarn", "uv"):
                 assert calls(tool) == [], tool
             assert calls("brew") == [["--cache"]]
@@ -93,6 +96,26 @@ class TestCleanup:
             assert [path for path in paths if not path.startswith(allowed)] == []
 
     @darwin
+    class TestOnApplyWithContainersAndTrash:
+        def test_should_not_prune_or_empty_the_trash_without_confirmation(self, run, fake_bin, calls, sandbox):
+            busy_tools(fake_bin, sandbox)
+            result = run("cleanup", "--apply", timeout=30)
+            assert result.returncode == 0
+            assert calls("docker") == [["info"], ["system", "df"]]
+            assert emptied_trash(calls) == []
+            assert result.stdout.count("ℹ non-interactive: keeping\n") >= 3
+            for kept in ("Trash kept", "Containers kept", "Volumes kept"):
+                assert f"▪ {kept}\n" in result.stdout
+
+        def test_should_prune_and_empty_the_trash_with_yes(self, run, fake_bin, calls, sandbox):
+            busy_tools(fake_bin, sandbox)
+            result = run("cleanup", "--apply", "--yes", timeout=30)
+            assert result.returncode == 0
+            assert calls("docker") == [["info"], ["system", "df"], ["system", "prune", "-f"], ["volume", "prune", "-f"]]
+            assert len(emptied_trash(calls)) == 1
+            assert "ℹ auto-yes\n✔ Trash emptied\n" in result.stdout
+
+    @darwin
     class TestOnBadArguments:
         def test_should_exit_2_on_an_unknown_option(self, run):
             result = run("cleanup", "--nope")
@@ -129,6 +152,10 @@ def xcode_leftovers(sandbox):
         path.mkdir(parents=True)
         (path / "blob").write_bytes(b"x" * 4096)
     return safe, risky
+
+
+def emptied_trash(calls):
+    return [call for call in calls("osascript") if "empty trash" in call[-1]]
 
 
 def quiet_tools(fake_bin, sandbox):
