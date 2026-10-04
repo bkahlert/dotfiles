@@ -4,7 +4,7 @@ AGENTS = {
     "bkahlert": ["claude-code"],
     "ista": ["claude-code", "gemini-cli", "github-copilot"],
 }
-SKILLS = ("grill-me", "handoff")
+SKILLS = ("grill-me", "grilling", "handoff")
 # `fnm env` as far as the script needs it: it puts the default Node.js's bin on PATH.
 FNM_ENV = 'export PATH="$HOME/node/bin:$PATH"'
 

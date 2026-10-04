@@ -19,5 +19,8 @@ eval "$(fnm env --shell bash)"
 # grill-me — Socratic quiz skill for learning topics interactively (mattpocock)
 npx --yes skills add -g "mattpocock/skills/skills/productivity/grill-me" --agent "${agents[@]}" -y
 
+# grilling — the interview itself; grill-me only tells the agent to call it, so grill-me does nothing without it (mattpocock)
+npx --yes skills add -g "mattpocock/skills/skills/productivity/grilling" --agent "${agents[@]}" -y
+
 # handoff — compact the conversation into a document a fresh session can continue from (mattpocock)
 npx --yes skills add -g "mattpocock/skills/skills/productivity/handoff" --agent "${agents[@]}" -y
