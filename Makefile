@@ -19,14 +19,14 @@ lint-shell:
 	git ls-files -z -- ':!quick-access' | while IFS= read -r -d '' file; do \
 	  [[ $$file == *.tmpl && $$file != *.sh.tmpl ]] && continue; \
 	  if [[ $$file == *.sh || $$file == *.sh.tmpl || $$file == *.bash ]] || head -n 1 "$$file" | grep -qE '^#!.*bash'; then printf '%s\0' "$$file"; fi; \
-	done | xargs -0 shellcheck
+	done | xargs -0 uv run --locked shellcheck
 
 lint-zsh:
 	git ls-files -z -- 'home/**/*.zsh' | xargs -0 -n 1 zsh -n
 
 lint-workflows:
-	actionlint
-	uvx zizmor==1.30.1 .github/workflows
+	uv run --locked actionlint
+	uv run --locked zizmor .github/workflows
 
 unit:
 	uv run --locked pytest -m "not integration"

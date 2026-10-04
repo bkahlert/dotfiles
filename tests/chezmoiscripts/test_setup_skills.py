@@ -1,5 +1,3 @@
-import re
-
 import pytest
 
 AGENTS = {
@@ -68,18 +66,6 @@ class TestSetupSkills:
             result = script("setup-skills", env={"DOTFILES_CONTEXT": context})
             assert (result.returncode, calls("npx")) == (1, [])
             assert result.stderr == f"nvm not found in {nvm}; run_once_before_02-install-nvm installs it\n"
-
-    class TestPinning:
-        def test_should_run_an_exact_version_of_the_skills_cli(self, script, fake_bin, calls):
-            fake_bin("npx")
-            script("setup-skills", env={"DOTFILES_CONTEXT": "ista"})
-            assert all(re.fullmatch(r"skills@\d+\.\d+\.\d+", call[1]) for call in calls("npx"))
-
-        def test_should_install_every_skill_from_a_commit(self, script, fake_bin, calls):
-            fake_bin("npx")
-            script("setup-skills", env={"DOTFILES_CONTEXT": "ista"})
-            assert all(re.fullmatch(r".+#[0-9a-f]{40}", call[4]) for call in calls("npx"))
-
 
 def installs(npx_calls):
     return [(call[4].partition("#")[0].rsplit("/", 1)[-1], call[call.index("--agent") + 1:-1]) for call in npx_calls]

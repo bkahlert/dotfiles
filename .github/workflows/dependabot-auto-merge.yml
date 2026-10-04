@@ -1,0 +1,25 @@
+name: dependabot-auto-merge
+
+# Dependabot's pull requests merge themselves once the required `ci` check passes; its cooldown in
+# dependabot.yml holds each release back for a few days first.
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  auto-merge:
+    # The PR author, not github.actor: a maintainer re-running the job would otherwise not match.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Squash-merge once the required checks pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "$PR_URL"
