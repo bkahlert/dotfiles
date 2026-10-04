@@ -67,8 +67,10 @@ def modify_scripts() -> list[tuple[str, Path]]:
 
 
 def templates() -> list[tuple[str, Path]]:
-    """Every template that is not a .chezmoiscripts/ script (`dot_gitconfig.tmpl` -> `gitconfig`)."""
-    return [(target_key(source.name), source) for source in sorted(HOME_SOURCE.rglob("*.tmpl"))
+    """Every template that is not a .chezmoiscripts/ script (`dot_gitconfig.tmpl` -> `gitconfig`), and
+    `.chezmoiignore`, which chezmoi templates without the suffix."""
+    sources = [*sorted(HOME_SOURCE.rglob("*.tmpl")), HOME_SOURCE / ".chezmoiignore"]
+    return [(target_key(source.name), source) for source in sources
             if source.is_file() and CHEZMOISCRIPTS_SOURCE not in source.parents]
 
 
