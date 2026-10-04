@@ -10,8 +10,8 @@
 #   -h, --help            Show this help.
 #
 # Safe items (caches, logs, leftovers) are removed without asking. Risky items
-# (backups, archives, whole dependency caches, simulators, IDE configs) are listed
-# and confirmed one by one. The dry run never prompts; it reports both totals.
+# (Trash, container and volume prunes, backups, archives, whole dependency caches,
+# simulators, IDE configs) are listed and confirmed one by one. The dry run never prompts; it reports both totals.
 #
 # Examples:
 #   cleanup                            # report only
@@ -152,31 +152,6 @@ fi
 old_avail=$(df -k / | tail -1 | awk '{print $4}')
 
 # ---------- safe: paths ----------
-# ~/.Trash is TCC-protected: without Full Disk Access the shell sees an empty
-# directory. Finder sees the real thing and empties the trash of every volume.
-step 'Trash (all volumes, via Finder)'
-trash_count=$(osascript -e 'tell application "Finder" to count items of trash' 2>/dev/null || printf 0)
-if (( trash_count == 0 )); then
-  skip 'Trash: empty'
-else
-  trash_bytes=$(size_of "$HOME/.Trash")
-  if (( trash_bytes )); then
-    info "Trash: $trash_count item(s), $(bytes_to_human "$trash_bytes")"
-    $apply || reclaimable=$((reclaimable + trash_bytes))
-  else
-    info "Trash: $trash_count item(s), size unknown without Full Disk Access"
-  fi
-  empty_trash() {
-    osascript -e 'tell application "Finder"
-      set warned to warns before emptying of trash
-      set warns before emptying of trash to false
-      empty trash
-      set warns before emptying of trash to warned
-    end tell'
-  }
-  run 'Trash emptied' empty_trash
-fi
-
 step 'System & diagnostic logs'
 clean 'Logs' false true \
   /private/var/log/asl/*.asl \
@@ -276,16 +251,60 @@ else
   skip 'uv not installed'
 fi
 
-step 'Containers: dangling images, stopped containers, unused volumes'
+# ---------- risky ----------
+# ~/.Trash is TCC-protected: without Full Disk Access the shell sees an empty
+# directory. Finder sees the real thing and empties the trash of every volume.
+step 'Trash (all volumes, via Finder; cannot be undone)'
+trash_count=$(osascript -e 'tell application "Finder" to count items of trash' 2>/dev/null || printf 0)
+if (( trash_count == 0 )); then
+  skip 'Trash: empty'
+else
+  trash_bytes=$(size_of "$HOME/.Trash")
+  if (( trash_bytes )); then
+    info "Trash: $trash_count item(s), $(bytes_to_human "$trash_bytes")"
+  else
+    info "Trash: $trash_count item(s), size unknown without Full Disk Access"
+  fi
+  empty_trash() {
+    osascript -e 'tell application "Finder"
+      set warned to warns before emptying of trash
+      set warns before emptying of trash to false
+      empty trash
+      set warns before emptying of trash to warned
+    end tell'
+  }
+  if ! $apply; then
+    reclaimable_risky=$((reclaimable_risky + trash_bytes)); skip 'Trash: would ask'
+  elif confirm 'Empty the Trash? Its items cannot be restored.'; then
+    run 'Trash emptied' empty_trash
+  else
+    skip 'Trash kept'
+  fi
+fi
+
+# `docker` may be the podman wrapper, where a volume prune deletes the named
+# volumes of stopped containers (database data, for example).
+step 'Containers: stopped containers, dangling images, unused volumes'
 if command -v docker &>/dev/null && docker info &>/dev/null; then
   docker system df 2>/dev/null | while IFS= read -r line; do item "$line"; done
-  run 'containers pruned' docker system prune -f
-  run 'volumes pruned' docker volume prune -f
+  if ! $apply; then
+    skip 'Containers: would ask'; skip 'Volumes: would ask'
+  else
+    if confirm 'Remove stopped containers, dangling images and unused networks?'; then
+      run 'containers pruned' docker system prune -f
+    else
+      skip 'Containers kept'
+    fi
+    if confirm 'Remove unused volumes? Data of stopped containers is lost.'; then
+      run 'volumes pruned' docker volume prune -f
+    else
+      skip 'Volumes kept'
+    fi
+  fi
 else
   skip 'docker/podman not installed or not running'
 fi
 
-# ---------- risky ----------
 step 'iOS Mobile Applications archive'
 clean 'iOS Mobile Applications' true false "$HOME/Music/iTunes/iTunes Media/Mobile Applications"/*
 
