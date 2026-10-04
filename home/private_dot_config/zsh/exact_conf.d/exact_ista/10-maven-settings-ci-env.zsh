@@ -2,7 +2,10 @@
 # Purpose: Export CI environment variables from the active Maven profile in
 #          ~/.m2/settings.xml. Exports CAS_ARTIFACTORY_BASE_URL,
 #          CAS_ARTIFACTORY_CI_USER, and CAS_ARTIFACTORY_CI_TOKEN — but only
-#          when not already set (e.g. skips when running in CI).
+#          when not already set (e.g. skips when running in CI). Stays silent
+#          when the file declares no active profile.
+#          The Python parse runs once per settings.xml change: its result is
+#          cached under $XDG_CACHE_HOME/zsh, keyed on the file's mtime and size.
 # Usage:   Sourced automatically from ~/.config/zsh/conf.d/
 
 [[ -f "${HOME}/.m2/settings.xml" ]] || return 0
@@ -12,7 +15,25 @@ if [[ -n "${CAS_ARTIFACTORY_BASE_URL}" && -n "${CAS_ARTIFACTORY_CI_USER}" && -n 
   return 0
 fi
 
-_artifactory_exports=$(python3 - "${HOME}/.m2/settings.xml" <<'PYEOF'
+zmodload -F zsh/stat b:zstat
+# Prefixed builtins only: plain mkdir/mv must stay the external commands in the user's session.
+zmodload -Fm zsh/files 'b:zf_*'
+
+_artifactory_settings="${HOME}/.m2/settings.xml"
+_artifactory_cache="${XDG_CACHE_HOME:-${HOME}/.cache}/zsh/maven-settings-ci-env"
+zstat -H _artifactory_key -- "${_artifactory_settings}"
+_artifactory_stamp="# mtime ${_artifactory_key[mtime]} size ${_artifactory_key[size]}"
+
+if [[ -f "${_artifactory_cache}" ]]; then
+  _artifactory_exports=$(<"${_artifactory_cache}")
+  if [[ "${_artifactory_exports%%$'\n'*}" == "${_artifactory_stamp}" ]]; then
+    eval "${_artifactory_exports}"
+    unset _artifactory_settings _artifactory_cache _artifactory_key _artifactory_stamp _artifactory_exports
+    return 0
+  fi
+fi
+
+_artifactory_exports=$(python3 - "${_artifactory_settings}" <<'PYEOF'
 import sys, re, shlex
 import xml.etree.ElementTree as ET
 
@@ -35,8 +56,7 @@ def t(name):
 
 active_profiles = [el.text for el in root.findall(f'{t("activeProfiles")}/{t("activeProfile")}')]
 if not active_profiles:
-    print('artifactory: no activeProfile found in settings.xml', file=sys.stderr)
-    sys.exit(1)
+    sys.exit(0)
 
 active_id = active_profiles[0]
 
@@ -85,6 +105,16 @@ PYEOF
 
 if [[ $? -eq 0 ]]; then
   eval "${_artifactory_exports}"
+  # Only a clean parse is cached (an empty result included), so a broken settings.xml keeps warning.
+  # The cache holds the token: owner-only, and renamed into place so a concurrent shell never reads half a file.
+  (
+    umask 077
+    zf_mkdir -p "${_artifactory_cache:h}" &&
+      {
+        print -r -- "${_artifactory_stamp}"$'\n'"${_artifactory_exports}" >| "${_artifactory_cache}.$$" &&
+          zf_mv -f "${_artifactory_cache}.$$" "${_artifactory_cache}"
+      } || zf_rm -f "${_artifactory_cache}.$$"
+  ) 2>/dev/null
 fi
 
-unset _artifactory_exports
+unset _artifactory_settings _artifactory_cache _artifactory_key _artifactory_stamp _artifactory_exports
