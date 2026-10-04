@@ -7,5 +7,4 @@ SAVEHIST=10000
 
 setopt hist_ignore_all_dups  # Remove older duplicate entries
 setopt hist_reduce_blanks    # Remove superfluous blanks
-setopt inc_append_history    # Write immediately, not on exit
-setopt share_history         # Share history between sessions
+setopt share_history         # Share history between sessions; also writes each command at once, so inc_append_history would be redundant
