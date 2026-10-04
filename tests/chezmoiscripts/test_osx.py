@@ -1,6 +1,26 @@
 import pytest
 
 RESTARTED = ["cfprefsd", "Dock", "Finder", "Mail", "SystemUIServer", "Terminal"]
+# A representative pick across the sections of the script; a flipped flag or changed number fails.
+CHOSEN = [
+    ["write", "-g", "NSNavPanelExpandedStateForSaveMode", "-bool", "true"],
+    ["write", "-g", "NSNavPanelExpandedStateForSaveMode2", "-bool", "true"],
+    ["write", "NSGlobalDomain", "NSAutomaticQuoteSubstitutionEnabled", "-bool", "false"],
+    ["write", "NSGlobalDomain", "InitialKeyRepeat", "-int", "25"],
+    ["write", "NSGlobalDomain", "KeyRepeat", "-int", "2"],
+    ["write", "NSGlobalDomain", "AppleLocale", "-string", "en_US@rg=dezzzz"],
+    ["write", "-g", "com.apple.mouse.scaling", "-float", "1.5"],
+    ["write", "NSGlobalDomain", "AppleShowAllExtensions", "-bool", "true"],
+    ["write", "com.apple.finder", "AppleShowAllFiles", "-bool", "true"],
+    ["write", "com.apple.finder", "FXPreferredViewStyle", "-string", "Nlsv"],
+    ["write", "com.apple.desktopservices", "DSDontWriteNetworkStores", "-bool", "true"],
+    ["write", "com.apple.dock", "autohide", "-bool", "false"],
+    ["write", "com.apple.dock", "tilesize", "-int", "23"],
+    ["write", "com.apple.dock", "wvous-tl-corner", "-int", "3"],
+    ["write", "com.apple.SoftwareUpdate", "AutomaticCheckEnabled", "-bool", "true"],
+    ["write", "-g", "com.apple.swipescrolldirection", "-bool", "false"],
+    ["write", "com.apple.dock", "showLaunchpadGestureEnabled", "-bool", "false"],
+]
 
 
 class TestOsx:
@@ -15,6 +35,21 @@ class TestOsx:
             assert calls("osascript")[0] == ["-e", 'tell application "System Preferences" to quit']
             assert calls("chflags") == [["nohidden", str(sandbox.home / "Library")]]
             assert calls("killall") == []
+
+        def test_should_write_the_chosen_values(self, script, system_tools, calls):
+            script("osx", "--no-restart")
+            missing = [write for write in CHOSEN if write not in calls("defaults")]
+            assert missing == []
+
+        def test_should_save_screenshots_to_the_downloads_folder_of_the_home(self, script, system_tools, calls, sandbox):
+            script("osx", "--no-restart")
+            assert ["write", "com.apple.screencapture", "location", "-string", f"{sandbox.home}/Downloads"] in calls("defaults")
+
+        def test_should_name_a_key_in_every_write(self, script, system_tools, calls):
+            script("osx", "--no-restart")
+            # What follows `write` is the domain (or -g), then the key, wherever `-currentHost` and co. stand.
+            writes = [call[call.index("write") + 1:] for call in calls("defaults") if "write" in call]
+            assert [write for write in writes if write[1].startswith("-")] == []
 
         def test_should_restart_the_affected_apps(self, script, system_tools, calls):
             script("osx")

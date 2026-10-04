@@ -31,8 +31,8 @@ osascript -e 'tell application "System Preferences" to quit'
 defaults write -g NSQuitAlwaysKeepsWindows -bool true
 
 # Expand save panel by default
-defaults write -g NSNavPanelExpandedStateForSaveMode -bool true \
-  && defaults write -g NSNavPanelExpandedStateForSaveMode2 -bool true
+defaults write -g NSNavPanelExpandedStateForSaveMode -bool true
+defaults write -g NSNavPanelExpandedStateForSaveMode2 -bool true
 
 # Expand print panel by default
 defaults write -g PMPrintingExpandedStateForPrint -bool true
@@ -55,7 +55,7 @@ defaults write com.apple.AppleMultitouchTrackpad Clicking -int 1
 defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -int 1
 
 # Trackpad: Scroll direction
-defaults write com.apple.swipescrolldirection -int 0
+defaults write -g com.apple.swipescrolldirection -bool false
 
 # Trackpad: Haptic feedback (light, silent clicking)
 defaults write com.apple.AppleMultitouchTrackpad FirstClickThreshold -int 0
@@ -71,7 +71,7 @@ defaults write NSGlobalDomain ContextMenuGesture -int 1
 defaults write com.apple.dock showMissionControlGestureEnabled -bool true
 defaults write com.apple.dock showAppExposeGestureEnabled -bool true
 defaults write com.apple.dock showDesktopGestureEnabled -bool true
-defaults write com.apple.dock.showLaunchpadGestureEnabled -bool false
+defaults write com.apple.dock showLaunchpadGestureEnabled -bool false
 
 # Disable "Open man Page in Terminal" and "Search man Page Index in Terminal" shortcuts
 TEMP_SETTINGS_FILE=$(mktemp -t 'man-shortcuts-off.json')
@@ -192,14 +192,14 @@ defaults write NSGlobalDomain NSUserDictionaryReplacementItems -string '
 # Note: if you're in the US, replace `EUR` with `USD`, `Centimeters` with
 # `Inches`, `en_GB` with `en_US`, and `true` with `false`.
 defaults write NSGlobalDomain AppleLanguages -array "en-US" "de-DE"
-defaults write NSGlobalDomain AppleLocale -string "de_DE"
+defaults write NSGlobalDomain AppleLocale -string "en_US@rg=dezzzz"
 defaults write NSGlobalDomain AppleMeasurementUnits -string "Centimeters"
 defaults write NSGlobalDomain AppleTemperatureUnit -string "Celsius"
 defaults write NSGlobalDomain AppleMetricUnits -bool true
 defaults write NSGlobalDomain AppleICUForce12HourTime -bool false
 
 # Set mouse speed (vertical mouse)
-defaults write -g com.apple.mouse.scaling 6
+defaults write -g com.apple.mouse.scaling -float 1.5
 
 ###############################################################################
 # Screen                                                                      #

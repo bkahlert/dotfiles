@@ -56,10 +56,12 @@ class TestGcloudLogin:
         ], ids=["cli", "adc", "admin"])
         def test_should_do_nothing_and_say_so(self, run, fake_bin, calls, args, mode, command):
             fake_bin("gcloud")
+            fake_bin("pkill")
             result = login(run, *args)
             assert result.returncode == 0
             assert result.stderr.endswith(f"✔ Credentials for {command[-2]} are still valid ({mode}); nothing to do\n")
             assert calls("gcloud") == [command]
+            assert calls("pkill") == []
 
     class TestOnGcloudFailingBeforeTheBrowser:
         def test_should_relay_its_output_and_exit_1(self, run, fake_bin):
@@ -91,6 +93,34 @@ class TestGcloudLogin:
             assert (sandbox.home / "chromium.args").read_text().splitlines() == [
                 f"--user-data-dir={profile}", "--remote-debugging-port=0", "--no-first-run",
                 "--no-default-browser-check", "--no-startup-window"]
+
+        @pytest.mark.parametrize("args,profile", [((), "normal"), (("--adc",), "normal"), (("--admin",), "admin")],
+                                 ids=["cli", "adc", "admin"])
+        def test_should_end_a_leftover_chromium_of_that_profile_before_launching_a_new_one(
+                self, run, fake_bin, calls, sandbox, args, profile):
+            browser_tools(fake_bin, sandbox)
+            fake_bin("op-agent", script="printf hunter2\n")
+            fake_bin("gcloud-login-driver", script='touch "$HOME/callback"\n')
+            # The browser starts in the background, so a pkill that runs after the launch can still beat
+            # its first write. Linger, and any browser launched meanwhile shows up.
+            fake_bin("pkill", script='sleep 0.3\n[[ -e "$HOME/chromium.args" ]] && touch "$HOME/pkill-after-launch"\nexit 0\n')
+            result = login(run, *args, timeout=30)
+            assert result.returncode == 0
+            expected = f"--user-data-dir={sandbox.home}/Library/Application Support/gcloud-login/{profile}"
+            assert calls("pkill") == [["-f", "--", expected]]
+            assert not (sandbox.home / "pkill-after-launch").exists()
+
+        @pytest.mark.parametrize("args", [(), ("--adc",)], ids=["cli", "adc"])
+        def test_should_not_read_the_admin_password_outside_the_admin_flow(self, run, fake_bin, calls, sandbox, args):
+            browser_tools(fake_bin, sandbox)
+            fake_bin("op-agent", script="printf hunter2\n")
+            fake_bin("gcloud-login-driver", script='cat > "$HOME/driver.stdin"\ntouch "$HOME/callback"\n')
+            result = login(run, *args, timeout=30)
+            assert result.returncode == 0
+            assert calls("op-agent") == []
+            assert (sandbox.home / "driver.stdin").read_text() == ""
+            [driver] = calls("gcloud-login-driver")
+            assert driver[driver.index("--email") + 1] == NORMAL
 
         def test_should_exit_2_when_the_driver_times_out_and_gcloud_never_finishes(self, run, fake_bin, sandbox):
             browser_tools(fake_bin, sandbox)
