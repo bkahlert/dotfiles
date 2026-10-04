@@ -83,6 +83,7 @@ class Sandbox:
         self.home = home
         self.fakes = fakes
         self.calls_dir = fakes / ".calls"
+        self.real_tools = real_tools
         self.calls_dir.mkdir(parents=True)
         self.env = isolated_env(home, [str(fakes), str(bin_links), str(real_tools)])
         for name in GUARDED:
@@ -95,11 +96,14 @@ class Sandbox:
                               capture_output=True, text=True, timeout=timeout)
 
     def only_tools(self, *names):
-        """PATH becomes the fakes plus bash (which they run on) and the named real tools, so a glab, node or claude installed on the machine cannot leak in."""
+        """PATH becomes the fakes plus bash (which they run on) and the named REAL_TOOLS, so a glab, node or claude installed on the machine cannot leak in."""
         bare = self.fakes.parent / "bare"
         bare.mkdir(exist_ok=True)
         for name in dict.fromkeys(("bash", *names)):
-            (bare / name).symlink_to(shutil.which(name))
+            tool = self.real_tools / name
+            if not tool.is_symlink():
+                pytest.fail(f"only_tools: {name} is not one of the REAL_TOOLS")
+            (bare / name).symlink_to(tool.readlink())
         self.env["PATH"] = f"{self.fakes}:{bare}"
 
     def zsh(self, snippet, *, function=None, modules=(), timeout=10):

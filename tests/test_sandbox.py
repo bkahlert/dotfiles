@@ -107,6 +107,17 @@ class TestSandbox:
             result = sandbox.zsh("print -r -- ${+commands[cat]}${+commands[faked]}${+commands[ls]}${+commands[bash]}")
             assert result.stdout == "1101\n"
 
+        def test_should_take_bash_from_the_tool_directories_whatever_the_callers_path_is(self, sandbox, monkeypatch):
+            monkeypatch.setenv("PATH", "/bin:/usr/bin")
+            sandbox.only_tools()
+            result = sandbox.run("bash", "-c", 'echo "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}"')
+            major, minor = map(int, result.stdout.split("."))
+            assert (major, minor) >= (4, 4)
+
+        def test_should_fail_on_a_tool_outside_the_real_tools(self, sandbox):
+            with pytest.raises(pytest.fail.Exception, match="glab is not one of the REAL_TOOLS"):
+                sandbox.only_tools("glab")
+
     class TestZsh:
         def test_should_autoload_a_function_from_the_source_tree(self, zsh, sandbox, tmp_path, monkeypatch):
             (tmp_path / "greet").write_text("print -r -- hello $1\n")
