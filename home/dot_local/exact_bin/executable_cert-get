@@ -46,9 +46,9 @@ fetch() {
 if $download; then
   # Renamed into place only on success, so a failed or interrupted fetch leaves no empty or partial file.
   tmp="$domain.pem.$$"
-  trap 'rm -f "$tmp"' EXIT
+  trap 'rm -f -- "$tmp"' EXIT
   fetch >"$tmp" || exit 1
-  mv -f "$tmp" "$domain.pem"
+  mv -f -- "$tmp" "$domain.pem"
   printf '%s\n' "$domain.pem"
 else
   fetch

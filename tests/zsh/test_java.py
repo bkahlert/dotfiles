@@ -40,6 +40,8 @@ def start(zsh):
 
 def installed_brew_jdk(sandbox, jdk):
     sandbox.env["HOMEBREW_PREFIX"] = str(sandbox.home / "prefix")
+    # Answers like the real one and records, so a module that forks it shows in calls("brew").
+    sandbox.fake_bin("brew", stdout=str(sandbox.home / "prefix"))
     return jdk("prefix", *BREW_JDK.split("/"))
 
 

@@ -67,19 +67,15 @@ class TestIdp:
     class TestOnIdpNewerThanCache:
         def test_should_regenerate_the_cache_and_source_it(self, zsh, sandbox, fake_bin, calls, cache):
             fake_bin("idp", stdout=SCRIPT)
-            cache.parent.mkdir(parents=True)
-            cache.write_text("IDP_SCRIPT_SOURCED=stale\n")
-            os.utime(cache, (LONG_AGO, LONG_AGO))
+            stale(sandbox, cache)
             result = zsh('print -r -- "$IDP_SCRIPT_SOURCED"', modules=MODULES)
             assert (result.stdout, calls("idp"), body(cache)) == ("1\n", [["completion", "zsh"]], SCRIPT)
 
         def test_should_keep_the_old_cache_when_idp_fails(self, zsh, sandbox, fake_bin, cache):
             fake_bin("idp", stderr="idp: not logged in\n", exit_code=1)
-            cache.parent.mkdir(parents=True)
-            cache.write_text("IDP_SCRIPT_SOURCED=stale\n")
-            os.utime(cache, (LONG_AGO, LONG_AGO))
+            stale(sandbox, cache)
             result = zsh('print -r -- "$IDP_SCRIPT_SOURCED"', modules=MODULES)
-            assert (result.stdout, cache.read_text()) == ("stale\n", "IDP_SCRIPT_SOURCED=stale\n")
+            assert (result.stdout, body(cache)) == ("stale\n", "IDP_SCRIPT_SOURCED=stale\n")
 
     class TestOnUpgradeToAnOlderBuild:
         def test_should_regenerate_the_cache_for_the_new_binary(self, zsh, sandbox):
@@ -114,3 +110,10 @@ def installed_idp(sandbox, version, script):
 def body(cache):
     """The cached script without its first line, which names the binary it came from."""
     return cache.read_text().split("\n", 1)[1]
+
+
+def stale(sandbox, cache):
+    """A cache written for the idp on the PATH, older than that binary: only the mtime says to regenerate it."""
+    cache.parent.mkdir(parents=True)
+    cache.write_text(f"# idp: {(sandbox.fakes / 'idp').resolve()}\nIDP_SCRIPT_SOURCED=stale\n")
+    os.utime(cache, (LONG_AGO, LONG_AGO))

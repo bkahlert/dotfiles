@@ -26,6 +26,8 @@ def sdk(sandbox):
 def brew_sdk(sandbox, sdk, **kwargs):
     prefix = sandbox.home / "prefix"
     sandbox.env["HOMEBREW_PREFIX"] = str(prefix)
+    # Answers like the real one and records, so a module that forks it shows in calls("brew").
+    sandbox.fake_bin("brew", stdout=str(prefix))
     return sdk(prefix / "share" / "google-cloud-sdk", **kwargs)
 
 

@@ -49,6 +49,11 @@ class TestCertGet:
             run("cert-get", "--download", "example.test")
             assert sorted(path.name for path in sandbox.home.glob("example.test*")) == ["example.test.pem"]
 
+        def test_should_leave_nothing_behind_on_failure_for_a_domain_that_looks_like_an_option(self, run, fake_bin, sandbox):
+            fake_bin("openssl", script=OPENSSL_FAILING)
+            result = run("cert-get", "--download", "--", "-example.test")
+            assert (result.returncode, result.stderr, list(sandbox.home.glob("*example.test*"))) == (1, "", [])
+
         def test_should_leave_nothing_behind_on_ctrl_c(self, fake_bin, sandbox):
             fake_bin("openssl", script=OPENSSL_HANGING)
             # Its own session, so the SIGINT goes to cert-get and its children the way Ctrl-C does, not to pytest.
