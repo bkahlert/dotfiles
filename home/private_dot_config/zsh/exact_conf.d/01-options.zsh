@@ -7,8 +7,5 @@ unset LC_CTYPE
 autoload -U colors && colors
 export CLICOLOR=1
 
-# Word splitting compatible with sh
-setopt shwordsplit
-
 # Don't error on unmatched globs
 unsetopt nomatch
