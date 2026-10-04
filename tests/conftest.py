@@ -5,17 +5,18 @@ from pathlib import Path
 
 import pytest
 
-from repo import FUNCTIONS_SOURCE, isolated_env, module_path, scripts
+from repo import FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
 
 # The only real tools a subject can reach, besides the fakes and the other scripts under test: shells,
 # coreutils and text tools. Everything else (docker, aws, node, claude, a Homebrew package) is not on the
 # sandbox PATH at all, so an unfaked call fails whether or not the machine has the tool installed.
-# A new subject that needs another real tool adds it here.
-REAL_TOOLS = ("awk", "base64", "basename", "bash", "cat", "chmod", "cmp", "cp", "cut", "date", "diff", "dirname",
-              "env", "expr", "false", "find", "getconf", "grep", "gzip", "head", "hostname", "id", "jq", "kill",
-              "ln", "ls", "mkdir", "mkfifo", "mktemp", "mv", "nohup", "od", "perl", "ps", "python3", "readlink", "realpath",
-              "rm", "rmdir", "sed", "seq", "sh", "sleep", "sort", "stat", "tail", "tar", "tee", "test", "touch",
-              "tr", "true", "tty", "uname", "uniq", "wc", "which", "whoami", "xargs", "zsh")
+# A new subject that needs another real tool adds it here. They are taken from TOOL_DIRECTORIES, not from
+# the caller's PATH, so the same tool is found on every machine (bash must be Homebrew's 4.4+ on macOS).
+REAL_TOOLS = ("awk", "base64", "basename", "bash", "cat", "chmod", "cp", "cut", "date", "dirname", "env",
+              "false", "find", "getconf", "grep", "gzip", "head", "jq", "ls", "mkdir", "mkfifo", "mktemp", "mv",
+              "nohup", "python3", "rm", "rmdir", "sed", "seq", "sh", "shasum", "sleep", "sort", "stat", "tail",
+              "tar", "test", "touch", "tr", "true", "uname", "uniq", "wc", "zsh")
+TOOL_DIRECTORIES = ":".join(SYSTEM_PATH)
 
 # Tools that reach the network, a vault, system state or the user's own state (repositories,
 # processes, the clipboard, container machines), or ignore `HOME` (`ssh-keygen -R` edits the
@@ -42,11 +43,13 @@ def bin_links(tmp_path_factory):
 
 @pytest.fixture(scope="session")
 def real_tools(tmp_path_factory):
-    """Symlinks to the REAL_TOOLS found on the machine's PATH (Homebrew's bash first: the scripts need 4.4)."""
+    """Symlinks to the REAL_TOOLS, found in TOOL_DIRECTORIES in order."""
+    found = {name: shutil.which(name, path=TOOL_DIRECTORIES) for name in REAL_TOOLS}
+    if missing := [name for name, path in found.items() if path is None]:
+        pytest.exit(f"REAL_TOOLS not found in {TOOL_DIRECTORIES}: {' '.join(missing)}", returncode=2)
     links = tmp_path_factory.mktemp("real-tools")
-    for name in REAL_TOOLS:
-        if found := shutil.which(name):
-            (links / name).symlink_to(found)
+    for name, path in found.items():
+        (links / name).symlink_to(path)
     return links
 
 
