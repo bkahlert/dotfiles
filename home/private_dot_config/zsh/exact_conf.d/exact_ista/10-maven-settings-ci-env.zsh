@@ -5,7 +5,7 @@
 #          when not already set (e.g. skips when running in CI). Stays silent
 #          when the file declares no active profile.
 #          The Python parse runs once per settings.xml change: its result is
-#          cached under $XDG_CACHE_HOME/zsh, keyed on the file's mtime.
+#          cached under $XDG_CACHE_HOME/zsh, keyed on the file's mtime and size.
 # Usage:   Sourced automatically from ~/.config/zsh/conf.d/
 
 [[ -f "${HOME}/.m2/settings.xml" ]] || return 0
@@ -16,18 +16,19 @@ if [[ -n "${CAS_ARTIFACTORY_BASE_URL}" && -n "${CAS_ARTIFACTORY_CI_USER}" && -n 
 fi
 
 zmodload -F zsh/stat b:zstat
-zmodload -F zsh/files b:mkdir b:mv
+# Prefixed builtins only: plain mkdir/mv must stay the external commands in the user's session.
+zmodload -Fm zsh/files 'b:zf_*'
 
 _artifactory_settings="${HOME}/.m2/settings.xml"
 _artifactory_cache="${XDG_CACHE_HOME:-${HOME}/.cache}/zsh/maven-settings-ci-env"
-zstat -A _artifactory_mtime +mtime -- "${_artifactory_settings}"
-_artifactory_stamp="# mtime ${_artifactory_mtime[1]}"
+zstat -H _artifactory_key -- "${_artifactory_settings}"
+_artifactory_stamp="# mtime ${_artifactory_key[mtime]} size ${_artifactory_key[size]}"
 
-if [[ -r "${_artifactory_cache}" ]]; then
+if [[ -f "${_artifactory_cache}" ]]; then
   _artifactory_exports=$(<"${_artifactory_cache}")
   if [[ "${_artifactory_exports%%$'\n'*}" == "${_artifactory_stamp}" ]]; then
     eval "${_artifactory_exports}"
-    unset _artifactory_settings _artifactory_cache _artifactory_mtime _artifactory_stamp _artifactory_exports
+    unset _artifactory_settings _artifactory_cache _artifactory_key _artifactory_stamp _artifactory_exports
     return 0
   fi
 fi
@@ -108,10 +109,12 @@ if [[ $? -eq 0 ]]; then
   # The cache holds the token: owner-only, and renamed into place so a concurrent shell never reads half a file.
   (
     umask 077
-    mkdir -p "${_artifactory_cache:h}" &&
-      print -r -- "${_artifactory_stamp}"$'\n'"${_artifactory_exports}" >| "${_artifactory_cache}.$$" &&
-      mv -f "${_artifactory_cache}.$$" "${_artifactory_cache}"
+    zf_mkdir -p "${_artifactory_cache:h}" &&
+      {
+        print -r -- "${_artifactory_stamp}"$'\n'"${_artifactory_exports}" >| "${_artifactory_cache}.$$" &&
+          zf_mv -f "${_artifactory_cache}.$$" "${_artifactory_cache}"
+      } || zf_rm -f "${_artifactory_cache}.$$"
   ) 2>/dev/null
 fi
 
-unset _artifactory_settings _artifactory_cache _artifactory_mtime _artifactory_stamp _artifactory_exports
+unset _artifactory_settings _artifactory_cache _artifactory_key _artifactory_stamp _artifactory_exports

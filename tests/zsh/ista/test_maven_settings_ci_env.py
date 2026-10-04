@@ -27,7 +27,7 @@ SETTINGS = """\
 
 @pytest.fixture(autouse=True)
 def bare(sandbox):
-    sandbox.only_tools("zsh", "python3", "touch")
+    sandbox.only_tools("zsh", "python3", "touch", "mv", "mkdir")
 
 
 @pytest.fixture
@@ -82,6 +82,13 @@ class TestMavenSettingsCiEnv:
             result = zsh(SHOW, modules=MODULES)
             assert (result.returncode, result.stdout, result.stderr) == (0, "||\n", "")
 
+    class TestOnLoad:
+        @pytest.mark.parametrize("command", ["mv", "mkdir"])
+        def test_should_leave_the_command_the_external_one(self, zsh, settings, command):
+            settings()
+            result = zsh(f"whence -w {command}", modules=MODULES)
+            assert (result.stdout, result.stderr) == (f"{command}: command\n", "")
+
     class TestOnVariablesAlreadySet:
         def test_should_leave_them_alone(self, zsh, settings, sandbox):
             settings()
@@ -127,6 +134,25 @@ class TestMavenSettingsCiEnv:
             result = zsh(SHOW, modules=MODULES)
             assert (result.stdout, result.stderr) == ("https://repo.example/artifactory|deploy|rotated\n", "")
             assert len(python_calls()) == 2
+
+        def test_should_read_a_settings_file_anew_that_changed_size_but_kept_its_mtime(self, zsh, settings, sandbox):
+            settings()
+            file = sandbox.home / ".m2" / "settings.xml"
+            mtime = file.stat().st_mtime
+            zsh("true", modules=MODULES)
+            settings(password="a-much-longer-password")
+            os.utime(file, (mtime, mtime))
+            result = zsh(SHOW, modules=MODULES)
+            assert (result.stdout, result.stderr) == ("https://repo.example/artifactory|deploy|a-much-longer-password\n", "")
+
+        def test_should_leave_no_temporary_file_behind_when_caching_fails(self, zsh, settings, sandbox):
+            settings()
+            blocked = sandbox.home / ".cache" / "zsh" / "maven-settings-ci-env"
+            blocked.mkdir(parents=True)
+            blocked.chmod(0o500)
+            result = zsh(SHOW, modules=MODULES)
+            assert (result.stdout, result.stderr) == ("https://repo.example/artifactory|deploy|s3cret\n", "")
+            assert [f.name for f in blocked.parent.iterdir()] == ["maven-settings-ci-env"]
 
         def test_should_keep_the_cached_credentials_readable_by_the_owner_only(self, zsh, settings, sandbox):
             settings()
