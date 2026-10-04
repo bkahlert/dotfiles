@@ -8,10 +8,10 @@
 assume() {
   if ! (( $+commands[assume] )); then
     if command -v brew &>/dev/null; then
-      echo "granted not found — installing via Homebrew..."
+      echo "granted not found — installing via Homebrew..." >&2
       brew install common-fate/granted/granted || return 1
     else
-      echo "granted not found and Homebrew is not available. Please install it manually."
+      echo "granted not found and Homebrew is not available. Please install it manually." >&2
       return 1
     fi
   fi

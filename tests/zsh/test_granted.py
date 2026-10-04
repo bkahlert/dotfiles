@@ -31,7 +31,8 @@ class TestGranted:
             install_assume(sandbox)
             result = zsh('assume org; print -r -- "$ASSUMED"', modules=[MODULE])
             assert result.stdout.splitlines()[-1] == "org"
-            assert "installing via Homebrew" in result.stdout + result.stderr
+            assert "installing via Homebrew" in result.stderr
+            assert "installing via Homebrew" not in result.stdout
             assert calls("brew") == [["install", "common-fate/granted/granted"]]
 
         def test_should_return_1_when_brew_fails(self, zsh, fake_bin):
@@ -44,4 +45,5 @@ class TestGranted:
             (sandbox.fakes / "brew").unlink()
             result = zsh('assume org; echo "status $?"', modules=[MODULE])
             assert result.stdout.splitlines()[-1] == "status 1"
-            assert "Homebrew is not available" in result.stdout + result.stderr
+            assert "Homebrew is not available" in result.stderr
+            assert "Homebrew is not available" not in result.stdout
