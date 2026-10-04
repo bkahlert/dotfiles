@@ -4,22 +4,25 @@
 
 set -euo pipefail
 
-self_dir="$(cd "$(dirname "$0")" && pwd)"
+# Print the first executable <name> on PATH that is not this script. Compared by
+# file identity (-ef), so a trailing slash, a relative entry or a symlinked
+# directory cannot make the wrapper pick itself and re-exec forever.
+find_other() {
+  local dir candidate
+  local IFS=:
+  for dir in $PATH; do
+    candidate="${dir:-.}/$1"
+    if [[ -f "$candidate" && -x "$candidate" && ! "$candidate" -ef "$0" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
 
-# Strip this script's directory from PATH so `command -v` resolves to the
-# next candidate, not back to this wrapper.
-clean_path=""
-IFS=:
-for dir in $PATH; do
-  [[ "$dir" == "$self_dir" ]] && continue
-  clean_path="${clean_path:+$clean_path:}$dir"
-done
-unset IFS
-PATH="$clean_path"
-
-if real=$(command -v docker); then
+if real=$(find_other docker); then
   exec "$real" "$@"
-elif real=$(command -v podman); then
+elif real=$(find_other podman); then
   exec "$real" "$@"
 fi
 
