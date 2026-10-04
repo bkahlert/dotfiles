@@ -7,6 +7,11 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
     name = {{ promptStringOnce . "name" "Full name" | quote }}
 {{- $company := promptStringOnce . "company" "Context name (bkahlert, ista, or empty for none)" }}
     company = {{ $company | quote }}
+
+{{- /* Scripts run by chezmoi do not start from an interactive zsh, which is what
+       exports DOTFILES_CONTEXT; on a fresh machine nothing else sets it. */}}
+[scriptEnv]
+    DOTFILES_CONTEXT = {{ $company | quote }}
 {{- /* 1Password is the ista secret store; bkahlert is a company too, so gate
        on the context rather than on company being set. */}}
 {{- if eq $company "ista" }}

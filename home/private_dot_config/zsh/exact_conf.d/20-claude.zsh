@@ -1,12 +1,4 @@
-# Auto-install Claude CLI wrapper
-claude() {
-  if ! (( $+commands[claude] )); then
-    echo "Claude not found. Installing..." >&2
-    curl -fsSL https://claude.ai/install.sh | bash
-    rehash
-  fi
-  command claude "$@"
-}
+# claude comes from run_once_before_03-install-claude, which puts it in ~/.local/bin, where it updates itself.
 
 # No shell completion here on purpose: the CLI has no `completion` subcommand
 # (`claude --help` lists none), so `claude completion --shell zsh` was parsed as

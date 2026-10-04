@@ -39,6 +39,8 @@ Defined in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), prompted on `chezmoi i
 - Any known context, personal included: `[[ -n "$DOTFILES_CONTEXT" ]] && ...`
 - Business only; use this for work-only behaviour: `[[ "$DOTFILES_CONTEXT" == ista ]] && ...`
 
+`.chezmoiscripts/` scripts get `$DOTFILES_CONTEXT` from `scriptEnv` in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), which chezmoi sets for every script it runs. No interactive zsh has exported it yet on `chezmoi init --apply` on a fresh machine, so a script must not rely on the shell's copy.
+
 In shell scripts use the env var with a default:
 ```bash
 [[ "${DOTFILES_CONTEXT:-}" == ista ]] && ...
@@ -86,7 +88,7 @@ Each package entry in install scripts must have an inline comment stating:
 
 Example: `cask "1password-cli" # 1Password CLI (op); required by chezmoi to read secrets at apply time`
 
-[.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`/`01` prefixes order the install scripts (Homebrew before packages). Only add `.tmpl` where the script itself needs a template value.
+[.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`03` prefixes order the install scripts: Homebrew, packages, nvm with a default Node.js, Claude Code. A later script that needs one of these tools fails when it is missing instead of skipping. Only add `.tmpl` where the script itself needs a template value.
 
 ## Key Files
 
@@ -180,6 +182,7 @@ CI runs the same targets on every pull request and on `main`; the `ci` check is 
 | `bin/executable_<name>` | `tests/bin/test_<name>.py` (hyphens as underscores) |
 | `private_dot_claude/executable_<name>` (`~/.claude/<name>`) | `tests/claude/test_<name>.py`, same sandbox; `run("<name>")` resolves it |
 | `functions/<name>` | `tests/functions/test_<name>.py` |
+| `~/.zshenv` ([dot_zshenv](home/dot_zshenv)), which runs for every zsh | `tests/zsh/test_zshenv.py` |
 | `conf.d/NN-<name>.zsh` that defines a function | `tests/zsh/test_<name>.py`; `conf.d/exact_ista/...` under `tests/zsh/ista/` |
 | `.chezmoiscripts/run_*_<name>` | `tests/chezmoiscripts/test_<name>.py`: the name without the `run_…` prefix, ordering digits and extension (`01-install-packages.sh` → `test_install_packages.py`) |
 | `modify_<name>` (anywhere under `home/`) | `tests/modify/test_<name>.py`, dots as underscores (`modify_settings.json` → `test_settings_json.py`) |

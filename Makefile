@@ -13,10 +13,12 @@ ci: lint unit integration
 lint: lint-shell lint-zsh lint-workflows
 
 # Every tracked file with a bash shebang or a .sh/.bash suffix. Templates are not shell before
-# rendering, and quick-access/ holds symlinks to files that are already covered.
+# rendering, except .sh.tmpl scripts: they keep their template actions in comments, which shellcheck
+# skips. quick-access/ holds symlinks to files that are already covered.
 lint-shell:
-	git ls-files -z -- ':!quick-access' ':!*.tmpl' | while IFS= read -r -d '' file; do \
-	  if [[ $$file == *.sh || $$file == *.bash ]] || head -n 1 "$$file" | grep -qE '^#!.*bash'; then printf '%s\0' "$$file"; fi; \
+	git ls-files -z -- ':!quick-access' | while IFS= read -r -d '' file; do \
+	  [[ $$file == *.tmpl && $$file != *.sh.tmpl ]] && continue; \
+	  if [[ $$file == *.sh || $$file == *.sh.tmpl || $$file == *.bash ]] || head -n 1 "$$file" | grep -qE '^#!.*bash'; then printf '%s\0' "$$file"; fi; \
 	done | xargs -0 shellcheck
 
 lint-zsh:
