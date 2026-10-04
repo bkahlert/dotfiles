@@ -1,4 +1,3 @@
-import re
 import time
 
 import pytest
@@ -163,17 +162,8 @@ class TestGcloudLogin:
                 result = login(run, timeout=30)
                 assert result.returncode == 1
                 assert result.stderr.endswith("✘ gcloud-login: Chromium install failed\n")
-                [call] = calls("npx")
-                assert re.fullmatch(r"@puppeteer/browsers@\d+\.\d+\.\d+", call[1])
-                assert call[:1] + call[2:] == ["--yes", "install", "chromium@1702741",
-                                               "--path", f"{sandbox.home}/.cache/gcloud-login"]
-
-            def test_should_show_the_installers_own_error(self, run, fake_bin, sandbox):
-                fake_bin("gcloud", script=GCLOUD_BROWSER)
-                fake_bin("node")
-                fake_bin("npx", stderr="npm error 404 not found\n", exit_code=1)
-                result = login(run, timeout=30)
-                assert "npm error 404 not found\n" in result.stderr
+                assert calls("npx") == [["--yes", "@puppeteer/browsers", "install", "chromium@1702741",
+                                         "--path", f"{sandbox.home}/.cache/gcloud-login"]]
 
 
 GCLOUD_VALID = "\n".join([

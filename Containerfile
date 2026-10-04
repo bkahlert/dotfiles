@@ -1,8 +1,8 @@
 # base: what `make integration` runs. One-shot: the entrypoint applies the dotfiles and exits,
 # so there is no service contract to probe (Podman warns that OCI images drop the directive).
-# Pinned by digest (Dependabot bumps tag and digest together). Fully qualified because Podman resolves a bare
-# `fedora` to this registry while Docker Hub's copy has a different digest.
-FROM registry.fedoraproject.org/fedora:44@sha256:7011f51bd8089d345be42d41f0aa3190d258823528852a5e7ec976fe2fd20f53 AS base
+# Pinned by digest on Docker Hub, where Dependabot bumps tag and digest together. Fully qualified because Podman
+# maps a bare `fedora` to registry.fedoraproject.org, whose digest differs.
+FROM docker.io/library/fedora:44@sha256:43b29f65a41eb9c35e1cd5323e3bdf3b655c2357a9f4f1ff2f9c2798e5045d80 AS base
 
 # pipefail: a failed pipeline stage fails the build instead of passing on empty output.
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
