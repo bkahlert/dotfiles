@@ -90,7 +90,8 @@ report_status() {
     cli_state="needs login"; all_valid=false
   fi
   if adc_token=$(gcloud auth application-default print-access-token 2>/dev/null); then
-    adc_email=$(curl -fsS "${TOKENINFO_URL}?access_token=${adc_token}" | jq -r '.email // empty')
+    # The token goes in the POST body on stdin: a query string would show up in ps and in server logs.
+    adc_email=$(printf '%s' "$adc_token" | curl -fsS --data-urlencode 'access_token@-' "$TOKENINFO_URL" | jq -r '.email // empty')
     adc_state=valid
   else
     adc_email=""; adc_state="needs login"; all_valid=false
