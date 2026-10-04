@@ -30,7 +30,7 @@ class TestInstallHomebrew:
                 result = script("install-homebrew", prefix_root=tmp_path)
                 assert result.returncode == 0, result.stderr
                 [call] = calls("curl")
-                assert INSTALLER_URL in call and "=https" in call
+                assert INSTALLER_URL in call and "=https" in call and "-fsSL" in call
                 assert (sandbox.home / "installer-calls").read_text() == "ran\n"
 
             def test_should_leave_no_installer_behind(self, script, sandbox, tmp_path):
