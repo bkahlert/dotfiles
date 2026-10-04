@@ -101,7 +101,9 @@ class TestGcloudLogin:
             browser_tools(fake_bin, sandbox)
             fake_bin("op-agent", script="printf hunter2\n")
             fake_bin("gcloud-login-driver", script='touch "$HOME/callback"\n')
-            fake_bin("pkill", script='[[ -e "$HOME/chromium.args" ]] && touch "$HOME/pkill-after-launch"\n')
+            # The browser starts in the background, so a pkill that runs after the launch can still beat
+            # its first write. Linger, and any browser launched meanwhile shows up.
+            fake_bin("pkill", script='sleep 0.3\n[[ -e "$HOME/chromium.args" ]] && touch "$HOME/pkill-after-launch"\nexit 0\n')
             result = login(run, *args, timeout=30)
             assert result.returncode == 0
             expected = f"--user-data-dir={sandbox.home}/Library/Application Support/gcloud-login/{profile}"
