@@ -10,7 +10,14 @@ case "${DOTFILES_CONTEXT:-}" in
   *)        exit 0 ;;
 esac
 
-command -v npx >/dev/null || { printf 'npx not available; skipping skills install\n' >&2; exit 0; }
+# npx is the default node's, which run_once_before_02-install-nvm installed and nvm.sh puts on PATH.
+export NVM_DIR="$HOME/.nvm"
+[[ -s $NVM_DIR/nvm.sh ]] || { printf 'nvm not found in %s; run_once_before_02-install-nvm installs it\n' "$NVM_DIR" >&2; exit 1; }
+# nvm.sh is not written for set -u.
+set +u
+# shellcheck source=/dev/null
+source "$NVM_DIR/nvm.sh"
+set -u
 
 # Both pins run third-party code on every apply; bump them together, which also re-runs this script.
 skills_cli=skills@1.7.0

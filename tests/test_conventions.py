@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 import repo
-from repo import CONF_D_SOURCE, FUNCTIONS_SOURCE, ROOT, chezmoiscripts, modify_scripts, scripts, templates
+from repo import CONF_D_SOURCE, FUNCTIONS_SOURCE, HOME_SOURCE, ROOT, chezmoiscripts, modify_scripts, scripts, templates
 
 TESTS = ROOT / "tests"
 ALLOWLIST = tomllib.loads((TESTS / "untested.toml").read_text())
@@ -52,6 +52,7 @@ def subjects():
     for section, files in (("modify", modify_scripts()), ("templates", templates())):
         for key, source in files:
             found.append(Subject(section, key, source, (TESTS / section / f"test_{key}.py",)))
+    found.append(Subject("startup", "zshenv", HOME_SOURCE / "dot_zshenv", (TESTS / "zsh" / "test_zshenv.py",)))
     for source in conf_d_modules():
         if DEFINES_A_FUNCTION.search(source.read_text()):
             found.append(Subject("conf_d", conf_d_key(source), source, (conf_d_test(source),)))

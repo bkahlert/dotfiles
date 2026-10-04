@@ -13,6 +13,22 @@ class TestChezmoiToml:
         data = tomllib.loads(chezmoi.config(company).read_text())["data"]
         assert data == {"email": "test@example.com", "name": "Test User", "company": company}
 
+    class TestScriptEnv:
+        @pytest.mark.parametrize("company", ("", "bkahlert", "ista"), ids=("none", "bkahlert", "ista"))
+        def test_should_hand_the_context_to_scripts_as_dotfiles_context(self, chezmoi, company):
+            config = tomllib.loads(chezmoi.config(company).read_text())
+            assert config["scriptEnv"] == {"DOTFILES_CONTEXT": company}
+
+        @pytest.mark.parametrize("company", ("", "ista"), ids=("none", "ista"))
+        def test_should_reach_a_script_chezmoi_runs_without_a_shell_having_set_it(self, chezmoi, sandbox, tmp_path, company):
+            source = tmp_path / "source"
+            script = source / ".chezmoiscripts" / "run_after_context.sh"
+            script.parent.mkdir(parents=True)
+            script.write_text('#!/usr/bin/env bash\nprintf "[%s]" "${DOTFILES_CONTEXT-unset}"\n')
+            result = chezmoi.run("apply", "--destination", str(sandbox.home), config=chezmoi.config(company), source=source)
+            assert result.returncode == 0, result.stderr
+            assert result.stdout == f"[{company}]"
+
     class TestOnAnySourceLocation:
         @pytest.fixture(params=("in the default location", "in a clone elsewhere"))
         def source(self, request, tmp_path):

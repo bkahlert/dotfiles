@@ -4,7 +4,9 @@
 
 set -euo pipefail
 
-command -v claude >/dev/null || { printf 'claude not available; skipping MCP server setup\n' >&2; exit 0; }
+# claude is where run_once_before_03-install-claude put it, which is on no PATH yet on a fresh machine.
+PATH="$HOME/.local/bin:$PATH"
+command -v claude >/dev/null || { printf 'claude not found; run_once_before_03-install-claude installs it\n' >&2; exit 1; }
 
 # context7 — up-to-date library documentation lookup (Upstash)
 claude mcp remove --scope user context7 2>/dev/null || true
