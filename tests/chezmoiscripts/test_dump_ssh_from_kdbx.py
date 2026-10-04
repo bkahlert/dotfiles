@@ -7,7 +7,7 @@ import sys
 import pytest
 from pykeepass import PyKeePass, create_database
 
-from repo import CHEZMOISCRIPTS_SOURCE
+from repo import CHEZMOISCRIPTS_SOURCE, CONTEXTS, HOME_SOURCE
 
 PASSWORD = "master"
 KDBX = "Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx"
@@ -15,6 +15,24 @@ PUB = b"ssh-ed25519 AAAA key\n"
 
 
 class TestDumpSshFromKdbx:
+    class TestOnRender:
+        """The template is rendered by the real chezmoi: a render error aborts the whole `chezmoi apply`."""
+
+        @pytest.mark.parametrize("company", CONTEXTS, ids=lambda c: c or "none")
+        def test_should_render_nothing_instead_of_failing_without_a_vault(self, rendered, company):
+            result = rendered(company)
+            assert (result.returncode, result.stdout) == (0, "")
+
+        @pytest.mark.skipif(sys.platform != "darwin", reason="the script is only rendered on macOS")
+        def test_should_embed_the_hash_of_the_vault_so_a_change_reruns_the_script(self, rendered, vault):
+            first = rendered("bkahlert").stdout
+            vault.entry("pi", file="~/.ssh/conf.d/pi.conf", content="Host pi")
+            second = rendered("bkahlert").stdout
+            assert first.startswith("#!/usr/bin/env -S uv run --script\n")
+            assert re.search(r"^# kdbx-hash: [0-9a-f]{64}  ", first, re.MULTILINE)
+            assert re.search(r"^# kdbx-hash: [0-9a-f]{64}  ", second, re.MULTILINE)
+            assert first != second
+
     class TestOnEntries:
         def test_should_join_blocks_sharing_a_file_sorted_by_entry_title(self, vault, dump, sandbox):
             vault.entry("b-pi", file="~/.ssh/conf.d/berries.conf", content="Host b")
@@ -100,6 +118,22 @@ class TestDumpSshFromKdbx:
             assert result.returncode == 1
             assert result.stderr == "cancelled by user\n"
             assert not (sandbox.home / ".ssh").exists()
+
+
+@pytest.fixture
+def rendered(sandbox, tmp_path):
+    chezmoi = shutil.which("chezmoi")
+    if chezmoi is None:
+        pytest.skip("chezmoi is not installed")
+    template = CHEZMOISCRIPTS_SOURCE / "run_onchange_after_dump-ssh-from-kdbx.tmpl"
+
+    def run(company):
+        config = tmp_path / f"{company or 'none'}.toml"
+        config.write_text(f'[data]\n  email = "a@b.c"\n  name = "n"\n  company = "{company}"\n')
+        return subprocess.run([chezmoi, "execute-template", "--config", str(config), "--source", str(HOME_SOURCE)],
+                              input=template.read_text(), env={**sandbox.env, "PATH": f"/usr/bin:/bin:{sandbox.env['PATH']}"},
+                              cwd=sandbox.home, capture_output=True, text=True, timeout=30)
+    return run
 
 
 @pytest.fixture

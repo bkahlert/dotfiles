@@ -1,4 +1,6 @@
-{{ if eq .chezmoi.os "darwin" -}}
+{{- /* Without the vault (iCloud not synced yet, a machine that never had it) this renders nothing: a failing `output` would abort the whole apply, and the script runs once the vault appears. */ -}}
+{{- $kdbx := joinPath .chezmoi.homeDir "Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx" -}}
+{{ if and (eq .chezmoi.os "darwin") (stat $kdbx) -}}
 #!/usr/bin/env -S uv run --script
 # /// script
 # dependencies = ["pykeepass"]
@@ -23,7 +25,7 @@ DB unlock, just no Host block contribution). Entries in the Recycle Bin
 are skipped too: pykeepass iterates the bin like any group, and it keeps
 copies of moved entries.
 """
-# kdbx-hash: {{ output "shasum" "-a" "256" (joinPath .chezmoi.homeDir "Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx") }}
+# kdbx-hash: {{ output "shasum" "-a" "256" $kdbx }}
 
 import re
 import subprocess
