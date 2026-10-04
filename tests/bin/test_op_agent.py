@@ -15,6 +15,11 @@ class TestOpAgent:
             status = run("op-agent", "status")
             assert status.stdout.startswith("op-agent: running (pid ")
 
+        def test_should_leave_an_op_warning_on_stderr_out_of_the_secret(self, run, fake_bin, daemon):
+            fake_bin("op", script='printf "[WARNING] update available\\n" >&2\nprintf "s3cret"\nexit 0\n')
+            result = run("op-agent", "read", "op://Employee/item/password", timeout=30)
+            assert (result.returncode, result.stdout) == (0, "s3cret")
+
         def test_should_reuse_the_running_daemon(self, run, fake_bin, calls, daemon):
             fake_bin("op", script=OP_SECRET)
             run("op-agent", "read", "op://Employee/item/password", timeout=30)
