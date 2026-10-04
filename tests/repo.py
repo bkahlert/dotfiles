@@ -29,7 +29,7 @@ def require_chezmoi() -> str:
     a test skips on a developer machine and fails on CI, where a skip would hide that it never ran."""
     path = shutil.which("chezmoi")
     if path is None:
-        if os.environ.get("CI"):
+        if os.environ.get("CI", "").lower() not in ("", "0", "false"):
             pytest.fail("chezmoi is not installed; install it in the CI job instead of skipping", pytrace=False)
         pytest.skip("chezmoi is not installed")
     return path

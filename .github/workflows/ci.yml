@@ -6,7 +6,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '17 5 * * 1'  # weekly: the image and the macOS job install the latest chezmoi, sheldon, starship, zoxide
+    - cron: '17 5 * * 1'  # weekly: the jobs and the image install the latest chezmoi (and the image and the macOS job the latest sheldon, starship, zoxide)
   workflow_dispatch:
 
 permissions:
@@ -25,10 +25,9 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-      - name: Install zsh, shellcheck, actionlint and chezmoi
+      - name: Install zsh, shellcheck and actionlint
         # Both linters are pinned to the versions Homebrew ships locally, so `make lint` reports the
         # same findings here and on a developer machine; the image's own shellcheck is older.
-        # chezmoi runs the template tests, which fail rather than skip on CI when it is missing.
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends zsh
@@ -37,17 +36,21 @@ jobs:
             https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz
           curl -fsSL -o "$tools/actionlint.tar.gz" \
             https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
-          curl -fsSL -o "$tools/chezmoi.tar.gz" \
-            https://github.com/twpayne/chezmoi/releases/download/v2.73.0/chezmoi_2.73.0_linux_amd64.tar.gz
-          # SHA-256 digests of the release assets, as published by GitHub for shellcheck v0.11.0, actionlint 1.7.12 and chezmoi 2.73.0
+          # SHA-256 digests of the release assets, as published by GitHub for shellcheck v0.11.0 and actionlint 1.7.12
           sha256sum -c - <<SUMS
           8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198  $tools/shellcheck.tar.xz
           8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $tools/actionlint.tar.gz
-          b597729b687af4488a848240134cb633de8ca0f04e0d26d48f400ee2ac338ffa  $tools/chezmoi.tar.gz
           SUMS
           sudo tar -xJf "$tools/shellcheck.tar.xz" --strip-components=1 -C /usr/local/bin shellcheck-v0.11.0/shellcheck
           sudo tar -xzf "$tools/actionlint.tar.gz" -C /usr/local/bin actionlint
-          sudo tar -xzf "$tools/chezmoi.tar.gz" -C /usr/local/bin chezmoi
+      - name: Install chezmoi
+        # The template tests need it and fail rather than skip on CI without it. Latest, like the macOS job and the
+        # image: a version pinned here is one Dependabot cannot bump.
+        run: |
+          installer=$(mktemp)
+          curl -fsSL --proto '=https' -o "$installer" https://get.chezmoi.io
+          sudo sh "$installer" -b /usr/local/bin
+          rm "$installer"
       - run: make lint unit
         env:
           CHROMIUM_BIN: /usr/bin/google-chrome

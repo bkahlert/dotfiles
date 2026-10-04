@@ -27,7 +27,8 @@ class TestRequireChezmoi:
             with pytest.raises(pytest.fail.Exception, match="chezmoi is not installed"):
                 require_chezmoi()
 
-        def test_should_skip_on_an_empty_ci_variable(self, monkeypatch):
-            monkeypatch.setenv("CI", "")
+        @pytest.mark.parametrize("value", ["", "0", "false", "FALSE"])
+        def test_should_skip_when_the_ci_variable_says_no(self, monkeypatch, value):
+            monkeypatch.setenv("CI", value)
             with pytest.raises(pytest.skip.Exception):
                 require_chezmoi()
