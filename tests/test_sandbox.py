@@ -115,5 +115,5 @@ class TestSandbox:
             assert result.stdout == "hello world\n"
 
         def test_should_source_a_module_from_the_source_tree(self, zsh):
-            result = zsh("whence -w _dc_ok", modules=["ista/10-dev-chapter.zsh"])
-            assert result.stdout == "_dc_ok: function\n"
+            result = zsh("whence -w _dc_warn", modules=["ista/10-dev-chapter.zsh"])
+            assert result.stdout == "_dc_warn: function\n"
