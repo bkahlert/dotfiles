@@ -1,32 +1,9 @@
 export ZDOTDIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
 
-# Put nvm's default node on PATH for every shell, interactive or not (MCP
-# servers, GUI apps never source .zshrc): this is where node, npm and npx come
-# from, while conf.d/10-nvm.zsh only loads nvm itself on demand. Resolves the default
-# the way nvm stores it (alias files, then the installed versions) with zsh
-# globbing alone: no nvm.sh, no forks, and nothing printed when it resolves to
-# nothing.
-if [[ -s $HOME/.nvm/alias/default ]]; then
-  () {
-    emulate -L zsh
-    setopt extended_glob
-    local nvm=$HOME/.nvm spec hops
-    spec=$(<$nvm/alias/default)
-    spec=${spec//[[:space:]]/}
-    # An alias file holds the next alias or a version: lts/* -> lts/jod -> v22.x.y.
-    for (( hops = 0; hops < 5; hops++ )); do
-      [[ -f $nvm/alias/$spec ]] || break
-      spec=$(<$nvm/alias/$spec)
-      spec=${spec//[[:space:]]/}
-    done
-    spec=${spec#v}
-    local -a found
-    case $spec in
-      node|stable) found=($nvm/versions/node/v[0-9]*(N/n[-1])) ;;
-      [0-9]##(.[0-9]##)#) found=($nvm/versions/node/v$spec(|.*)(N/n[-1])) ;;
-      *) return 0 ;;
-    esac
-    (( $#found )) && [[ -d $found[1]/bin ]] && (( ! $path[(Ie)$found[1]/bin] )) && path=($found[1]/bin $path)
-    return 0
-  }
-fi
+# fnm's default Node.js for every zsh, interactive or not: MCP servers and other subprocesses never read .zshrc,
+# where conf.d/10-fnm.zsh sets fnm up in full. aliases/default is fnm's link to the default version.
+() {
+  local bin=${FNM_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/fnm}/aliases/default/bin
+  [[ -d $bin ]] && (( ! $path[(Ie)$bin] )) && path=($bin $path)
+  return 0
+}

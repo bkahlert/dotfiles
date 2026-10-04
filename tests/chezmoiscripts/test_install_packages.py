@@ -9,6 +9,7 @@ ENTRY = re.compile(r'(brew|cask) "[a-z0-9@._+-]+" +# \S.*')
 LINUX_INSTALLERS = {
     "sheldon": "https://rossmacarthur.github.io/install/crate.sh",
     "starship": "https://starship.rs/install.sh",
+    "fnm": "https://fnm.vercel.app/install",
     "zoxide": "https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh",
 }
 
@@ -68,12 +69,13 @@ class TestInstallPackages:
             for call in calls("curl"):
                 assert call[:4] == ["--proto", "=https", "--tlsv1.2", "-fsSL"], call
 
-        def test_should_hand_starship_and_sheldon_their_options(self, script, linux, sandbox):
+        def test_should_hand_each_installer_its_options(self, script, linux, sandbox):
             script("install-packages", uname="Linux")
             ran = (sandbox.home / "ran").read_text().splitlines()
             assert ran == [
                 f"{LINUX_INSTALLERS['sheldon']} --repo rossmacarthur/sheldon --to {sandbox.home}/.local/bin",
                 f"{LINUX_INSTALLERS['starship']} --yes",
+                f"{LINUX_INSTALLERS['fnm']} --skip-shell --install-dir {sandbox.home}/.local/bin",
                 f"{LINUX_INSTALLERS['zoxide']} ",
             ]
 
