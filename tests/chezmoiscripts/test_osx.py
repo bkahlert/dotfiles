@@ -55,6 +55,23 @@ class TestOsx:
             script("osx")
             assert [call[0] for call in calls("killall")] == RESTARTED
 
+        class TestOnAppleTerminal:
+            def test_should_not_kill_the_terminal_running_the_apply(self, script, system_tools, calls):
+                result = script("osx", env={"TERM_PROGRAM": "Apple_Terminal"})
+                assert result.returncode == 0, result.stderr
+                assert [call[0] for call in calls("killall")] == [app for app in RESTARTED if app != "Terminal"]
+
+            def test_should_ask_for_a_manual_terminal_restart_on_stderr(self, script, system_tools):
+                result = script("osx", env={"TERM_PROGRAM": "Apple_Terminal"})
+                assert "Terminal" in result.stderr
+                assert "restart" in result.stderr
+                assert "Terminal" not in result.stdout
+
+        class TestOnOtherTerminal:
+            def test_should_still_restart_the_terminal(self, script, system_tools, calls):
+                script("osx", env={"TERM_PROGRAM": "iTerm.app"})
+                assert [call[0] for call in calls("killall")] == RESTARTED
+
         def test_should_stop_at_the_first_failing_default(self, script, system_tools, fake_bin, calls):
             fake_bin("defaults", exit_code=1)
             result = script("osx", "--no-restart")
