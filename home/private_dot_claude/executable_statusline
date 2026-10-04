@@ -109,9 +109,10 @@ def nerd_fonts_supported(override):
 
 
 def fonts_changed_since(path):
-    """Installing or removing a font changes the mtime of the directory it lands in."""
+    """Installing or removing a font changes the mtime of the directory it lands in, which may be a subdirectory."""
     since = path.stat().st_mtime_ns
-    return any(directory.is_dir() and directory.stat().st_mtime_ns > since for directory in font_directories())
+    return any(Path(directory).stat().st_mtime_ns > since
+               for root in font_directories() for directory, _, _ in os.walk(root))
 
 
 def font_directories():

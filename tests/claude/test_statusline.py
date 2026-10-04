@@ -34,14 +34,17 @@ class TestStatusline:
             result = run("statusline", stdin=json.dumps(INPUT))
             assert result.stdout == NERD
 
-        def test_should_probe_again_once_a_font_was_installed_after_the_cache(self, run, sandbox, fake_bin):
-            cache = cache_detection(sandbox, "0")
-            fonts = sandbox.home / ("Library/Fonts" if sys.platform == "darwin" else ".local/share/fonts")
+        @pytest.mark.parametrize("family", ["", "JetBrainsMono"], ids=["top-level", "family-subdirectory"])
+        def test_should_probe_again_once_a_font_was_installed_after_the_cache(self, run, sandbox, fake_bin, family):
+            fonts = sandbox.home / ("Library/Fonts" if sys.platform == "darwin" else ".local/share/fonts") / family
             fonts.mkdir(parents=True)
-            (fonts / "JetBrainsMonoNerdFont-Regular.ttf").write_text("")
-            fake_bin("fc-list", stdout=f"{fonts}/JetBrainsMonoNerdFont-Regular.ttf: JetBrainsMono Nerd Font:style=Regular\n")
+            cache = cache_detection(sandbox, "0")
             hour_ago = time.time() - 3600
             os.utime(cache, (hour_ago, hour_ago))
+            for directory in {fonts, fonts.parent} if family else {fonts}:
+                os.utime(directory, (hour_ago, hour_ago))
+            (fonts / "JetBrainsMonoNerdFont-Regular.ttf").write_text("")
+            fake_bin("fc-list", stdout=f"{fonts}/JetBrainsMonoNerdFont-Regular.ttf: JetBrainsMono Nerd Font:style=Regular\n")
             result = run("statusline", stdin=json.dumps(INPUT))
             assert (result.stdout, cache.read_text()) == (NERD, "1")
 
