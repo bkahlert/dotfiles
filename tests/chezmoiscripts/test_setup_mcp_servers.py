@@ -13,6 +13,12 @@ class TestSetupMcpServers:
             assert removed.index("jetbrains") < removed.index("idea")
             assert removed.index("idea") < next(i for i, call in enumerate(calls("claude")) if call[:2] == ["mcp", "add"])
 
+        def test_should_remove_the_retired_servers(self, script, fake_bin, calls):
+            fake_bin("claude")
+            script("setup-mcp-servers")
+            removed = [call[-1] for call in calls("claude") if call[:2] == ["mcp", "remove"]]
+            assert {"context7", "serena", "gcloud-observability"} <= set(removed)
+
         def test_should_tolerate_a_server_that_was_never_registered(self, script, fake_bin):
             fake_bin("claude", script='[[ $2 == remove ]] && exit 1\nexit 0\n')
             result = script("setup-mcp-servers")
