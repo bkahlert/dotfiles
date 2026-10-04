@@ -192,14 +192,14 @@ defaults write NSGlobalDomain NSUserDictionaryReplacementItems -string '
 # Note: if you're in the US, replace `EUR` with `USD`, `Centimeters` with
 # `Inches`, `en_GB` with `en_US`, and `true` with `false`.
 defaults write NSGlobalDomain AppleLanguages -array "en-US" "de-DE"
-defaults write NSGlobalDomain AppleLocale -string "de_DE"
+defaults write NSGlobalDomain AppleLocale -string "en_US@rg=dezzzz"
 defaults write NSGlobalDomain AppleMeasurementUnits -string "Centimeters"
 defaults write NSGlobalDomain AppleTemperatureUnit -string "Celsius"
 defaults write NSGlobalDomain AppleMetricUnits -bool true
 defaults write NSGlobalDomain AppleICUForce12HourTime -bool false
 
 # Set mouse speed (vertical mouse)
-defaults write -g com.apple.mouse.scaling 6
+defaults write -g com.apple.mouse.scaling -float 1.5
 
 ###############################################################################
 # Screen                                                                      #
