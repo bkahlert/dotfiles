@@ -1,15 +1,18 @@
 // Tests for gcloud-login-driver against fixture pages that mimic the Google
 // login sequence, served locally and opened in a headless Chromium.
-const { test, describe, before, after } = require('node:test');
+const { test, describe, before, beforeEach, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const https = require('node:https');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 
 const DRIVER = path.join(__dirname, '..', 'home', 'dot_local', 'exact_bin', 'executable_gcloud-login-driver');
 const EMAIL = 'someone@example.test';
+const GOOGLE_HOST = 'accounts.google.com';
+const LOOKALIKE_HOST = 'accounts.google.com.evil.test';
 
 function findChromium() {
   const root = path.join(os.homedir(), '.cache', 'gcloud-login', 'chromium');
@@ -30,14 +33,14 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
   let chromium, fixture;
 
   before(async () => {
-    chromium = await launchChromium();
     fixture = await startFixture();
+    chromium = await launchChromium({ hostRules: fixture.hostRules });
   });
 
   after(async () => {
     // The server must close even if Chromium cleanup fails: an open listener keeps node alive forever.
     // Either may be unset when `before` failed halfway.
-    try { await chromium?.kill(); } finally { fixture?.server.close(); }
+    try { await chromium?.kill(); } finally { fixture?.close(); }
   }, { timeout: 20_000 });
 
   describe('on identifier, chooser, password, oauth-signin-interstitial and consent pages', () => {
@@ -52,9 +55,30 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
 
   describe('on a password page without a password', () => {
     test('exits 3 and names the missing password', async () => {
-      const result = await runDriver({ url: `${fixture.origin}/password`, password: '' });
+      const result = await runDriver({ url: `${fixture.googleOrigin}/password`, password: '' });
       assert.equal(result.code, 3);
       assert.match(result.stderr, /password/);
+    });
+  });
+
+  describe('on a password page of a host that is not Google', () => {
+    beforeEach(() => fixture.reset());
+
+    for (const [name, origin] of [
+      ['an unrelated host', () => fixture.origin],
+      ['a host that merely starts with the Google login host', () => fixture.lookalikeOrigin],
+    ]) {
+      test(`exits 4, names the host and does not type the password on ${name}`, async () => {
+        const result = await runDriver({ url: `${origin()}/password`, password: 'hunter2' });
+        assert.equal(result.code, 4, result.stderr);
+        assert.match(result.stderr, new RegExp(`password page on unexpected host ${new URL(origin()).hostname.replaceAll('.', '\\.')}\\b`));
+        assert.equal(fixture.seen().password, null);
+      });
+    }
+
+    test('exits 4 even when no password was supplied', async () => {
+      const result = await runDriver({ url: `${fixture.origin}/password`, password: '' });
+      assert.equal(result.code, 4, result.stderr);
     });
   });
 
@@ -121,11 +145,17 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
     return true;
   }
 
-  async function launchChromium({ bin = CHROMIUM, timeoutMs = 30_000 } = {}) {
+  async function launchChromium({ bin = CHROMIUM, timeoutMs = 30_000, hostRules = '' } = {}) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gcloud-login-driver-test-'));
     const proc = spawn(bin, [
       `--user-data-dir=${dir}`, '--remote-debugging-port=0', '--headless=new',
       '--no-first-run', '--no-default-browser-check',
+      // The fixture answers for the real Google login host and a lookalike,
+      // so the driver's origin check sees the names it will see in
+      // production. Both are served over TLS with a throwaway certificate:
+      // Chromium upgrades google.com to https (preloaded HSTS).
+      '--ignore-certificate-errors',
+      `--host-resolver-rules=${hostRules}`,
       // This throwaway profile stores nothing worth encrypting, and without
       // these macOS pops a "Keychain Not Found" dialog on the user's screen.
       // gcloud-login's real launch must NOT use them: the normal and admin
@@ -180,10 +210,13 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
 
   // Fixture pages mirror the real navigation: identifier form (Enter) ->
   // chooser (click) -> password form (Enter) -> oauth/id interstitial
-  // (click Continue) -> consent (click) -> callback.
+  // (click Continue) -> consent (click) -> callback. The password page is
+  // reached under the Google login host, the callback under 127.0.0.1 as
+  // gcloud's local server is.
   async function startFixture() {
     const seen = { identifier: null, password: null, callback: false };
-    const server = http.createServer((req, res) => {
+    let origin, googleOrigin;
+    const handler = (req, res) => {
       const url = new URL(req.url, 'http://127.0.0.1');
       const page = body => { res.setHeader('Content-Type', 'text/html'); res.end(`<!doctype html><title>${url.pathname}</title>${body}`); };
       switch (url.pathname) {
@@ -191,9 +224,9 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
           return page(`<form action="/chooser" method="get"><input type="text" name="identifier"></form>`);
         case '/chooser':
           seen.identifier = url.searchParams.get('identifier') ?? seen.identifier;
-          return page(`<div role="link" data-identifier="${EMAIL}" onclick="location='/password'">${EMAIL}</div>`);
+          return page(`<div role="link" data-identifier="${EMAIL}" onclick="location='${googleOrigin}/password'">${EMAIL}</div>`);
         case '/password':
-          return page(`<form action="/signin/oauth/id" method="get"><input type="password" name="Passwd"></form>`);
+          return page(`<form action="${origin}/signin/oauth/id" method="get"><input type="password" name="Passwd"></form>`);
         case '/signin/oauth/id':
           seen.password = url.searchParams.get('Passwd') ?? seen.password;
           return page(`<button>Cancel</button><button onclick="location='/signin/oauth/consent'">Continue</button>`);
@@ -207,9 +240,33 @@ describe('gcloud-login-driver', { skip: CHROMIUM ? false : 'Chromium not install
         default:
           return page('<p>Something else</p>');
       }
-    });
-    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-    return { server, origin: `http://127.0.0.1:${server.address().port}`, seen: () => ({ ...seen }) };
+    };
+    const server = http.createServer(handler);
+    const tlsServer = https.createServer(selfSignedCertificate(), handler);
+    await Promise.all([server, tlsServer].map(s => new Promise(resolve => s.listen(0, '127.0.0.1', resolve))));
+    origin = `http://127.0.0.1:${server.address().port}`;
+    googleOrigin = `https://${GOOGLE_HOST}`;
+    const tlsTarget = `127.0.0.1:${tlsServer.address().port}`;
+    return {
+      origin,
+      googleOrigin,
+      lookalikeOrigin: `https://${LOOKALIKE_HOST}`,
+      hostRules: `MAP ${GOOGLE_HOST} ${tlsTarget}, MAP ${LOOKALIKE_HOST} ${tlsTarget}`,
+      close: () => { server.close(); tlsServer.close(); },
+      seen: () => ({ ...seen }),
+      reset: () => Object.assign(seen, { identifier: null, password: null, callback: false }),
+    };
+  }
+
+  function selfSignedCertificate() {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gcloud-login-driver-test-'));
+    try {
+      execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1', '-subj', `/CN=${GOOGLE_HOST}`,
+        '-keyout', path.join(dir, 'key.pem'), '-out', path.join(dir, 'cert.pem')], { stdio: 'ignore' });
+      return { key: fs.readFileSync(path.join(dir, 'key.pem')), cert: fs.readFileSync(path.join(dir, 'cert.pem')) };
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   }
 
   function runDriver({ url, password, timeout = 20 }) {
