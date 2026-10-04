@@ -3,6 +3,8 @@ import pytest
 RESTARTED = ["cfprefsd", "Dock", "Finder", "Mail", "SystemUIServer", "Terminal"]
 # A representative pick across the sections of the script; a flipped flag or changed number fails.
 CHOSEN = [
+    ["write", "-g", "NSNavPanelExpandedStateForSaveMode", "-bool", "true"],
+    ["write", "-g", "NSNavPanelExpandedStateForSaveMode2", "-bool", "true"],
     ["write", "NSGlobalDomain", "NSAutomaticQuoteSubstitutionEnabled", "-bool", "false"],
     ["write", "NSGlobalDomain", "InitialKeyRepeat", "-int", "25"],
     ["write", "NSGlobalDomain", "KeyRepeat", "-int", "2"],

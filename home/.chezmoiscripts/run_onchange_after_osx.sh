@@ -31,8 +31,8 @@ osascript -e 'tell application "System Preferences" to quit'
 defaults write -g NSQuitAlwaysKeepsWindows -bool true
 
 # Expand save panel by default
-defaults write -g NSNavPanelExpandedStateForSaveMode -bool true \
-  && defaults write -g NSNavPanelExpandedStateForSaveMode2 -bool true
+defaults write -g NSNavPanelExpandedStateForSaveMode -bool true
+defaults write -g NSNavPanelExpandedStateForSaveMode2 -bool true
 
 # Expand print panel by default
 defaults write -g PMPrintingExpandedStateForPrint -bool true
