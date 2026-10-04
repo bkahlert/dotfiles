@@ -100,7 +100,7 @@ def nerd_fonts_supported(override):
             return forced == "1"
     cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "claude" / "nerd-font-support"
     try:
-        if not cache.is_file():
+        if not cache.is_file() or fonts_changed_since(cache):
             cache.parent.mkdir(parents=True, exist_ok=True)
             cache.write_text("1" if nerd_fonts_installed() else "0")
         return cache.read_text().strip() == "1"
@@ -108,9 +108,23 @@ def nerd_fonts_supported(override):
         return nerd_fonts_installed()
 
 
+def fonts_changed_since(path):
+    """Installing or removing a font changes the mtime of the directory it lands in, which may be a subdirectory."""
+    since = path.stat().st_mtime_ns
+    return any(Path(directory).stat().st_mtime_ns > since
+               for root in font_directories() for directory, _, _ in os.walk(root))
+
+
+def font_directories():
+    if sys.platform == "darwin":
+        return [Path.home() / "Library/Fonts", Path("/Library/Fonts")]
+    data = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+    return [data / "fonts", Path.home() / ".fonts", Path("/usr/local/share/fonts"), Path("/usr/share/fonts")]
+
+
 def nerd_fonts_installed():
     if sys.platform == "darwin":
-        for directory in (Path.home() / "Library/Fonts", Path("/Library/Fonts")):
+        for directory in font_directories():
             if directory.is_dir() and any("nerd" in entry.name.lower() for entry in directory.iterdir()):
                 return True
     if shutil.which("fc-list"):

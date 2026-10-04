@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
-# Purpose: Serve the current directory over HTTP with live reload.
+# Purpose: Serve the current directory over HTTP with live reload, on localhost
+#          unless a --host is given.
 # Usage:   serve-live [<live-server-option>...]
+#
+# Examples:
+#   serve-live
+#   serve-live --host=0.0.0.0   # reachable from the LAN
 
 set -euo pipefail
 
+# live-server binds 0.0.0.0 by default.
+host=(--host=127.0.0.1)
+for arg; do [[ $arg == --host=* ]] && host=(); done
+
 port=$(pick-port) || { printf 'serve-live: no port available\n' >&2; exit 1; }
 printf 'serve-live: http://localhost:%s\n' "$port" >&2
-exec npx live-server --port="$port" --no-browser "$@"
+exec npx live-server --port="$port" --no-browser ${host[@]+"${host[@]}"} "$@"

@@ -1,10 +1,18 @@
+import subprocess
+
+import pytest
+
+SYSTEM_BASH_MAJOR = int(subprocess.run(["/bin/bash", "-c", "echo ${BASH_VERSINFO[0]}"],
+                                        capture_output=True, text=True).stdout)
+
+
 class TestServe:
-    def test_should_serve_on_the_picked_port_with_caching_disabled(self, run, fake_bin, calls):
+    def test_should_serve_localhost_on_the_picked_port_with_caching_disabled(self, run, fake_bin, calls):
         fake_bin("pick-port", stdout="4321")
         fake_bin("npx")
         result = run("serve")
         assert result.returncode == 0
-        assert calls("npx") == [["http-server", "-c-1", "-p", "4321"]]
+        assert calls("npx") == [["http-server", "-c-1", "-p", "4321", "-a", "127.0.0.1"]]
 
     def test_should_announce_the_url_on_stderr(self, run, fake_bin):
         fake_bin("pick-port", stdout="4321")
@@ -15,8 +23,23 @@ class TestServe:
     def test_should_pass_extra_options_to_http_server(self, run, fake_bin, calls):
         fake_bin("pick-port", stdout="4321")
         fake_bin("npx")
-        run("serve", "--cors", "-a", "127.0.0.1")
-        assert calls("npx") == [["http-server", "-c-1", "-p", "4321", "--cors", "-a", "127.0.0.1"]]
+        run("serve", "--cors", "-s")
+        assert calls("npx") == [["http-server", "-c-1", "-p", "4321", "-a", "127.0.0.1", "--cors", "-s"]]
+
+    class TestOnGivenAddress:
+        @pytest.mark.parametrize("given", [["-a", "0.0.0.0"], ["-a0.0.0.0"], ["-a=0.0.0.0"]], ids=["spaced", "attached", "equals"])
+        def test_should_bind_only_that_address(self, run, fake_bin, calls, given):
+            fake_bin("pick-port", stdout="4321")
+            fake_bin("npx")
+            run("serve", *given)
+            assert calls("npx") == [["http-server", "-c-1", "-p", "4321", *given]]
+
+        @pytest.mark.skipif(SYSTEM_BASH_MAJOR >= 4, reason="this system's /bin/bash is new enough")
+        def test_should_run_on_the_system_bash(self, run, bin_links, fake_bin, calls):
+            fake_bin("pick-port", stdout="4321")
+            fake_bin("npx")
+            result = run("/bin/bash", str(bin_links / "serve"), "-a", "0.0.0.0")
+            assert (result.returncode, calls("npx")) == (0, [["http-server", "-c-1", "-p", "4321", "-a", "0.0.0.0"]])
 
     class TestOnNoFreePort:
         def test_should_exit_1_with_a_message_and_start_no_server(self, run, fake_bin, calls):
