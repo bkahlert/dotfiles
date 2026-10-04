@@ -42,6 +42,21 @@ class TestSandbox:
             assert result.returncode == 127
             assert result.stderr == "git: not faked in this test\n"
 
+        def test_should_hide_an_installed_tool_that_is_neither_listed_nor_guarded(self, run):
+            # `rev` ships with macOS and util-linux but is not a tool any subject needs.
+            result = run("bash", "-c", "command -v rev")
+            assert (result.returncode, result.stdout) == (1, "")
+
+        def test_should_reach_the_listed_real_tools(self, run):
+            result = run("bash", "-c", "command -v jq awk sed")
+            assert result.returncode == 0
+            assert len(result.stdout.split()) == 3
+
+        def test_should_run_bash_4_4_or_newer_whatever_the_callers_path_is(self, run):
+            result = run("bash", "-c", 'echo "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}"')
+            major, minor = map(int, result.stdout.split("."))
+            assert (major, minor) >= (4, 4)
+
         @pytest.mark.parametrize("command", [
             ["ssh-keygen", "-l", "-f", "/dev/null"], ["openssl", "version"], ["xcrun", "--version"],
             ["gem", "--version"], ["uv", "--version"], ["yarn", "--version"], ["composer", "--version"],
