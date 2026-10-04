@@ -13,3 +13,10 @@ home/.chezmoiexternal.toml.lock
 __pycache__/
 # node
 node_modules/
+# Claude Code (local settings and agent worktrees)
+.claude/settings.local.json
+.claude/worktrees/
+# superpowers (skill runtime data)
+.superpowers/
+# ruff
+.ruff_cache/
