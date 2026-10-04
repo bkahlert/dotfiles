@@ -1,5 +1,5 @@
 # Per-host config materialized from KeePassXC entries by
-# .chezmoiscripts/run_onchange_after_dump-ssh-from-kdbx.py.tmpl.
+# .chezmoiscripts/run_onchange_after_dump-ssh-from-kdbx.tmpl.
 # These per-host blocks must come BEFORE any Host directive in this file:
 # an Include placed after a `Host` line is scoped to that Host (per
 # ssh_config(5)), which would silently disable per-host config matching.

@@ -9,7 +9,6 @@
 #   --no-restart: Don't restart any apps or services after running the script.
 #
 # For an incomplete list of defaults, see https://macos-defaults.com/
-# To capture default changes use `scripts/capture-defaults-key`.
 #
 # See also:
 #   http://secrets.blacktree.com/?showapp=com.apple.finder

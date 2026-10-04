@@ -1,3 +1,6 @@
 .config/copy-password
 .claude/statusline-test
 .claude/statusline-input.json
+.startup
+.startup.log
+Library/LaunchAgents/com.user.startup.plist
