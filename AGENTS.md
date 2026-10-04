@@ -100,7 +100,6 @@ Example: `brew "1password-cli" # 1Password CLI (op); required by chezmoi to read
 | `~/.claude/CLAUDE.md` | [CLAUDE.md](home/private_dot_claude/CLAUDE.md) | AI coding conventions |
 | `~/.claude/settings.json` | [claude-settings.json](home/.chezmoitemplates/claude-settings.json) via [modify_settings.json](home/private_dot_claude/modify_settings.json) | Claude Code settings; `model` and `effortLevel` stay as set on the machine |
 | `~/.npmrc` | [dot_npmrc.tmpl](home/dot_npmrc.tmpl) | Business: GitLab registry |
-| `~/.startup` | [executable_dot_startup](home/executable_dot_startup) | Login script (macOS, run via LaunchAgent) |
 | `~/.agents/skills/*`, `~/.claude/skills/*` | [dot_agents/skills](home/dot_agents/skills), [private_dot_claude/skills](home/private_dot_claude/skills) | Repo-owned agent skills + their symlinks; third-party ones via [setup-skills](home/.chezmoiscripts/run_onchange_after_setup-skills.sh). See [quick-access/README.md](quick-access/README.md) |
 | `~/.local/bin/gcloud-login` | [executable_gcloud-login](home/dot_local/exact_bin/executable_gcloud-login) | Unattended gcloud/ADC login (ista); design notes in git history (`git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md`) |
 
@@ -208,4 +207,4 @@ Classes nest as [testing.md](home/private_dot_config/exact_agents/exact_rules/te
 Both legs write a chezmoi config with the context's `company`, apply the source tree with `tests/shims/op` and `tests/shims/keepassxc-cli` first on `PATH` and `--no-tty` with a dummy password on stdin, then run `zsh -li -c true` and require exit 0 and an empty stderr.
 
 - Container ([Containerfile](Containerfile) stage `base`, [entrypoint.sh](entrypoint.sh)): Fedora with chezmoi, sheldon, starship, zoxide. `make run` builds the `vnc` stage for manual inspection.
-- Native macOS: a temp home, `--exclude=scripts` (no `brew bundle`, no LaunchAgent, no `defaults write`), `sheldon lock` by hand, and a preflight that `chezmoi data` reports the temp home. Every path chezmoi and the startup files touch derives from `HOME`, `ZDOTDIR` or an `XDG_*` variable, which is why this is safe to run on a developer Mac. **Startup code must keep it that way: write only under those directories, and stay silent when a tool you wrap is absent.**
+- Native macOS: a temp home, `--exclude=scripts` (no `brew bundle`, no `defaults write`), `sheldon lock` by hand, and a preflight that `chezmoi data` reports the temp home. Every path chezmoi and the startup files touch derives from `HOME`, `ZDOTDIR` or an `XDG_*` variable, which is why this is safe to run on a developer Mac. **Startup code must keep it that way: write only under those directories, and stay silent when a tool you wrap is absent.**
