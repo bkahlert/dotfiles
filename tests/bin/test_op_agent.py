@@ -65,6 +65,22 @@ class TestOpAgent:
             assert result.returncode == 2
             assert result.stderr == "op-agent: read: reference not set (see 'op-agent --help')\n"
 
+    class TestOnHelp:
+        def test_should_print_the_header_and_exit_0(self, run):
+            for flag in ("-h", "--help"):
+                result = run("op-agent", flag)
+                assert result.returncode == 0
+                assert result.stdout.startswith("Purpose: Keep one 1Password CLI authorization alive")
+                assert "Usage:   op-agent start | stop | status\n" in result.stdout
+                assert result.stderr == ""
+
+    class TestOnNoCommand:
+        def test_should_print_the_help_to_stderr_and_exit_2(self, run):
+            result = run("op-agent")
+            assert result.returncode == 2
+            assert result.stdout == ""
+            assert result.stderr == run("op-agent", "--help").stdout
+
     class TestOnUnknownCommand:
         def test_should_exit_2(self, run):
             result = run("op-agent", "bogus")
