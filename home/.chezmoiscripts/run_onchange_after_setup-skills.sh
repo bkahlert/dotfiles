@@ -19,12 +19,8 @@ set +u
 source "$NVM_DIR/nvm.sh"
 set -u
 
-# Both pins run third-party code on every apply; bump them together, which also re-runs this script.
-skills_cli=skills@1.7.0
-mattpocock_ref=d81f3a183412e71a5b1e84ca21bc1a35eea03a60
-
 # grill-me — Socratic quiz skill for learning topics interactively (mattpocock)
-npx --yes "${skills_cli}" add -g "mattpocock/skills/skills/productivity/grill-me#${mattpocock_ref}" --agent "${agents[@]}" -y
+npx --yes skills add -g "mattpocock/skills/skills/productivity/grill-me" --agent "${agents[@]}" -y
 
 # handoff — compact the conversation into a document a fresh session can continue from (mattpocock)
-npx --yes "${skills_cli}" add -g "mattpocock/skills/skills/productivity/handoff#${mattpocock_ref}" --agent "${agents[@]}" -y
+npx --yes skills add -g "mattpocock/skills/skills/productivity/handoff" --agent "${agents[@]}" -y

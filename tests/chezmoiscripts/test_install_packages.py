@@ -9,7 +9,7 @@ ENTRY = re.compile(r'(brew|cask) "[a-z0-9@._+-]+" +# \S.*')
 LINUX_INSTALLERS = {
     "sheldon": "https://rossmacarthur.github.io/install/crate.sh",
     "starship": "https://starship.rs/install.sh",
-    "zoxide": "https://raw.githubusercontent.com/ajeetdsouza/zoxide/v0.10.0/install.sh",
+    "zoxide": "https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh",
 }
 
 
@@ -67,10 +67,6 @@ class TestInstallPackages:
             script("install-packages", uname="Linux")
             for call in calls("curl"):
                 assert call[:4] == ["--proto", "=https", "--tlsv1.2", "-fsSL"], call
-
-        def test_should_pin_the_zoxide_installer_to_a_release_tag(self):
-            assert re.fullmatch(r"https://raw\.githubusercontent\.com/ajeetdsouza/zoxide/v\d+\.\d+\.\d+/install\.sh",
-                                LINUX_INSTALLERS["zoxide"])
 
         def test_should_hand_starship_and_sheldon_their_options(self, script, linux, sandbox):
             script("install-packages", uname="Linux")

@@ -22,8 +22,6 @@ brew "starship"                    # Cross-shell prompt; config in ~/.config/sta
 brew "zoxide"                      # Smarter cd that learns frecency; aliased to z in conf.d
 brew "bat"                         # cat replacement with syntax highlighting and git diff support
 brew "jq"                          # Command-line JSON processor; used by scripts and aliases
-brew "shellcheck"                  # Shell script linter; make lint runs it on every bash file
-brew "actionlint"                  # GitHub Actions workflow linter; make lint runs it on .github/workflows
 brew "btop"                        # Terminal resource monitor (CPU, memory, disk, network)
 brew "coreutils"                   # GNU core utilities as g-prefixed binaries; macOS ships no timeout, ~/.local/bin/timeout forwards to gtimeout
 brew "glab"                        # GitLab CLI (glab); merge requests and pipelines from the terminal, installed up front instead of on first use
@@ -60,8 +58,7 @@ else
   fi
 
   # zoxide — frecency-based cd replacement; aliased to z in conf.d
-  # The installer script is pinned to a release tag; it still installs the latest release binary.
   if ! command -v zoxide &>/dev/null; then
-    run_installer sh https://raw.githubusercontent.com/ajeetdsouza/zoxide/v0.10.0/install.sh
+    run_installer sh https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh
   fi
 fi

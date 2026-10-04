@@ -4,16 +4,15 @@
 
 set -euo pipefail
 
-# Bump deliberately: the installer runs as published at this tag.
-nvm_version=v0.40.8
 export NVM_DIR="$HOME/.nvm"
 
 if [[ ! -s $NVM_DIR/nvm.sh ]]; then
-  # Downloaded in full before it runs, so a failed or truncated download aborts instead of running half a script.
+  # master's installer installs the latest release. It is downloaded in full before it runs, so a failed or
+  # truncated download aborts instead of running half a script.
   installer=$(mktemp)
   trap 'rm -f "$installer"' EXIT
   curl --proto '=https' --tlsv1.2 -fsSL --output "$installer" \
-    "https://raw.githubusercontent.com/nvm-sh/nvm/$nvm_version/install.sh"
+    https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh
   mkdir -p "$NVM_DIR"
   # PROFILE=/dev/null: the installer would append its loader to a shell profile; .zshenv and conf.d/10-nvm.zsh cover that.
   PROFILE=/dev/null bash "$installer"

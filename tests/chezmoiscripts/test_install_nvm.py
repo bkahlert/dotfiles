@@ -1,11 +1,6 @@
-import re
-
 import pytest
 
-from repo import chezmoiscripts
-
-SOURCE = dict(chezmoiscripts())["install-nvm"].read_text()
-INSTALLER_URL = re.compile(r"https://raw\.githubusercontent\.com/nvm-sh/nvm/v\d+\.\d+\.\d+/install\.sh")
+INSTALLER_URL = "https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh"
 # What nvm's installer leaves behind: an nvm.sh whose nvm records its arguments and which, like the real one, does
 # not survive set -u. The installer itself records the PROFILE it was given.
 INSTALLER = """\
@@ -47,7 +42,7 @@ class TestInstallNvm:
             result = script("install-nvm")
             assert result.returncode == 0, result.stderr
             [call] = calls("curl")
-            assert "=https" in call and any(INSTALLER_URL.fullmatch(arg) for arg in call)
+            assert "=https" in call and INSTALLER_URL in call
 
         def test_should_keep_the_installer_out_of_the_shell_profiles(self, script, sandbox):
             fake_curl(sandbox)
@@ -103,7 +98,3 @@ class TestInstallNvm:
             assert result.returncode != 0
             assert lines(sandbox.home / "installer-calls") == []
             assert lines(sandbox.home / "nvm-calls") == []
-
-    class TestPinning:
-        def test_should_name_one_nvm_release(self):
-            assert re.search(r"^nvm_version=v\d+\.\d+\.\d+$", SOURCE, re.MULTILINE)

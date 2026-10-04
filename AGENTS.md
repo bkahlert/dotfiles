@@ -90,6 +90,10 @@ Example: `cask "1password-cli" # 1Password CLI (op); required by chezmoi to read
 
 [.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`03` prefixes order the install scripts: Homebrew, packages, nvm with a default Node.js, Claude Code. A later script that needs one of these tools fails when it is missing instead of skipping. Only add `.tmpl` where the script itself needs a template value.
 
+### Versions
+
+Pin a version only where [Dependabot](.github/dependabot.yml) bumps it: actions by commit SHA, the Python tools in `uv.lock` (pytest, shellcheck, actionlint, zizmor), the Containerfile base by digest. Everything else — installers, `npx` packages, Homebrew — takes the latest release, since a version written into a script ages unnoticed. Dependabot's pull requests merge themselves once `ci` passes ([dependabot-auto-merge.yml](.github/workflows/dependabot-auto-merge.yml)).
+
 ## Key Files
 
 | Target | Source | Notes |
