@@ -44,8 +44,9 @@ class TestOsx:
 
         def test_should_name_a_key_in_every_write(self, script, system_tools, calls):
             script("osx", "--no-restart")
-            keyless = [call for call in calls("defaults") if call[0] == "write" and call[2].startswith("-")]
-            assert keyless == []
+            # What follows `write` is the domain (or -g), then the key, wherever `-currentHost` and co. stand.
+            writes = [call[call.index("write") + 1:] for call in calls("defaults") if "write" in call]
+            assert [write for write in writes if write[1].startswith("-")] == []
 
         def test_should_restart_the_affected_apps(self, script, system_tools, calls):
             script("osx")
