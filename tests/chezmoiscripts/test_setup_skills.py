@@ -47,6 +47,23 @@ class TestSetupSkills:
             assert result.returncode == 0, result.stderr
             assert result.stderr == "npx not available; skipping skills install\n"
 
+    class TestOnChangeDetection:
+        def test_should_rerun_once_npx_appears(self, rendered, sandbox, fake_bin):
+            sandbox.only_tools()
+            (sandbox.fakes / "npx").unlink()
+            without_npx = rendered("setup-skills")
+            fake_bin("npx")
+            with_npx = rendered("setup-skills")
+            assert with_npx != without_npx
+
+        def test_should_render_the_same_script_while_npx_stays_as_it_is(self, rendered, sandbox):
+            sandbox.only_tools()
+            (sandbox.fakes / "npx").unlink()
+            assert rendered("setup-skills") == rendered("setup-skills")
+
+        def test_should_render_a_script_that_starts_with_the_shebang(self, rendered):
+            assert rendered("setup-skills").startswith("#!/usr/bin/env bash\n")
+
     class TestPinning:
         def test_should_run_an_exact_version_of_the_skills_cli(self, script, fake_bin, calls):
             fake_bin("npx")

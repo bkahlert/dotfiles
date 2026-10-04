@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Purpose: Install Claude Code skills.
 # Usage:   Run automatically by chezmoi when this file changes.
+#
+# The line below puts npx's presence into the rendered script, so chezmoi runs it again once npx appears
+# instead of treating the skipped run as done.
+# npx: {{ if lookPath "npx" }}present{{ else }}absent{{ end }}
 
 set -euo pipefail
 

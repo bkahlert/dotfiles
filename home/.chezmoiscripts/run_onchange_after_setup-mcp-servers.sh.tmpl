@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Purpose: Register user-scoped MCP servers in Claude Code.
 # Usage:   Run automatically by chezmoi when this file changes.
+#
+# The line below puts claude's presence into the rendered script, so chezmoi runs it again once claude
+# is installed (lazily, by conf.d/20-claude.zsh) instead of treating the skipped run as done.
+# claude: {{ if lookPath "claude" }}present{{ else }}absent{{ end }}
 
 set -euo pipefail
 

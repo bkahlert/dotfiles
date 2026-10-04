@@ -10,7 +10,6 @@
 
 [chezmoiscripts]
 install-nanorc = "one `git clone` behind two guards; the container leg applies it for real"
-setup-mcp-servers = "a list of `claude mcp` calls with no branching; the next change that adds a condition adds the test"
 sheldon-lock = "renders to one guarded `sheldon lock`; every integration leg renders and runs it"
 
 [modify]
