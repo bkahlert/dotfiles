@@ -4,6 +4,9 @@
 
 set -euo pipefail
 
+# Pinned: npx runs this third-party code on every call; bump deliberately.
+readonly LIVE_SERVER=live-server@1.2.2
+
 port=$(pick-port) || { printf 'serve-live: no port available\n' >&2; exit 1; }
 printf 'serve-live: http://localhost:%s\n' "$port" >&2
-exec npx live-server --port="$port" --no-browser "$@"
+exec npx "$LIVE_SERVER" --port="$port" --no-browser "$@"

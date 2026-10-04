@@ -8,14 +8,18 @@
 # run `chezmoi apply` before `sc` — otherwise `sc` re-sources the stale
 # already-applied target file.
 
+# Pinned: these functions pipe third-party scripts into bash. Bump deliberately.
+_pihero_release=v2.8.1
+_lgtm_commit=65b3a0510089a7171e4fba3f986cfb2a324d6e4d  # grafana/docker-otel-lgtm
+
 hero() {
-  curl -fsSL https://github.com/bkahlert/pihero/releases/latest/download/hero | bash -s -- "$@"
+  curl -fsSL https://github.com/bkahlert/pihero/releases/download/${_pihero_release}/hero | bash -s -- "$@"
 }
 wizard() {
-  curl -fsSL https://github.com/bkahlert/pihero/releases/latest/download/wizard | bash -s -- "$@"
+  curl -fsSL https://github.com/bkahlert/pihero/releases/download/${_pihero_release}/wizard | bash -s -- "$@"
 }
 visitor() {
-  curl -fsSL https://github.com/bkahlert/pihero/releases/latest/download/visitor | bash -s -- "$@"
+  curl -fsSL https://github.com/bkahlert/pihero/releases/download/${_pihero_release}/visitor | bash -s -- "$@"
 }
 
 grafana-start() {
@@ -31,5 +35,5 @@ grafana-start() {
   local watcher=$!
   trap 'kill "$watcher" 2>/dev/null' EXIT
 
-  curl -fsSL https://raw.githubusercontent.com/grafana/docker-otel-lgtm/refs/heads/main/run-lgtm.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/grafana/docker-otel-lgtm/${_lgtm_commit}/run-lgtm.sh | bash
 }

@@ -9,9 +9,9 @@ CURL_CALLS = [line for line in INSTRUCTIONS if re.search(r"^RUN\s+curl\s|[;&|(]\
 
 
 class TestBaseImage:
-    def test_should_be_pinned_to_a_fedora_release(self):
+    def test_should_be_pinned_to_a_fedora_release_by_digest(self):
         bases = [line for line in INSTRUCTIONS if re.match(r"FROM (?!base )", line)]
-        assert bases and all(re.match(r"FROM fedora:\d+ ", line) for line in bases), bases
+        assert bases and all(re.match(r"FROM (?:registry\.fedoraproject\.org/)?fedora:\d+@sha256:[0-9a-f]{64} ", line) for line in bases), bases
 
 
 class TestShell:

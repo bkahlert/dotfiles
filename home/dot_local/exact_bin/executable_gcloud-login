@@ -32,6 +32,8 @@ readonly ADMIN_EMAIL="bjoern.kahlert.admin@ista-express.de"
 # op:// references reject.
 readonly ADMIN_OP_REF="op://Employee/p44thhnd5ylh6zrm6etwozs63a/password"
 readonly CHROMIUM_BUILD=1702741   # Chromium 156.0.8070.0, tested 2026-09-22
+# Pinned: npx runs this third-party installer on every fresh Chromium download; bump deliberately.
+readonly PUPPETEER_BROWSERS=@puppeteer/browsers@3.2.3
 readonly CACHE_DIR="$HOME/.cache/gcloud-login"
 readonly PROFILE_ROOT="$HOME/Library/Application Support/gcloud-login"
 readonly TOKENINFO_URL="https://oauth2.googleapis.com/tokeninfo"
@@ -116,7 +118,7 @@ chromium_bin() {
 ensure_chromium() {
   [[ -n "$(chromium_bin)" ]] && return 0
   info "Installing Chromium $CHROMIUM_BUILD (plain build, immune to the managed-profile interception)"
-  npx --yes @puppeteer/browsers install "chromium@$CHROMIUM_BUILD" --path "$CACHE_DIR" >/dev/null \
+  npx --yes "$PUPPETEER_BROWSERS" install "chromium@$CHROMIUM_BUILD" --path "$CACHE_DIR" >/dev/null \
     || die "gcloud-login: Chromium install failed"
   [[ -n "$(chromium_bin)" ]] || die "gcloud-login: Chromium install failed"
 }
