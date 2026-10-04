@@ -63,4 +63,11 @@ done
 
 warn "Forcing SIGKILL on: $*"
 kill -9 "$@" 2>/dev/null
+sleep 0.5
+# shellcheck disable=SC2046
+set -- $(lsof -t -iTCP:"$port" -sTCP:LISTEN 2>/dev/null)
+if [[ $# -gt 0 ]]; then
+  err "Port $port is still in use by: $*"
+  exit 1
+fi
 ok "Port $port freed."

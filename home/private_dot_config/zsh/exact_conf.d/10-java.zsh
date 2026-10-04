@@ -6,8 +6,9 @@
 unset JAVA_HOME
 
 # Prefer Homebrew's openjdk; fall back to /usr/libexec/java_home.
-if command -v brew &>/dev/null; then
-  brew_jdk="$(brew --prefix)/opt/openjdk/libexec/openjdk.jdk"
+# $HOMEBREW_PREFIX is exported by `brew shellenv` (.zprofile); unset means no Homebrew lookup.
+if [[ -n ${HOMEBREW_PREFIX-} ]]; then
+  brew_jdk="$HOMEBREW_PREFIX/opt/openjdk/libexec/openjdk.jdk"
   if [ -x "$brew_jdk/Contents/Home/bin/java" ]; then
     export JAVA_HOME="$brew_jdk/Contents/Home"
   fi

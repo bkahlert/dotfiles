@@ -69,29 +69,31 @@ class TestCleanup:
             assert "ℹ auto-yes\n✔ Xcode Archives cleaned\n" in result.stdout
 
         def test_should_skip_the_system_steps_when_sudo_is_denied(self, run, fake_bin, calls, sandbox):
+            quiet_tools(fake_bin, sandbox)
+            result = run("cleanup", "--apply", "--yes", timeout=30)
+            assert calls("sudo") == [["-v"]]
+            assert result.stdout.count("sudo not granted") == 1
+
+        def test_should_clean_the_dropbox_cache_without_sudo(self, run, fake_bin, calls, sandbox):
             blob = sandbox.home / "Dropbox/.dropbox.cache/blob"
             blob.parent.mkdir(parents=True)
             blob.write_bytes(b"x")
             quiet_tools(fake_bin, sandbox)
             result = run("cleanup", "--apply", "--yes", timeout=30)
-            assert blob.exists()
-            assert calls("sudo") == [["-v"]]
-            assert result.stdout.count("sudo not granted") == 1
-            assert "▪ Dropbox cache: needs sudo\n" in result.stdout
+            assert not blob.exists()
+            assert "✔ Dropbox cache cleaned\n" in result.stdout
+            assert "Dropbox cache: needs sudo" not in result.stdout
+            assert not any(str(blob.parent) in arg for call in calls("sudo") for arg in call)
 
-        def test_should_only_hand_system_logs_and_the_dropbox_cache_to_sudo(self, run, fake_bin, calls, sandbox):
+        def test_should_only_hand_system_logs_to_sudo(self, run, fake_bin, calls, sandbox):
             xcode_leftovers(sandbox)
-            dropbox = sandbox.home / "Dropbox/.dropbox.cache"
-            dropbox.mkdir(parents=True)
-            (dropbox / "blob").write_bytes(b"x")
             quiet_tools(fake_bin, sandbox)
             fake_bin("sudo")
             run("cleanup", "--apply", "--yes", timeout=30)
             elevated = [call for call in calls("sudo") if call[:2] == ["-n", "rm"]]
             paths = [path for call in elevated for path in call[3:]]
-            allowed = ("/private/var/log/", "/Library/Logs/", f"{dropbox}/")
+            allowed = ("/private/var/log/", "/Library/Logs/")
             assert calls("sudo")[0] == ["-v"]
-            assert str(dropbox / "blob") in paths
             assert all(call[:3] == ["-n", "rm", "-rf"] for call in elevated)
             assert [path for path in paths if not path.startswith(allowed)] == []
 

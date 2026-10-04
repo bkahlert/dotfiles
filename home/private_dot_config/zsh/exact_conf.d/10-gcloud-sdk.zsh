@@ -2,9 +2,8 @@
 _gcloud_sdk_dirs=(
   "$HOME/google-cloud-sdk"
 )
-if command -v brew &>/dev/null; then
-  _gcloud_sdk_dirs+=("$(brew --prefix)/share/google-cloud-sdk")
-fi
+# $HOMEBREW_PREFIX is exported by `brew shellenv` (.zprofile); unset means no Homebrew lookup.
+[[ -n ${HOMEBREW_PREFIX-} ]] && _gcloud_sdk_dirs+=("$HOMEBREW_PREFIX/share/google-cloud-sdk")
 
 for _gcloud_sdk_dir in "${_gcloud_sdk_dirs[@]}"; do
   [[ -d $_gcloud_sdk_dir ]] || continue

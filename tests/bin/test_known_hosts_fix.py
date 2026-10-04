@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestKnownHostsFix:
     class TestOnHost:
         def test_should_hand_ssh_keygen_the_known_hosts_under_home(self, run, fake_bin, calls, sandbox):
@@ -31,6 +34,23 @@ class TestKnownHostsFix:
                                      "(twin entries, if any, will need separate handling).\n")
             assert known_hosts.read_text() == PLAIN_A + PLAIN_B
             assert calls("ssh-keygen") == []
+
+        @pytest.mark.parametrize("line", ["08", "09", "008"])
+        def test_should_read_a_zero_padded_line_as_decimal(self, run, fake_bin, calls, sandbox, line):
+            write_known_hosts(sandbox, extra=[f"h{n}.test {KEY}\n" for n in range(4, 10)])
+            fake_bin("ssh-keygen")
+            result = run("known-hosts-fix", line)
+            host = f"h{int(line)}.test"
+            assert (result.returncode, result.stderr) == (0, f"Line {int(line)} → host {host}\n")
+            assert calls("ssh-keygen") == [["-R", host, "-f", str(sandbox.home / ".ssh/known_hosts")]]
+
+        def test_should_fail_when_deleting_a_hashed_line_fails(self, run, fake_bin, sandbox):
+            known_hosts = write_known_hosts(sandbox)
+            fake_bin("sed", script=SED_FAILING_IN_PLACE)
+            result = run("known-hosts-fix", "3")
+            assert result.returncode == 1
+            assert result.stderr.endswith(f"known-hosts-fix: could not delete line 3 from {known_hosts}\n")
+            assert known_hosts.read_text() == PLAIN_A + PLAIN_B + HASHED
 
         def test_should_reject_a_line_out_of_range(self, run, sandbox):
             write_known_hosts(sandbox)
@@ -73,9 +93,13 @@ HASHED = f"|1|abcdefghijklmnopqrstuvwxyz0=|abcdefghijklmnopqrstuvwxyz0= {KEY}\n"
 REAL_SSH_KEYGEN = '[[ " $* " == *" -f "* ]] || exit 99\nexec "$(command -pv ssh-keygen)" "$@"\n'
 
 
-def write_known_hosts(sandbox):
+SED_FAILING_IN_PLACE = ('for a in "$@"; do [[ $a == -i* ]] && { echo "sed: cannot edit" >&2; exit 4; }; done\n'
+                        'exec "$(command -pv sed)" "$@"\n')
+
+
+def write_known_hosts(sandbox, extra=()):
     ssh = sandbox.home / ".ssh"
     ssh.mkdir(mode=0o700)
     known_hosts = ssh / "known_hosts"
-    known_hosts.write_text(PLAIN_A + PLAIN_B + HASHED)
+    known_hosts.write_text("".join([PLAIN_A, PLAIN_B, HASHED, *extra]))
     return known_hosts

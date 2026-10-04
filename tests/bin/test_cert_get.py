@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestCertGet:
     def test_should_print_the_leaf_certificate_as_pem(self, run, fake_bin, calls):
         fake_bin("openssl", script=OPENSSL)
@@ -20,7 +23,36 @@ class TestCertGet:
             assert (result.returncode, result.stdout) == (0, "example.test.pem\n")
             assert (sandbox.home / "example.test.pem").read_text() == "PEM:CERT\n"
 
+        def test_should_leave_nothing_behind_on_failure(self, run, fake_bin, sandbox):
+            fake_bin("openssl", script=OPENSSL_FAILING)
+            result = run("cert-get", "--download", "example.test")
+            assert (result.returncode, result.stdout) == (1, "")
+            assert list(sandbox.home.glob("example.test*")) == []
+
+        def test_should_keep_an_existing_file_on_failure(self, run, fake_bin, sandbox):
+            existing = sandbox.home / "example.test.pem"
+            existing.write_text("OLD\n")
+            fake_bin("openssl", script=OPENSSL_FAILING)
+            result = run("cert-get", "--download", "example.test")
+            assert result.returncode == 1
+            assert [existing.read_text(), sorted(path.name for path in sandbox.home.glob("example.test*"))] == [
+                "OLD\n", ["example.test.pem"]]
+
+        def test_should_leave_no_temporary_file_on_success(self, run, fake_bin, sandbox):
+            fake_bin("openssl", script=OPENSSL)
+            run("cert-get", "--download", "example.test")
+            assert sorted(path.name for path in sandbox.home.glob("example.test*")) == ["example.test.pem"]
+
     class TestOnBadArguments:
+        @pytest.mark.parametrize("flags", [(), ("--download",)], ids=["print", "download"])
+        def test_should_reject_a_domain_with_a_slash(self, run, fake_bin, calls, sandbox, flags):
+            fake_bin("openssl", script=OPENSSL)
+            result = run("cert-get", *flags, "../evil")
+            assert result.returncode == 2
+            assert result.stderr == "cert-get: domain must not contain '/': ../evil\nSee 'cert-get --help'\n"
+            assert calls("openssl") == []
+            assert not (sandbox.home.parent / "evil.pem").exists()
+
         def test_should_print_the_help_to_stderr_without_arguments(self, run):
             result = run("cert-get")
             assert result.returncode == 2
@@ -38,3 +70,4 @@ class TestCertGet:
 
 
 OPENSSL = 'case $1 in s_client) printf "CERT\\n" ;; x509) printf "PEM:"; cat ;; esac\nexit 0\n'
+OPENSSL_FAILING = 'case $1 in s_client) exit 1 ;; x509) printf "PEM:"; cat; exit 1 ;; esac\n'

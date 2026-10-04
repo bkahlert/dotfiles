@@ -2,14 +2,14 @@ export NVM_DIR="$HOME/.nvm"
 
 # Resolve nvm.sh from either install method:
 #   - Official curl installer drops it at $NVM_DIR/nvm.sh
-#   - Homebrew puts it at $(brew --prefix)/opt/nvm/nvm.sh and expects
+#   - Homebrew puts it at $HOMEBREW_PREFIX/opt/nvm/nvm.sh and expects
 #     $NVM_DIR to stay at ~/.nvm (pointing it at the cellar would wipe
 #     installed Node versions on every brew upgrade — see brew's caveat).
 _nvm_sh=
 if [ -s "$NVM_DIR/nvm.sh" ]; then
   _nvm_sh="$NVM_DIR/nvm.sh"
-elif command -v brew &>/dev/null && [ -s "$(brew --prefix)/opt/nvm/nvm.sh" ]; then
-  _nvm_sh="$(brew --prefix)/opt/nvm/nvm.sh"
+elif [ -n "${HOMEBREW_PREFIX-}" ] && [ -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ]; then
+  _nvm_sh="$HOMEBREW_PREFIX/opt/nvm/nvm.sh"
 fi
 
 # Lazy-load nvm only when actually installed; otherwise leave node/npm/npx

@@ -23,9 +23,9 @@ def sdk(sandbox):
     return install
 
 
-def brew_sdk(sandbox, fake_bin, sdk, **kwargs):
+def brew_sdk(sandbox, sdk, **kwargs):
     prefix = sandbox.home / "prefix"
-    fake_bin("brew", stdout=str(prefix))
+    sandbox.env["HOMEBREW_PREFIX"] = str(prefix)
     return sdk(prefix / "share" / "google-cloud-sdk", **kwargs)
 
 
@@ -44,26 +44,33 @@ class TestGcloudSdk:
             assert (result.stdout, result.stderr) == (f"{home_sdk}/bin\nnone\n", "")
 
     class TestOnHomebrewInstall:
-        def test_should_put_its_bin_directory_on_the_path_and_register_completion(self, zsh, sandbox, fake_bin, sdk):
-            brewed = brew_sdk(sandbox, fake_bin, sdk)
+        def test_should_put_its_bin_directory_on_the_path_and_register_completion(self, zsh, sandbox, sdk):
+            brewed = brew_sdk(sandbox, sdk)
             result = zsh(SHOW, modules=MODULES)
             assert (result.stdout, result.stderr) == (f"{brewed}/bin\n{brewed}\n", "")
 
+        def test_should_not_fork_brew_for_the_prefix(self, zsh, sandbox, sdk, calls):
+            brew_sdk(sandbox, sdk)
+            zsh(SHOW, modules=MODULES)
+            assert calls("brew") == []
+
+    class TestOnUnsetHomebrewPrefix:
+        def test_should_skip_the_homebrew_lookup_without_forking_brew(self, zsh, sandbox, sdk, calls):
+            brew_sdk(sandbox, sdk)
+            del sandbox.env["HOMEBREW_PREFIX"]
+            result = zsh('print -r -- "${path[1]}"', modules=MODULES)
+            assert (result.stdout, result.stderr, calls("brew")) == (f"{sandbox.fakes}\n", "", [])
+
     class TestOnBothInstalls:
-        def test_should_use_the_tarball_only(self, zsh, sandbox, fake_bin, sdk):
-            brew_sdk(sandbox, fake_bin, sdk)
+        def test_should_use_the_tarball_only(self, zsh, sandbox, sdk):
+            brew_sdk(sandbox, sdk)
             home_sdk = sdk(sandbox.home / "google-cloud-sdk")
             result = zsh('print -rl -- ${(M)path:#*google-cloud-sdk/bin}\nprint -r -- "$GCLOUD_COMPLETION_FROM"', modules=MODULES)
             assert (result.stdout, result.stderr) == (f"{home_sdk}/bin\n{home_sdk}\n", "")
 
     class TestOnNoInstall:
-        def test_should_leave_the_path_alone_and_stay_silent(self, zsh, sandbox, fake_bin):
-            fake_bin("brew", stdout=str(sandbox.home / "prefix"))
-            result = zsh('print -r -- "${path[1]}"', modules=MODULES)
-            assert (result.stdout, result.stderr) == (f"{sandbox.fakes}\n", "")
-
-        def test_should_not_ask_brew_when_there_is_none(self, zsh, sandbox):
-            (sandbox.fakes / "brew").unlink()
+        def test_should_leave_the_path_alone_and_stay_silent(self, zsh, sandbox):
+            sandbox.env["HOMEBREW_PREFIX"] = str(sandbox.home / "prefix")
             result = zsh('print -r -- "${path[1]}"', modules=MODULES)
             assert (result.stdout, result.stderr) == (f"{sandbox.fakes}\n", "")
 
