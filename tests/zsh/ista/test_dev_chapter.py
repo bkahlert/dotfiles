@@ -1,3 +1,4 @@
+import os
 import time
 
 MODULES = ["ista/10-dev-chapter.zsh"]
@@ -61,6 +62,37 @@ class TestDevChapter:
                 assert (result.stdout, result.stderr) == (
                     "", "✘ Failed to clone dev-chapter repository:\n✘ fatal: no route to host\n")
 
+            def test_should_leave_git_alone_and_stay_silent_in_a_shell_started_during_the_clone(self, zsh, fake_bin, calls, sandbox):
+                with_agent(sandbox)
+                fake_bin("git", script=half_clones(sandbox))
+                zsh("true", modules=MODULES)
+                eventually(lambda: (sandbox.home / "started").exists())
+                second = zsh("true", modules=MODULES)
+                time.sleep(0.3)
+                (sandbox.home / "release").touch()
+                assert (second.returncode, second.stdout, second.stderr) == (0, "", "")
+                assert [call[0] for call in calls("git")] == ["clone"]
+                assert not (sandbox.home / CACHE / "update-error").exists()
+
+            def test_should_remove_the_clone_marker_once_the_clone_ends(self, zsh, fake_bin, sandbox):
+                with_agent(sandbox)
+                fake_bin("git", stdout="fatal: no route to host", exit_code=128)
+                zsh("true", modules=MODULES)
+                eventually(lambda: (sandbox.home / CACHE / "clone-error").exists())
+                eventually(lambda: not (sandbox.home / CACHE / "cloning").exists())
+
+            def test_should_clone_again_on_a_stale_clone_marker(self, zsh, fake_bin, calls, sandbox):
+                with_agent(sandbox)
+                marker = sandbox.home / CACHE / "cloning"
+                marker.parent.mkdir(parents=True)
+                marker.touch()
+                long_ago = time.time() - 24 * 60 * 60
+                os.utime(marker, (long_ago, long_ago))
+                fake_bin("git")
+                zsh("true", modules=MODULES)
+                eventually(lambda: calls("git"))
+                assert calls("git")[0][:2] == ["clone", REMOTE]
+
         class TestOnExistingRepository:
             def test_should_pull_in_the_background_and_keep_the_tools_on_path(self, zsh, fake_bin, calls, sandbox):
                 with_repo(sandbox)
@@ -97,6 +129,16 @@ class TestDevChapter:
                 assert third.stderr == ""
                 assert len(calls("git")) == 1
 
+            def test_should_report_a_stored_failure_in_a_shell_that_inherits_the_tools_on_path(self, zsh, fake_bin, calls, sandbox):
+                with_repo(sandbox)
+                (sandbox.home / CACHE).mkdir(parents=True)
+                (sandbox.home / CACHE / "update-error").write_text("fatal: unreachable\n")
+                sandbox.env["PATH"] = f"{sandbox.home}/{REPO}/tools:{sandbox.env['PATH']}"
+                fake_bin("git")
+                result = zsh("true", modules=MODULES)
+                assert result.stderr == "! Failed to update dev-chapter repository:\n! fatal: unreachable\n"
+                assert calls("git") == []
+
 
 def with_agent(sandbox):
     sandbox.env["SSH_AUTH_SOCK"] = str(sandbox.home / "agent.sock")
@@ -115,14 +157,21 @@ def eventually(condition, timeout=5):
         time.sleep(0.02)
 
 
-def blocks_until_released(sandbox):
-    """A git that signals it started, then hangs until the test releases it (self-releasing after 10 s)."""
-    return (f"touch {sandbox.home}/started\n"
-            f"for _ in $(seq 200); do [ -e {sandbox.home}/release ] && exit 0; sleep 0.05; done\n")
+def blocks_until_released(sandbox, first=""):
+    """A git that runs `first`, signals it started, then hangs until the test releases it (marking `timed-out` after 5 s)."""
+    return (f"{first}\n"
+            f"touch {sandbox.home}/started\n"
+            f"for _ in $(seq 100); do [ -e {sandbox.home}/release ] && exit 0; sleep 0.05; done\n"
+            f"touch {sandbox.home}/timed-out\n")
+
+
+def half_clones(sandbox):
+    """What a real `git clone` does first: create the repository's .git, long before it finishes."""
+    return blocks_until_released(sandbox, first=f"mkdir -p {sandbox.home}/{REPO}/.git")
 
 
 def continues_while_git_runs(sandbox):
-    """Passes only if the shell gets past the module while git is still hanging; a synchronous git would deadlock."""
+    """Passes only if the shell gets past the module while git is still hanging; a synchronous git hangs until it times out."""
     return (f"repeat 200 {{ [[ -e {sandbox.home}/started ]] && break; sleep 0.02 }}\n"
-            f"[[ -e {sandbox.home}/started && ! -e {sandbox.home}/release ]] && print 'git running, shell continued'\n"
+            f"[[ -e {sandbox.home}/started && ! -e {sandbox.home}/release && ! -e {sandbox.home}/timed-out ]] && print 'git running, shell continued'\n"
             f"touch {sandbox.home}/release")

@@ -15,6 +15,7 @@ readonly DEV_CHAPTER_TOOLS="$DEV_CHAPTER_REPO/tools"
 readonly _DC_GIT_REMOTE="git@gitlab.com:ista-se/cas/ista-express/shared/dev-chapter-time/dev-chapter.git"
 readonly _DC_CACHE_DIR="$HOME/.cache/dev-chapter"
 readonly _DC_LAST_ATTEMPT_FILE="$_DC_CACHE_DIR/last_attempt"
+readonly _DC_CLONING_FILE="$_DC_CACHE_DIR/cloning"
 readonly _DC_CLONE_ERROR_FILE="$_DC_CACHE_DIR/clone-error"
 readonly _DC_UPDATE_ERROR_FILE="$_DC_CACHE_DIR/update-error"
 readonly _DC_PULL_INTERVAL=$((7 * 24 * 60 * 60))
@@ -48,6 +49,7 @@ _dc_clone() {
     # Keep the whole reason — git puts the actual cause on its *first* line.
     print -r -- "$out" > "$_DC_CLONE_ERROR_FILE"
   fi
+  rm -f "$_DC_CLONING_FILE"
 }
 
 _dc_pull() {
@@ -66,20 +68,29 @@ _dc_report() { # <error file> <_dc_warn|_dc_err> <headline>
   rm -f "$1"
 }
 
+# Before the PATH check: a shell that inherits the tools never pulls, so this is the only place it can show the failure.
+_dc_report "$_DC_CLONE_ERROR_FILE" _dc_err "Failed to clone dev-chapter repository:"
+_dc_report "$_DC_UPDATE_ERROR_FILE" _dc_warn "Failed to update dev-chapter repository:"
+
 # Early exit if tools already in PATH
 if [[ ":$PATH:" == *":$DEV_CHAPTER_TOOLS:"* ]]; then
   return 0
 fi
 
-_dc_report "$_DC_CLONE_ERROR_FILE" _dc_err "Failed to clone dev-chapter repository:"
-_dc_report "$_DC_UPDATE_ERROR_FILE" _dc_warn "Failed to update dev-chapter repository:"
-
 typeset _dc_cloning=false
+# git creates .git at the start of a clone, so a half-cloned repository looks like a finished
+# one; the marker is what tells a shell started meanwhile to leave it alone. One older than the
+# clone could possibly take is left over from a killed job.
+local -a _dc_marker=( $_DC_CLONING_FILE(N.mm-30) )
 
-if [[ ! -d "$DEV_CHAPTER_REPO" ]]; then
+if (( $#_dc_marker )); then
+  _dc_cloning=true
+elif [[ ! -d "$DEV_CHAPTER_REPO" ]]; then
   # The clone authenticates through the agent; without one a fresh machine stays quiet.
   [[ -n "$SSH_AUTH_SOCK" ]] || return 0
   _dc_cloning=true
+  mkdir -p "$_DC_CACHE_DIR"
+  : > "$_DC_CLONING_FILE"
   _dc_clone </dev/null >/dev/null 2>&1 &!
 elif [[ -d "$DEV_CHAPTER_REPO/.git" && -n "$SSH_AUTH_SOCK" ]]; then
   # Update repository if it's been more than a week
