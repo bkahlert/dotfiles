@@ -7,7 +7,7 @@ import sys
 import pytest
 from pykeepass import PyKeePass, create_database
 
-from repo import CHEZMOISCRIPTS_SOURCE, CONTEXTS, HOME_SOURCE
+from repo import CHEZMOISCRIPTS_SOURCE, CONTEXTS, HOME_SOURCE, require_chezmoi
 
 PASSWORD = "master"
 KDBX = "Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx"
@@ -122,9 +122,7 @@ class TestDumpSshFromKdbx:
 
 @pytest.fixture
 def rendered(sandbox, tmp_path):
-    chezmoi = shutil.which("chezmoi")
-    if chezmoi is None:
-        pytest.skip("chezmoi is not installed")
+    chezmoi = require_chezmoi()
     template = CHEZMOISCRIPTS_SOURCE / "run_onchange_after_dump-ssh-from-kdbx.tmpl"
 
     def run(company):
