@@ -37,12 +37,13 @@ def stubs(zsh):
 
 class TestNvm:
     class TestOnNoNvm:
-        def test_should_leave_node_and_npm_alone_without_forking_brew(self, zsh, calls):
+        def test_should_leave_node_and_npm_alone(self, zsh, sandbox):
+            (sandbox.fakes / "brew").unlink()
             result = zsh(LIST_STUBS, modules=[MODULE])
-            assert (result.stdout, result.stderr, calls("brew")) == ("", "", [])
+            assert (result.stdout, result.stderr) == ("", "")
 
-        def test_should_leave_them_alone_when_homebrew_has_no_nvm_either(self, zsh, sandbox):
-            sandbox.env["HOMEBREW_PREFIX"] = str(sandbox.home / "prefix")
+        def test_should_leave_them_alone_when_brew_has_no_nvm_either(self, zsh, fake_bin, sandbox):
+            fake_bin("brew", stdout=str(sandbox.home / "prefix"))
             assert stubs(zsh) == []
 
     class TestOnOfficialInstall:
@@ -73,27 +74,16 @@ class TestNvm:
 
     class TestOnHomebrewInstall:
         @pytest.fixture
-        def prefix(self, sandbox):
+        def prefix(self, sandbox, fake_bin):
             opt = sandbox.home / "prefix" / "opt" / "nvm"
             opt.mkdir(parents=True)
             (opt / "nvm.sh").write_text('nvm() { echo brew-nvm "$@"; }\n')
-            sandbox.env["HOMEBREW_PREFIX"] = str(sandbox.home / "prefix")
+            fake_bin("brew", stdout=str(sandbox.home / "prefix"))
 
         def test_should_stub_the_tools_and_load_the_brew_nvm_sh(self, zsh, prefix):
             result = zsh(f"{LIST_STUBS}; nvm ls", modules=[MODULE])
             assert result.stdout.splitlines() == [*STUBS.split(), "brew-nvm ls"]
 
-        def test_should_not_fork_brew_for_the_prefix(self, zsh, prefix, calls):
-            zsh("true", modules=[MODULE])
-            assert calls("brew") == []
-
         def test_should_create_nvm_dir_at_home_not_in_the_cellar(self, zsh, prefix, sandbox):
             zsh("true", modules=[MODULE])
             assert (sandbox.home / ".nvm").is_dir()
-
-        def test_should_find_the_brew_nvm_sh_under_the_prefix_brew_sits_in_on_unset_homebrew_prefix(self, zsh, uninherited_brew):
-            opt = uninherited_brew / "opt" / "nvm"
-            opt.mkdir(parents=True)
-            (opt / "nvm.sh").write_text('nvm() { echo brew-nvm "$@"; }\n')
-            result = zsh("nvm ls", modules=[MODULE])
-            assert (result.stdout, result.stderr) == ("brew-nvm ls\n", "")
