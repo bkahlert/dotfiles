@@ -15,12 +15,8 @@ CHOSEN = [
     ["write", "com.apple.dock", "tilesize", "-int", "23"],
     ["write", "com.apple.dock", "wvous-tl-corner", "-int", "3"],
     ["write", "com.apple.SoftwareUpdate", "AutomaticCheckEnabled", "-bool", "true"],
-]
-# Writes that name a domain and a type but no key, so `defaults` stores the value under the key
-# "-int" or "-bool" and the setting is never applied. Remove an entry once its line is fixed.
-KEYLESS = [
-    ["write", "com.apple.swipescrolldirection", "-int", "0"],
-    ["write", "com.apple.dock.showLaunchpadGestureEnabled", "-bool", "false"],
+    ["write", "-g", "com.apple.swipescrolldirection", "-bool", "false"],
+    ["write", "com.apple.dock", "showLaunchpadGestureEnabled", "-bool", "false"],
 ]
 
 
@@ -49,7 +45,7 @@ class TestOsx:
         def test_should_name_a_key_in_every_write(self, script, system_tools, calls):
             script("osx", "--no-restart")
             keyless = [call for call in calls("defaults") if call[0] == "write" and call[2].startswith("-")]
-            assert keyless == KEYLESS
+            assert keyless == []
 
         def test_should_restart_the_affected_apps(self, script, system_tools, calls):
             script("osx")

@@ -56,7 +56,7 @@ defaults write com.apple.AppleMultitouchTrackpad Clicking -int 1
 defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -int 1
 
 # Trackpad: Scroll direction
-defaults write com.apple.swipescrolldirection -int 0
+defaults write -g com.apple.swipescrolldirection -bool false
 
 # Trackpad: Haptic feedback (light, silent clicking)
 defaults write com.apple.AppleMultitouchTrackpad FirstClickThreshold -int 0
@@ -72,7 +72,7 @@ defaults write NSGlobalDomain ContextMenuGesture -int 1
 defaults write com.apple.dock showMissionControlGestureEnabled -bool true
 defaults write com.apple.dock showAppExposeGestureEnabled -bool true
 defaults write com.apple.dock showDesktopGestureEnabled -bool true
-defaults write com.apple.dock.showLaunchpadGestureEnabled -bool false
+defaults write com.apple.dock showLaunchpadGestureEnabled -bool false
 
 # Disable "Open man Page in Terminal" and "Search man Page Index in Terminal" shortcuts
 TEMP_SETTINGS_FILE=$(mktemp -t 'man-shortcuts-off.json')
