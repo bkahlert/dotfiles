@@ -25,6 +25,15 @@ class TestInstallPackages:
             fake_bin("brew", exit_code=1)
             assert script("install-packages").returncode == 1
 
+        class TestOnBrewOffPath:
+            @pytest.mark.parametrize("prefix", ["/opt/homebrew", "/usr/local"])
+            def test_should_load_brew_from_the_standard_prefix(self, script, sandbox, homebrew_at, calls, prefix):
+                sandbox.only_tools()
+                root = homebrew_at(prefix)
+                result = script("install-packages", prefix_root=root)
+                assert result.returncode == 0, result.stderr
+                assert calls("brew") == [["bundle", "--file=/dev/stdin"]]
+
     class TestBrewfile:
         @pytest.mark.parametrize("line", brewfile_lines(), ids=lambda line: line.split("#")[0].strip())
         def test_should_be_one_entry_with_a_comment_saying_why(self, line):

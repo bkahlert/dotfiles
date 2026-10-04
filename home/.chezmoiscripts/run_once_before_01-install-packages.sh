@@ -5,6 +5,16 @@
 set -euo pipefail
 
 if [[ $(uname) == Darwin ]]; then
+  # A fresh Mac has no brew on PATH yet: dot_zprofile, which adds it, is applied only after the scripts run.
+  if ! command -v brew &>/dev/null; then
+    for prefix in /opt/homebrew /usr/local; do
+      if [[ -x $prefix/bin/brew ]]; then
+        eval "$("$prefix/bin/brew" shellenv)"
+        break
+      fi
+    done
+  fi
+
   brew bundle --file=/dev/stdin <<EOF
 brew "uv"                          # Python package/project manager (replaces pip + venv + pyenv)
 brew "sheldon"                     # Zsh plugin manager; config in ~/.config/sheldon/plugins.toml
