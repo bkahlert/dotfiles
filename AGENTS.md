@@ -93,7 +93,7 @@ Pin a version only where [Dependabot](.github/dependabot.yml) bumps it: actions 
 | `~/.gitconfig` | [dot_gitconfig.tmpl](home/dot_gitconfig.tmpl) | Templated name/email |
 | `~/.ssh/config` | [private_config](home/private_dot_ssh/private_config) | 1Password SSH agent (macOS) |
 | `~/.claude/CLAUDE.md` | [CLAUDE.md](home/private_dot_claude/CLAUDE.md) | AI coding conventions |
-| `~/.claude/settings.json` | [claude-settings.json](home/.chezmoitemplates/claude-settings.json) via [modify_settings.json](home/private_dot_claude/modify_settings.json) | Claude Code settings; `model` and `effortLevel` stay as set on the machine |
+| `~/.claude/settings.json` | [modify_settings.json](home/private_dot_claude/modify_settings.json) | Claude Code defaults inline; `model` and `effortLevel` stay as set on the machine |
 | `~/.npmrc` | [private_dot_npmrc.tmpl](home/private_dot_npmrc.tmpl) | Business only (mode 0600, ignored elsewhere): GitLab and Artifactory registry tokens |
 | `~/.agents/skills/*`, `~/.claude/skills/*` | [dot_agents/skills](home/dot_agents/skills), [private_dot_claude/skills](home/private_dot_claude/skills) | Repo-owned agent skills + their symlinks; third-party ones via [setup-skills](home/.chezmoiscripts/run_onchange_after_setup-skills.sh). See [quick-access/README.md](quick-access/README.md) |
 | `~/.local/bin/gcloud-login` | [executable_gcloud-login](home/dot_local/exact_bin/executable_gcloud-login) | Unattended gcloud/ADC login (ista); design notes in git history (`git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md`) |

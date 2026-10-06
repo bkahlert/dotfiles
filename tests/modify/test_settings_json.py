@@ -44,46 +44,54 @@ class TestModifySettingsJson:
 
         def test_should_leave_an_unchanged_file_byte_identical(self, modify, source):
             settings = {"a": 1, "model": "m", "enabledPlugins": {"p": True}}
-            first = modify(SCRIPT, "", CHEZMOI_SOURCE_DIR=str(source(settings)))
-            second = modify(SCRIPT, first.stdout, CHEZMOI_SOURCE_DIR=str(source(settings)))
+            first = modify(source(settings), "")
+            second = modify(source(settings), first.stdout)
             assert second.stdout == first.stdout
 
     class TestOnNoCurrentFile:
         @pytest.mark.parametrize("current", ("", "\n"), ids=("empty", "newline"))
         def test_should_render_the_source_without_the_machine_keys(self, modify, source, current):
-            result = modify(SCRIPT, current, CHEZMOI_SOURCE_DIR=str(source({"a": 1, "model": "m"})))
+            result = modify(source({"a": 1, "model": "m"}), current)
             assert (result.returncode, json.loads(result.stdout)) == (0, {"a": 1})
 
     class TestOnInvalidJson:
         def test_should_fail_and_print_no_content_for_chezmoi_to_write(self, modify, source):
-            result = modify(SCRIPT, "{ not json", CHEZMOI_SOURCE_DIR=str(source({"a": 1})))
+            result = modify(source({"a": 1}), "{ not json")
             assert result.returncode != 0
             assert result.stdout == ""
 
     class TestOnTheRealSourceState:
         def test_should_render_valid_json_that_keeps_the_machine_choices(self, modify):
-            result = modify(SCRIPT, json.dumps({"model": "opus", "effortLevel": "high"}), CHEZMOI_SOURCE_DIR=str(HOME_SOURCE))
+            result = modify(SCRIPT, json.dumps({"model": "opus", "effortLevel": "high"}))
             rendered = json.loads(result.stdout)
             assert (result.returncode, rendered["model"], rendered["effortLevel"]) == (0, "opus", "high")
-            owned_by_the_repo = json.loads((HOME_SOURCE / ".chezmoitemplates" / "claude-settings.json").read_text())
-            assert rendered["statusLine"] == owned_by_the_repo["statusLine"]
+            assert rendered["statusLine"] == {"type": "command", "command": "~/.claude/statusline"}
+            assert rendered["env"]["CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS"] == "1"
+            assert rendered["enabledPlugins"]["superpowers@claude-plugins-official"] is True
+
+        def test_should_leave_the_real_defaults_byte_identical_on_repeated_apply(self, modify):
+            first = modify(SCRIPT, "")
+            second = modify(SCRIPT, first.stdout)
+            assert first.returncode == second.returncode == 0
+            assert first.stdout == second.stdout
 
 
 @pytest.fixture
 def source(tmp_path):
-    """A source directory whose claude-settings.json holds the given settings."""
+    """A copy of the modifier with fixture defaults in its heredoc."""
     def make(settings):
-        templates = tmp_path / "source" / ".chezmoitemplates"
-        templates.mkdir(parents=True, exist_ok=True)
-        (templates / "claude-settings.json").write_text(json.dumps(settings))
-        return tmp_path / "source"
+        script = tmp_path / "modify_settings.json"
+        prefix, defaults = SCRIPT.read_text().split("<<'SETTINGS'\n", 1)
+        _, suffix = defaults.split("\nSETTINGS", 1)
+        script.write_text(prefix + "<<'SETTINGS'\n" + json.dumps(settings) + "\nSETTINGS" + suffix)
+        return script
     return make
 
 
 @pytest.fixture
 def apply(modify, source):
     def run(from_source, live):
-        result = modify(SCRIPT, json.dumps(live), CHEZMOI_SOURCE_DIR=str(source(from_source)))
+        result = modify(source(from_source), json.dumps(live))
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
     return run
