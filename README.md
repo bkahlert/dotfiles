@@ -25,7 +25,7 @@ chezmoi init --apply bkahlert
 - **[Sheldon](https://sheldon.cli.rs/)** — zsh plugin manager (TOML config, Rust-based).
 - **[Starship](https://starship.rs/)** — cross-shell prompt (TOML config, Rust-based).
 - **Shell features** — scripts, functions, aliases and keybindings are spread over several prefixed source paths. [quick-access/](quick-access/README.md) maps them with prefix-free symlinks and explains where a new one belongs.
-- **AI assistant configs** — `~/.claude/`, `~/.gemini/`, and `~/.config/agents/` are tracked so prompt rules and slash commands stay in sync across machines.
+- **AI assistant configs** — `~/.claude/`, `~/.copilot/`, `~/.gemini/`, and `~/.config/agents/` are tracked so settings, prompt rules and slash commands stay in sync across machines.
 
 ## Making changes
 

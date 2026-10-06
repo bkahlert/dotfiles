@@ -94,6 +94,8 @@ Pin a version only where [Dependabot](.github/dependabot.yml) bumps it: actions 
 | `~/.ssh/config` | [private_config](home/private_dot_ssh/private_config) | 1Password SSH agent (macOS) |
 | `~/.claude/CLAUDE.md` | [CLAUDE.md](home/private_dot_claude/CLAUDE.md) | AI coding conventions |
 | `~/.claude/settings.json` | [modify_settings.json](home/private_dot_claude/modify_settings.json) | Claude Code defaults inline; `model` and `effortLevel` stay as set on the machine |
+| `~/.copilot/copilot-instructions.md` | [copilot-instructions.md](home/private_dot_copilot/copilot-instructions.md) | Copilot user instructions; explicitly reads the shared agent guidance because Copilot does not expand `@~/` imports |
+| `~/.copilot/settings.json` | [private_settings.json](home/private_dot_copilot/private_settings.json) | Repo-owned Copilot settings; apply overwrites local changes, unlike Claude's modifier |
 | `~/.npmrc` | [private_dot_npmrc.tmpl](home/private_dot_npmrc.tmpl) | Business only (mode 0600, ignored elsewhere): GitLab and Artifactory registry tokens |
 | `~/.agents/skills/*`, `~/.claude/skills/*` | [dot_agents/skills](home/dot_agents/skills), [private_dot_claude/skills](home/private_dot_claude/skills) | Repo-owned agent skills + their symlinks; third-party ones via [setup-skills](home/.chezmoiscripts/run_onchange_after_setup-skills.sh). See [quick-access/README.md](quick-access/README.md) |
 | `~/.local/bin/gcloud-login` | [executable_gcloud-login](home/dot_local/exact_bin/executable_gcloud-login) | Unattended gcloud/ADC login (ista); design notes in git history (`git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md`) |
