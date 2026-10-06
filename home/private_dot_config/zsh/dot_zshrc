@@ -9,12 +9,10 @@ for config in $ZDOTDIR/conf.d/*.zsh(N); do
   source "$config"
 done
 
-# Source company-specific configs (only when DOTFILES_CONTEXT is set)
-if [[ -n "$DOTFILES_CONTEXT" ]]; then
-  for config in $ZDOTDIR/conf.d/$DOTFILES_CONTEXT/*.zsh(N); do
-    source "$config"
-  done
-fi
+# Work-only modules are deployed only for ista by .chezmoiignore.
+for config in $ZDOTDIR/conf.d/ista/*.zsh(N); do
+  source "$config"
+done
 
 # Machine-local overrides (not managed by chezmoi)
 [[ -f $ZDOTDIR/.zshrc.local ]] && source $ZDOTDIR/.zshrc.local

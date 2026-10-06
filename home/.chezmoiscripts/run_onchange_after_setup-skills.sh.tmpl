@@ -4,11 +4,16 @@
 
 set -euo pipefail
 
-case "${DOTFILES_CONTEXT:-}" in
-  bkahlert) agents=(claude-code) ;;
-  ista)     agents=(claude-code gemini-cli github-copilot) ;;
-  *)        exit 0 ;;
-esac
+# {{ if eq .company "bkahlert" }}
+agents=(claude-code)
+# {{ else if eq .company "ista" }}
+agents=(claude-code gemini-cli github-copilot)
+# {{ else }}
+agents=()
+# {{ end }}
+if ((${#agents[@]} == 0)); then
+  exit 0
+fi
 
 # npx is that of fnm's default Node.js (run_once_before_02-install-node). fnm is Homebrew's on macOS, whose bin a
 # fresh Mac has on no PATH yet, and in ~/.local/bin on Linux.

@@ -29,12 +29,6 @@ class TestGcloudLogin:
             assert result.returncode == 2
             assert result.stderr == "✘ gcloud-login: unknown option --nope (see 'gcloud-login --help')\n"
 
-    class TestOutsideTheIstaContext:
-        def test_should_refuse_to_run(self, run):
-            result = run("gcloud-login")
-            assert result.returncode == 1
-            assert result.stderr == "✘ gcloud-login: only available in the ista context\n"
-
     class TestOnStatus:
         def test_should_report_both_identities_and_exit_0_when_valid(self, run, fake_bin):
             fake_bin("gcloud", script=GCLOUD_VALID)
@@ -190,7 +184,7 @@ CHROMIUM = "\n".join([
 
 
 def login(run, *args, **kwargs):
-    return run("env", "DOTFILES_CONTEXT=ista", "gcloud-login", *args, **kwargs)
+    return run("gcloud-login", *args, **kwargs)
 
 
 def browser_tools(fake_bin, sandbox):

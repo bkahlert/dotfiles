@@ -27,34 +27,23 @@ Defined in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), prompted on `chezmoi i
 |---|---|---|
 | `.email` | string | Git config email |
 | `.name` | string | Git config name |
-| `.company` | string | Context name — `"bkahlert"` personal, `"ista"` business, empty for none (the test container). An identifier, not a business flag. |
+| `.company` | string | Profile name — `"bkahlert"` personal, `"ista"` work, empty for none (the test container). |
 | `.chezmoi.os` | string | `"darwin"` or `"linux"` (built-in) |
 
 **Never use `.is_personal`** — it has been replaced by `.company`.
 
-### Runtime context: `$DOTFILES_CONTEXT`
+### Personal/work-specific files
 
-`conf.d/00-context.zsh.tmpl` stamps `$DOTFILES_CONTEXT` at apply time (`bkahlert`, `ista`). All runtime code should branch on `$DOTFILES_CONTEXT` instead of template conditionals:
-
-- Any known context, personal included: `[[ -n "$DOTFILES_CONTEXT" ]] && ...`
-- Business only; use this for work-only behaviour: `[[ "$DOTFILES_CONTEXT" == ista ]] && ...`
-
-`.chezmoiscripts/` scripts get `$DOTFILES_CONTEXT` from `scriptEnv` in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), which chezmoi sets for every script it runs. No interactive zsh has exported it yet on `chezmoi init --apply` on a fresh machine, so a script must not rely on the shell's copy.
-
-In shell scripts use the env var with a default:
-```bash
-[[ "${DOTFILES_CONTEXT:-}" == ista ]] && ...
-```
+Chezmoi has no built-in personal/work profile switch; `.company` is this repo's init-time profile data. Use `.chezmoiignore` to deploy profile-specific files only where they belong, and templates when file contents or apply-time script behavior differ by profile. Do not export the profile into the runtime shell or inject it into scripts with `scriptEnv`.
 
 ### Avoid templates — prefer runtime checks
 
 **Only use `.tmpl` when there is no runtime alternative.** Prefer:
 - `[[ $OSTYPE == darwin* ]]` over `{{ if eq .chezmoi.os "darwin" }}`
 - `[[ $(uname) == Darwin ]] || exit 0` in `.chezmoiscripts/` shell scripts
-- `[[ -n "$DOTFILES_CONTEXT" ]]` over `{{ if .company }}`
-- Directory structure (`exact_conf.d/exact_ista/`) over template conditionals
+- `.chezmoiignore` and directory structure (`exact_conf.d/exact_ista/`) over runtime profile checks
 
-A template is justified when the value must be baked in at apply time and the target format has no runtime equivalent — e.g. secrets in static config files, interpolated identity fields, or chezmoi-specific change detection. When in doubt, ask whether a runtime check could replace it.
+A template is justified when the value must be baked in at apply time and the target format has no runtime equivalent — e.g. secrets in static config files, interpolated identity fields, or selecting agents in an apply-time script. When in doubt, ask whether a runtime check could replace it.
 
 ## Secrets
 
@@ -77,8 +66,8 @@ Invariants that bite when editing source state:
 
 - `exact_` on `exact_bin/`, `exact_conf.d/` and `exact_functions/` means **removing a file from the repo removes it from the target**, and a file created directly in `$HOME` is deleted on the next apply. Always edit source state.
 - Exception: `~/.local/bin/claude` is owned by the Claude installer (`https://claude.ai/install.sh`) and survives `exact_bin` via `.chezmoiignore`. Other installer-owned entries need the same treatment.
-- Only use `.zsh.tmpl` when the file embeds a secret or needs `sha256sum` change detection — a module that merely differs per machine should branch on `$DOTFILES_CONTEXT` at runtime.
-- Context-specific modules go in `exact_conf.d/exact_ista/` as plain `.zsh`; the directory is the conditional, so no template is needed.
+- Only use `.zsh.tmpl` when the file embeds a secret or needs `sha256sum` change detection; a module that differs by profile should normally be selected at apply time.
+- Work-only modules go in `exact_conf.d/exact_ista/` as plain `.zsh`; `.chezmoiignore` controls whether the directory is deployed.
 
 ## Install Scripts
 
