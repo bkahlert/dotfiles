@@ -18,7 +18,10 @@
     "showContextWindow": true,
     "showModelEffort": true,
     "showQuota": true,
-    "showYolo": true
+    "showYolo": true,
+    "showCiStatus": true,
+    "showBranch": true,
+    "showPullRequest": true
   },
   "ide": {
     "autoConnect": true
