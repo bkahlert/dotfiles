@@ -1,9 +1,5 @@
-# Anthropic Claude CLI symlink — managed by https://claude.ai/install.sh,
-# not chezmoi. Without this, exact_bin/ would remove it on apply.
-.local/bin/claude
-
 # browser-harness shims — managed by `uv tool install browser-harness`,
-# same treatment as the Claude CLI above.
+# kept out of exact_bin so chezmoi does not remove them.
 .local/bin/browser-harness
 .local/bin/browser-harness-mcp
 

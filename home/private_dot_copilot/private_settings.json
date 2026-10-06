@@ -1,0 +1,36 @@
+{
+  "model": "auto",
+  "banner": "never",
+  "contextManagementTools": true,
+  "includeCoAuthoredBy": false,
+  "memory": false,
+  "showTimestamps": true,
+  "terminalProgress": true,
+  "terminalNotifications": true,
+  "updateTerminalTitle": true,
+  "dynamicRetrieval": {
+    "skills": true,
+    "mcp": true
+  },
+  "footer": {
+    "showAgent": true,
+    "showAiUsed": true,
+    "showContextWindow": true,
+    "showModelEffort": true,
+    "showQuota": true,
+    "showYolo": true,
+    "showCiStatus": true,
+    "showBranch": true,
+    "showPullRequest": true
+  },
+  "ide": {
+    "autoConnect": true
+  },
+  "subagents": {
+    "contextManagementTools": true
+  },
+  "allowedUrls": [
+    "https://docs.github.com",
+    "https://www.chezmoi.io"
+  ]
+}

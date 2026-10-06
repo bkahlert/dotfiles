@@ -38,9 +38,11 @@ Not symlinked, but worth knowing:
   with a symlink `~/.claude/skills/<name> -> ../../.agents/skills/<name>` so each agent finds them.
   Two mechanisms produce that layout:
   - third-party skills: [run_onchange_after_setup-skills.sh](../home/.chezmoiscripts/run_onchange_after_setup-skills.sh)
-    runs `skills add -g` (e.g. `grill-me`, `handoff`). The layout then depends on the agents requested: with a
+    detects `claude`, `gemini` and `copilot` on PATH (including Homebrew and fnm's default Node.js)
+    and runs `skills add -g` (e.g. `grill-me`, `handoff`) for all available agents, independent of company.
+    With no detected CLI, it installs nothing. The layout depends on the agents detected: with a
     universal agent (Gemini CLI, GitHub Copilot) in the list, the CLI writes the canonical copy and the symlink;
-    with `claude-code` alone (the `bkahlert` context) it copies straight into `~/.claude/skills/<name>`.
+    with `claude-code` alone it copies straight into `~/.claude/skills/<name>`.
     Without `-g` the CLI treats the working directory as a project and leaves a `skills-lock.json` in `$HOME`,
     because chezmoi runs scripts there;
   - repo-owned skills: the SKILL.md sits in [home/dot_agents/skills/](../home/dot_agents/skills) and the
@@ -141,7 +143,7 @@ forces it.
   08-completions.zsh            → compinit, after the plugins that extend $fpath
   09-path.zsh                   → $PATH, before anything resolves a command
   10-*.zsh                      → tool modules, one per tool
-  20-claude.zsh                 → Claude CLI
+  20-agents.zsh                 → installed AI CLIs (`clauded`, `copilotd`, `geminid` bypass permissions)
   89-scratch-workflow.zsh       → `ec` / `sc`, the scratch workflow
   90-scratch.zsh                → drafts, loaded last
   conf.d/ista/                  → work-only modules (deployed only for ista,

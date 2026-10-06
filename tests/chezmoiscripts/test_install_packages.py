@@ -37,6 +37,10 @@ class TestInstallPackages:
                 assert calls("brew") == [["bundle", "--file=/dev/stdin"]]
 
     class TestBrewfile:
+        def test_should_install_claude_code_and_github_copilot_via_casks(self):
+            casks = [line.split('"')[1] for line in brewfile_lines() if line.startswith("cask ")]
+            assert {"claude-code", "copilot-cli"} <= set(casks)
+
         @pytest.mark.parametrize("line", brewfile_lines(), ids=lambda line: line.split("#")[0].strip())
         def test_should_be_one_entry_with_a_comment_saying_why(self, line):
             assert ENTRY.fullmatch(line), f"not a `brew|cask \"name\"  # why` line: {line!r}"
