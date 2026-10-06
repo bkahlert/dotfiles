@@ -31,7 +31,8 @@ Library
 .agents/skills/gcloud-login-automation
 .claude/skills/gcloud-auth
 .claude/skills/gcloud-login-automation
-# Only the ista context sources conf.d/ista (see dot_zshrc).
+# These work-only tools/configs are deployed only for ista.
+.local/bin/gcloud-login
 .config/zsh/conf.d/ista/
 {{- end }}
 

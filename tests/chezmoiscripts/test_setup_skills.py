@@ -15,31 +15,25 @@ def fnm(sandbox):
 
 
 class TestSetupSkills:
-    class TestOnContext:
-        @pytest.mark.parametrize("context", AGENTS)
-        def test_should_install_every_skill_for_the_agents_of_the_context(self, script, fake_bin, calls, context):
+    class TestOnProfile:
+        @pytest.mark.parametrize("company", AGENTS)
+        def test_should_install_every_skill_for_the_profile(self, script, fake_bin, calls, company):
             fake_bin("npx")
-            result = script("setup-skills", env={"DOTFILES_CONTEXT": context})
+            result = script("setup-skills", company=company)
             assert result.returncode == 0, result.stderr
-            assert installs(calls("npx")) == [(skill, AGENTS[context]) for skill in SKILLS]
+            assert installs(calls("npx")) == [(skill, AGENTS[company]) for skill in SKILLS]
 
-        @pytest.mark.parametrize("context", ["", "other"])
-        def test_should_install_nothing_for_an_unknown_context(self, script, fake_bin, calls, context):
+        @pytest.mark.parametrize("company", ["", "other"])
+        def test_should_install_nothing_without_a_supported_profile(self, script, fake_bin, calls, company):
             fake_bin("npx")
-            result = script("setup-skills", env={"DOTFILES_CONTEXT": context})
-            assert result.returncode == 0
-            assert calls("npx") == []
-
-        def test_should_install_nothing_without_a_context(self, script, fake_bin, calls):
-            fake_bin("npx")
-            result = script("setup-skills")
+            result = script("setup-skills", company=company)
             assert result.returncode == 0
             assert calls("npx") == []
 
     class TestOnFailedInstall:
         def test_should_fail_and_not_go_on(self, script, fake_bin, calls):
             fake_bin("npx", exit_code=1)
-            result = script("setup-skills", env={"DOTFILES_CONTEXT": "ista"})
+            result = script("setup-skills", company="ista")
             assert result.returncode == 1
             assert len(calls("npx")) == 1
 
@@ -50,7 +44,7 @@ class TestSetupSkills:
             node_bin.mkdir(parents=True)
             (node_bin / "npx").write_text('#!/bin/sh\necho "$*" >> "$HOME/npx-calls"\n')
             (node_bin / "npx").chmod(0o755)
-            result = script("setup-skills", env={"DOTFILES_CONTEXT": "bkahlert"})
+            result = script("setup-skills", company="bkahlert")
             assert result.returncode == 0, result.stderr
             assert len((sandbox.home / "npx-calls").read_text().splitlines()) == len(SKILLS)
             assert calls("fnm") == [["env", "--shell", "bash"]]
@@ -61,7 +55,7 @@ class TestSetupSkills:
                                                                   context):
             fake_bin("npx")
             (sandbox.fakes / "fnm").unlink()
-            result = script("setup-skills", env={"DOTFILES_CONTEXT": context}, prefix_root=tmp_path)
+            result = script("setup-skills", company=context, prefix_root=tmp_path)
             assert (result.returncode, calls("npx")) == (1, [])
             assert result.stderr == "fnm not found; run_once_before_01-install-packages installs it\n"
 

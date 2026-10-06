@@ -57,3 +57,11 @@ class TestChezmoiignore:
         @pytest.mark.parametrize("company", ("", "bkahlert"), ids=("none", "bkahlert"))
         def test_should_be_dropped_elsewhere_because_nothing_sources_them(self, chezmoi, company):
             assert ISTA_MODULES in chezmoi.ignored(company)
+
+    class TestIstaCommand:
+        def test_should_be_applied_on_ista(self, chezmoi):
+            assert ".local/bin/gcloud-login" not in chezmoi.ignored("ista")
+
+        @pytest.mark.parametrize("company", ("", "bkahlert"), ids=("none", "bkahlert"))
+        def test_should_be_dropped_elsewhere(self, chezmoi, company):
+            assert ".local/bin/gcloud-login" in chezmoi.ignored(company)

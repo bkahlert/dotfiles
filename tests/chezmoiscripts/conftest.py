@@ -2,7 +2,7 @@ import subprocess
 
 import pytest
 
-from repo import chezmoiscripts
+from repo import HOME_SOURCE, chezmoiscripts, require_chezmoi
 
 SOURCES = dict(chezmoiscripts())
 
@@ -11,14 +11,25 @@ HOMEBREW_PREFIXES = ("/opt/homebrew", "/usr/local")
 
 
 @pytest.fixture
-def script(sandbox, fake_bin):
-    def run(key, *args, uname="Darwin", stdin=None, env=None, timeout=30, prefix_root=None):
+def script(sandbox, fake_bin, tmp_path):
+    def run(key, *args, uname="Darwin", stdin=None, env=None, timeout=30, prefix_root=None, company=""):
         if uname:
             fake_bin("uname", stdout=f"{uname}\n")
         source = SOURCES[key]
+        content = source.read_text()
+        if source.suffix == ".tmpl":
+            config = tmp_path / f"{company or 'none'}.toml"
+            config.write_text(f'[data]\n  company = "{company}"\n')
+            rendered = subprocess.run(
+                [require_chezmoi(), "execute-template", "--config", str(config), "--source", str(HOME_SOURCE)],
+                input=content, env=sandbox.env, cwd=sandbox.home, capture_output=True, text=True, timeout=timeout)
+            assert rendered.returncode == 0, rendered.stderr
+            content = rendered.stdout
+            source = tmp_path / source.name.removesuffix(".tmpl")
         if prefix_root:
             source = prefix_root / source.name
-            source.write_text(rebased(SOURCES[key].read_text(), prefix_root))
+        if source.parent == tmp_path or prefix_root:
+            source.write_text(rebased(content, prefix_root) if prefix_root else content)
         feed = {"input": stdin} if stdin is not None else {"stdin": subprocess.DEVNULL}
         return subprocess.run(["bash", str(source), *args], env={**sandbox.env, **(env or {})},
                               cwd=sandbox.home, **feed, capture_output=True, text=True, timeout=timeout)

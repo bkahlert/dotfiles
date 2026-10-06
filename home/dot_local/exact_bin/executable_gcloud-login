@@ -68,7 +68,6 @@ if ! [[ $timeout =~ ^[0-9]+$ ]] || (( timeout == 0 )); then
   die "gcloud-login: --timeout must be a positive integer (usage: gcloud-login [--admin | --adc] [--status] [--timeout <seconds>])"
 fi
 
-[[ "${DOTFILES_CONTEXT:-}" == ista ]] || die "gcloud-login: only available in the ista context"
 require_tools() {
   local tool
   for tool in "$@"; do
