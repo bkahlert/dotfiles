@@ -41,8 +41,8 @@ class TestChezmoiignore:
 
     class TestWorkOnlyTargets:
         @pytest.mark.parametrize("os", ["darwin", "linux"])
-        def test_should_never_deploy_work_only_targets(self, chezmoi, os):
-            assert set(WORK_TARGETS) <= set(patterns(chezmoi, os=os))
+        def test_should_not_preserve_work_only_targets_on_personal_checkout(self, chezmoi, os):
+            assert not set(WORK_TARGETS) & set(patterns(chezmoi, os=os))
 
     class TestMacosLibrary:
         def test_should_be_dropped_on_linux_where_there_is_no_library_directory(self, chezmoi):

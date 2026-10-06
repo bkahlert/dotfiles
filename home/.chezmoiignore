@@ -17,9 +17,3 @@ Library
 .aws/credentials
 .aws/sso/
 .aws/cli/cache/
-
-# Work-only tools and configuration live in the separate work dotfiles checkout.
-.local/bin/gcloud-login
-.config/zsh/conf.d/ista/
-.local/share/secrets/gitlab_token
-.npmrc
