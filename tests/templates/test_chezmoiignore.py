@@ -2,7 +2,7 @@ import pytest
 
 SOURCE = ".chezmoiignore"
 INSTALLER_OWNED = [".local/bin/browser-harness", ".local/bin/browser-harness-mcp",
-                   ".local/bin/agy", ".local/bin/fnm"]
+                   ".local/bin/fnm"]
 MACOS_LIBRARY = "Library"
 WORK_TARGETS = [
     ".local/bin/gcloud-login",
