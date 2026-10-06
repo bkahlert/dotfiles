@@ -20,21 +20,27 @@ class TestGitconfig:
         config = write_rendered(chezmoi, tmp_path)
         assert git_config(config, "--get", "core.editor").returncode == 1
 
-    class TestOnSettingsGitWouldIgnore:
-        """Git skips an alias named like a built-in command and reads a key only in the section that owns it."""
-
-        def test_should_define_no_alias_shadowing_a_builtin_command(self, chezmoi, tmp_path):
+    class TestGitDefaults:
+        def test_should_use_main_as_the_default_branch(self, chezmoi, tmp_path):
             config = write_rendered(chezmoi, tmp_path)
-            assert git_config(config, "--get", "alias.push").returncode == 1
+            result = git_config(config, "--get", "init.defaultBranch")
+            assert result.stdout.strip() == "main"
 
-        def test_should_trust_the_exit_code_of_the_diff_tool(self, chezmoi, tmp_path):
+        def test_should_not_define_git_aliases(self, chezmoi, tmp_path):
             config = write_rendered(chezmoi, tmp_path)
-            result = git_config(config, "--type=bool", "--get", "difftool.trustExitCode")
-            assert result.stdout.strip() == "true"
+            assert git_config(config, "--list").stdout.count("alias.") == 0
 
-        def test_should_not_set_trust_exit_code_for_pull(self, chezmoi, tmp_path):
+        def test_should_not_configure_an_external_diff_tool(self, chezmoi, tmp_path):
             config = write_rendered(chezmoi, tmp_path)
-            assert git_config(config, "--get", "pull.trustExitCode").returncode == 1
+            result = git_config(config, "--list")
+            assert "diff.tool=" not in result.stdout
+            assert "difftool." not in result.stdout
+
+        def test_should_not_configure_external_merge_or_web_tools(self, chezmoi, tmp_path):
+            config = write_rendered(chezmoi, tmp_path)
+            result = git_config(config, "--list")
+            assert "merge.tool=" not in result.stdout
+            assert "web.browser=" not in result.stdout
 
     class TestOnMacOS:
         def test_should_use_the_keychain_as_credential_helper(self, chezmoi):
