@@ -163,7 +163,10 @@ upstream marketplace, and installs third-party skills. The
 `idea` and installs skills; the
 [Gemini setup](home/.chezmoiscripts/run_onchange_after_setup-gemini.sh) installs skills.
 Each script runs only for its installed agent. Renaming these onchange scripts
-makes their setup run again on the next apply. Chrome uses an isolated,
+makes their setup run again on the next apply. Copilot's
+[source settings](home/private_dot_copilot/private_settings.json) also declare the
+Superpowers marketplace and enabled plugin, so later applies keep it enabled
+without rerunning setup. Chrome uses an isolated,
 headless profile with usage statistics disabled; it does not attach to your
 personal browser. Claude keeps its existing plugin configuration, so its live
 check can expose the profile-picker failure recorded in the browser guidance.

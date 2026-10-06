@@ -30,3 +30,31 @@ class TestCopilotConfig:
         assert stat.S_IMODE(copilot.stat().st_mode) == 0o700
         assert stat.S_IMODE((copilot / "settings.json").stat().st_mode) == 0o600
         assert (copilot / "mcp-config.json").read_text() == '{"mcpServers":{}}'
+
+    @pytest.mark.parametrize("company", CONTEXTS, ids=lambda company: company or "none")
+    def test_should_keep_superpowers_enabled_across_repeated_apply(self, tmp_path, company):
+        home = tmp_path / "home"
+        env = isolated_env(home, list(SYSTEM_PATH))
+        copilot = home / ".copilot"
+        copilot.mkdir()
+        installed = {
+            "enabledPlugins": {"superpowers@superpowers-marketplace": True},
+            "extraKnownMarketplaces": {
+                "superpowers-marketplace": {
+                    "source": {"source": "github", "repo": "obra/superpowers-marketplace"},
+                },
+            },
+        }
+        (copilot / "settings.json").write_text(json.dumps(installed))
+        command = [
+            require_chezmoi(), "--source", str(HOME_SOURCE), "--destination", str(home),
+            "--config", "/dev/null", "--config-format", "toml",
+            "--persistent-state", str(tmp_path / "state.boltdb"),
+            "--override-data", json.dumps({"company": company}), "apply", "--exclude=scripts", str(copilot),
+        ]
+        for _ in range(2):
+            result = subprocess.run(command, env=env, cwd=home, capture_output=True, text=True, timeout=30)
+            assert result.returncode == 0, result.stderr
+            settings = json.loads((copilot / "settings.json").read_text())
+            assert settings["enabledPlugins"] == installed["enabledPlugins"]
+            assert settings["extraKnownMarketplaces"] == installed["extraKnownMarketplaces"]
