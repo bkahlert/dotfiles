@@ -21,24 +21,12 @@ Library
 .aws/sso/
 .aws/cli/cache/
 
-{{- if ne .company "ista" }}
-# gcloud-login skills describe the ista Google accounts only.
+# Work-only tools and configuration live in the separate work dotfiles checkout.
 .agents/skills/gcloud-auth
 .agents/skills/gcloud-login-automation
 .claude/skills/gcloud-auth
 .claude/skills/gcloud-login-automation
-# These work-only tools/configs are deployed only for ista.
 .local/bin/gcloud-login
 .config/zsh/conf.d/ista/
-{{- end }}
-
-{{- if ne .company "ista" }}
-# The GitLab token only exists in the work vault.
 .local/share/secrets/gitlab_token
-# The registry tokens too; the file holds nothing else.
 .npmrc
-{{- end }}
-{{- if not .company }}
-# No password manager without a context (the test container).
-.local/share/secrets/context7_api_key
-{{- end }}

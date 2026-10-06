@@ -181,13 +181,6 @@ fi
 user_tmp=$(getconf DARWIN_USER_TEMP_DIR 2>/dev/null || printf '%s' "${TMPDIR:-/tmp}")
 user_tmp=${user_tmp%/}
 
-step 'gcloud-login driver test leftovers (older than 1h)'
-leftovers=()
-while IFS= read -r p; do leftovers+=("$p"); done < <(
-  find "$user_tmp" -maxdepth 1 -name 'gcloud-login-driver-test-*' -mmin +60 2>/dev/null
-)
-clean 'Driver test leftovers' false false "${leftovers[@]}"
-
 # Chromium-based apps clone their bundle into <tmp>/../X/<bundle-id>.code_sign_clone
 # for signature checks and remove it on exit. Crashed or killed runs leave them
 # behind. A running app still uses its clone, so keep those.

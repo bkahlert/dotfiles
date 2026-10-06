@@ -27,32 +27,23 @@ Defined in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl), prompted on `chezmoi i
 |---|---|---|
 | `.email` | string | Git config email |
 | `.name` | string | Git config name |
-| `.company` | string | Profile name — `"bkahlert"` personal, `"ista"` work, empty for none (the test container). |
 | `.chezmoi.os` | string | `"darwin"` or `"linux"` (built-in) |
-
-**Never use `.is_personal`** — it has been replaced by `.company`.
-
-### Personal/work-specific files
-
-Chezmoi has no built-in personal/work profile switch; `.company` is this repo's init-time profile data. Use `.chezmoiignore` to deploy profile-specific files only where they belong, and templates when file contents or apply-time script behavior differ by profile. Do not export the profile into the runtime shell or inject it into scripts with `scriptEnv`.
 
 ### Avoid templates — prefer runtime checks
 
 **Only use `.tmpl` when there is no runtime alternative.** Prefer:
 - `[[ $OSTYPE == darwin* ]]` over `{{ if eq .chezmoi.os "darwin" }}`
 - `[[ $(uname) == Darwin ]] || exit 0` in `.chezmoiscripts/` shell scripts
-- `.chezmoiignore` and directory structure (`exact_conf.d/exact_ista/`) over runtime profile checks
 
 A template is justified when the value must be baked in at apply time and the target format has no runtime equivalent — e.g. secrets in static config files, interpolated identity fields, or selecting agents in an apply-time script. When in doubt, ask whether a runtime check could replace it.
 
 ## Secrets
 
-Secrets are baked in at apply time by `.tmpl` files. The template is the record of where a secret lives; there is no separate registry. The backend follows the context:
+Secrets are baked in at apply time by `.tmpl` files. The template is the record of where a secret lives; there is no separate registry.
 
-- `ista`: 1Password — `{{ onepasswordRead "op://Employee/<item>/credential" }}`
-- otherwise: KeePassXC — `{{ (keepassxc "<item>").Password }}`, database set in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl). chezmoi asks for the master password once per run, and only when a template reads from it.
+KeePassXC — `{{ (keepassxc "<item>").Password }}`, database set in [.chezmoi.toml.tmpl](home/.chezmoi.toml.tmpl). chezmoi asks for the master password once per run, and only when a template reads from it.
 
-An item needed in both contexts keeps the same title in both vaults, so one template can branch on `.company`. A secret file that makes no sense in a context is dropped via [.chezmoiignore](home/.chezmoiignore), not rendered empty. Secrets a shell needs land as files under `~/.local/share/secrets/` ([dot_local/share/private_secrets](home/dot_local/share/private_secrets)) and are exported by a `conf.d` module; `chezmoi apply` is the rotation step.
+A secret file that makes no sense on a machine is dropped via [.chezmoiignore](home/.chezmoiignore), not rendered empty. Secrets a shell needs land as files under `~/.local/share/secrets/` ([dot_local/share/private_secrets](home/dot_local/share/private_secrets)) and are exported by a `conf.d` module; `chezmoi apply` is the rotation step.
 
 **Never commit plain-text secrets.** Inventory: `grep -rn 'op://\|keepassxc "' home/`.
 
@@ -66,8 +57,7 @@ Invariants that bite when editing source state:
 
 - `exact_` on `exact_bin/`, `exact_conf.d/` and `exact_functions/` means **removing a file from the repo removes it from the target**, and a file created directly in `$HOME` is deleted on the next apply. Always edit source state.
 - Exception: installer-owned entries such as `~/.local/bin/browser-harness` survive `exact_bin` via `.chezmoiignore`. Claude Code and GitHub Copilot CLI are installed only on macOS as Homebrew casks; the old native Claude symlink is no longer preserved.
-- Only use `.zsh.tmpl` when the file embeds a secret or needs `sha256sum` change detection; a module that differs by profile should normally be selected at apply time.
-- Work-only modules go in `exact_conf.d/exact_ista/` as plain `.zsh`; `.chezmoiignore` controls whether the directory is deployed.
+- Only use `.zsh.tmpl` when the file embeds a secret or needs `sha256sum` change detection.
 
 ## Install Scripts
 
@@ -75,9 +65,9 @@ Each package entry in install scripts must have an inline comment stating:
 1. What the tool does (one phrase)
 2. What requires it or why it's installed this way (e.g. "required by chezmoi secrets", "no distro package available")
 
-Example: `cask "1password-cli" # 1Password CLI (op); required by chezmoi to read secrets at apply time`
+Example: `cask "keepassxc" # KeePassXC; required by chezmoi to read secrets at apply time`
 
-[.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`02` prefixes order the installation scripts: Homebrew, packages (fnm, Claude Code and GitHub Copilot CLI on macOS), a default Node.js. A later script that needs one of these tools fails when it is missing instead of skipping. Keep agent setup in one `setup-<agent>.sh` script per agent, not scripts per mechanism, so each agent's MCPs, plugins and skills change together. Each script detects its own CLI at runtime, independent of `.company`, and skips when it is absent. Claude registers IntelliJ's `idea` server and installs third-party skills. Copilot also registers Context7 and isolated headless Chrome DevTools and installs Superpowers. Gemini installs third-party skills. Only add `.tmpl` where the script itself needs a template value.
+[.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`02` prefixes order the installation scripts: Homebrew, packages (fnm, Claude Code and GitHub Copilot CLI on macOS), a default Node.js. A later script that needs one of these tools fails when it is missing instead of skipping. Keep agent setup in one `setup-<agent>.sh` script per agent, not scripts per mechanism, so each agent's MCPs, plugins and skills change together. Each script detects its own CLI at runtime and skips when it is absent. Claude registers IntelliJ's `idea` server and installs third-party skills. Copilot also registers Context7 and isolated headless Chrome DevTools and installs Superpowers. Gemini installs third-party skills. Only add `.tmpl` where the script itself needs a template value.
 
 ### Versions
 
@@ -91,14 +81,12 @@ Pin a version only where [Dependabot](.github/dependabot.yml) bumps it: actions 
 | `~/.config/zsh/.zshrc` | [dot_zshrc](home/private_dot_config/zsh/dot_zshrc) | Thin loader |
 | `~/.config/zsh/.zprofile` | [dot_zprofile](home/private_dot_config/zsh/dot_zprofile) | Homebrew shellenv |
 | `~/.gitconfig` | [dot_gitconfig.tmpl](home/dot_gitconfig.tmpl) | Templated name/email |
-| `~/.ssh/config` | [private_config](home/private_dot_ssh/private_config) | 1Password SSH agent (macOS) |
+| `~/.ssh/config` | [private_config](home/private_dot_ssh/private_config) | KeePassXC SSH agent (macOS) |
 | `~/.claude/CLAUDE.md` | [CLAUDE.md](home/private_dot_claude/CLAUDE.md) | AI coding conventions |
 | `~/.claude/settings.json` | [modify_settings.json](home/private_dot_claude/modify_settings.json) | Claude Code defaults inline; `model` and `effortLevel` stay as set on the machine |
 | `~/.copilot/copilot-instructions.md` | [copilot-instructions.md](home/private_dot_copilot/copilot-instructions.md) | Copilot user instructions; explicitly reads the shared agent guidance because Copilot does not expand `@~/` imports |
 | `~/.copilot/settings.json` | [private_settings.json](home/private_dot_copilot/private_settings.json) | Repo-owned Copilot settings; apply overwrites local changes, unlike Claude's modifier |
-| `~/.npmrc` | [private_dot_npmrc.tmpl](home/private_dot_npmrc.tmpl) | Business only (mode 0600, ignored elsewhere): GitLab and Artifactory registry tokens |
 | `~/.agents/skills/*`, `~/.claude/skills/*` | [dot_agents/skills](home/dot_agents/skills), [private_dot_claude/skills](home/private_dot_claude/skills) | Repo-owned agent skills + their symlinks; third-party ones via each agent's setup script. See [quick-access/README.md](quick-access/README.md) |
-| `~/.local/bin/gcloud-login` | [executable_gcloud-login](home/dot_local/exact_bin/executable_gcloud-login) | Unattended gcloud/ADC login (ista); design notes in git history (`git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md`) |
 
 ## Common Tasks
 
@@ -112,7 +100,7 @@ Prefer a runtime check; avoid `.tmpl`.
 - In `.sh` scripts: `[[ $(uname) == Darwin ]] || exit 0`
 
 **Add a secret:**
-1. Store it in the vault of the context that needs it (1Password `Employee` on ista, KeePassXC otherwise); same title in both if both need it.
+1. Store it in KeePassXC.
 2. Reference it from a `.tmpl` file as shown under [Secrets](#secrets). If a shell needs it, add a file under `dot_local/share/private_secrets/` and export it from a `conf.d` module.
 
 **Add a brew package:**
@@ -184,10 +172,10 @@ checks. Shared [.run/](.run) configurations expose `ci` (no AI usage) and both p
 | `functions/<name>` | `tests/functions/test_<name>.py` |
 | `~/.zshenv` ([dot_zshenv](home/dot_zshenv)), which runs for every zsh | `tests/zsh/test_zshenv.py` |
 | `~/.bashrc` ([dot_bashrc](home/dot_bashrc)), which runs for `ssh host cmd` too | `tests/zsh/test_bashrc.py` |
-| `conf.d/NN-<name>.zsh` that defines a function | `tests/zsh/test_<name>.py`; `conf.d/exact_ista/...` under `tests/zsh/ista/` |
+| `conf.d/NN-<name>.zsh` that defines a function | `tests/zsh/test_<name>.py` |
 | `.chezmoiscripts/run_*_<name>` | `tests/chezmoiscripts/test_<name>.py`: the name without the `run_…` prefix, ordering digits and extension (`01-install-packages.sh` → `test_install_packages.py`) |
 | `modify_<name>` (anywhere under `home/`) | `tests/modify/test_<name>.py`, dots as underscores (`modify_settings.json` → `test_settings_json.py`) |
-| a `.tmpl` outside `.chezmoiscripts/`, and `.chezmoiignore` | `tests/templates/test_<name>.py`: the prefixes `modify_`, `executable_`, `private_`, `exact_`, `empty_` and `dot_`, ordering digits and `.tmpl` dropped, other non-alphanumerics as underscores (`private_conf.d/20-ista-1password.conf.tmpl` → `test_ista_1password_conf.py`, `.chezmoiignore` → `test_chezmoiignore.py`) |
+| a `.tmpl` outside `.chezmoiscripts/`, and `.chezmoiignore` | `tests/templates/test_<name>.py`: the prefixes `modify_`, `executable_`, `private_`, `exact_`, `empty_` and `dot_`, ordering digits and `.tmpl` dropped, other non-alphanumerics as underscores; `.chezmoiignore` → `test_chezmoiignore.py` |
 | behaviour spanning several files (a rule over every script, one pattern across modules), and the test harness itself | `tests/test_<topic>.py`, directly in `tests/` (or under `tests/integration/`); every other test file must be named after a subject |
 | every `conf.d` module | loaded by the integration legs; a module that prints on a fresh machine fails them |
 
@@ -199,9 +187,9 @@ Fixtures in [tests/conftest.py](tests/conftest.py) run the real script or functi
 
 - `run("name", *args)` runs a `bin/` or `~/.claude` script by its target name in a sandbox: temp `HOME`, `XDG_*` and `TMPDIR`; `PATH` is fakes first, then the other `bin/` scripts, then symlinks to the real tools listed in `REAL_TOOLS` ([conftest.py](tests/conftest.py): shells, coreutils, `awk`, `sed`, `jq`, `python3`, ...) and nothing else. They come from fixed system and Homebrew directories, not the caller's `PATH`; a missing one aborts the run. A subject that needs another real tool adds it there.
 - `fake_bin("tool", stdout=..., exit_code=..., script=...)` puts a fake on `PATH`; `calls("tool")` returns its recorded argument lists.
-- `zsh("snippet", function="name")` or `zsh("snippet", modules=["ista/10-dev-chapter.zsh"])` runs `zsh -f` with the source tree's functions and modules.
+- `zsh("snippet", function="name")` or `zsh("snippet", modules=["10-gcloud-sdk.zsh"])` runs `zsh -f` with the source tree's functions and modules.
 - `script("name", *args, uname="Darwin", env={...})` (in `tests/chezmoiscripts/`) runs a `.chezmoiscripts/` script by its key under the same sandbox, with a fake `uname` so either OS branch can be taken.
-- `chezmoi.render("private_dot_npmrc.tmpl", company="ista", os="darwin")`, `chezmoi.config(company)` and `chezmoi.ignored(company)` (in `tests/templates/`) run the real `chezmoi` against the source tree with the `op` and `keepassxc-cli` shims as vaults, so a secret renders as a placeholder that names its backend. They skip where `chezmoi` is not installed, except on CI (`CI` set and not `0` or `false`), where a missing `chezmoi` fails them: the `checks` and `macos` jobs install it. `require_chezmoi()` in [tests/repo.py](tests/repo.py) is the one place that decides; any test that needs the real `chezmoi` calls it.
+- `chezmoi.render("private_context7_api_key.tmpl", os="darwin")`, `chezmoi.config()` and `chezmoi.ignored()` (in `tests/templates/`) run the real `chezmoi` against the source tree with the `keepassxc-cli` shim as the vault, so a secret renders as a placeholder. They skip where `chezmoi` is not installed, except on CI (`CI` set and not `0` or `false`), where a missing `chezmoi` fails them: the `checks` and `macos` jobs install it. `require_chezmoi()` in [tests/repo.py](tests/repo.py) is the one place that decides; any test that needs the real `chezmoi` calls it.
 - `modify(script, current, **env)` (in `tests/modify/`) runs a `modify_` script the way chezmoi does: the current target on stdin, the new content on stdout.
 - Network, vault, system-state and user-state tools (`op`, `gh`, `gcloud`, `curl`, `openssl`, `ssh-keygen`, `brew`, `git`, `chezmoi`, `podman`, `xcrun`, `open`, `osascript`, `launchctl`, `defaults`, `sudo`, `pbcopy`, `lsof`, `pkill`, ...) are guarded: calling one unfaked fails with exit 127. Any other tool outside `REAL_TOOLS` is not on `PATH` and fails as not found, installed or not. Fake what the subject needs; the `REAL_TOOLS` are real.
   `PATH` is the only barrier: a subject that calls a tool by absolute path (`/usr/bin/curl`), or that runs through a real interpreter (`python3`, `zsh`, `bash`), can still reach host programs. It stops accidents, not a script that means to escape.
@@ -210,7 +198,7 @@ Classes nest as [testing.md](home/private_dot_config/exact_agents/exact_rules/te
 
 ### Integration legs
 
-Both legs write a chezmoi config with the context's `company`, apply the source tree with `tests/shims/op` and `tests/shims/keepassxc-cli` first on `PATH` and `--no-tty` with a dummy password on stdin, then run `zsh -li -c true` and require exit 0 and an empty stderr.
+Both legs write a chezmoi config with the user's email and name, apply the source tree with `tests/shims/keepassxc-cli` first on `PATH` and `--no-tty` with a dummy password on stdin, then run `zsh -li -c true` and require exit 0 and an empty stderr.
 
 - Container ([Containerfile](Containerfile) stage `base`, [entrypoint.sh](entrypoint.sh)): Fedora with chezmoi, sheldon, starship, zoxide. `make run` builds the `vnc` stage for manual inspection.
 - Native macOS: a temp home, `--exclude=scripts` (no `brew bundle`, no `defaults write`), `sheldon lock` by hand, and a preflight that `chezmoi data` reports the temp home. Every path chezmoi and the startup files touch derives from `HOME`, `ZDOTDIR` or an `XDG_*` variable, which is why this is safe to run on a developer Mac. **Startup code must keep it that way: write only under those directories, and stay silent when a tool you wrap is absent.**

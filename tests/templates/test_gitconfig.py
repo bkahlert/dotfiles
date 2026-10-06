@@ -11,9 +11,8 @@ GIT = shutil.which("git")
 
 
 class TestGitconfig:
-    @pytest.mark.parametrize("company", ("", "bkahlert", "ista"), ids=("none", "bkahlert", "ista"))
-    def test_should_identify_the_user_from_the_template_data(self, chezmoi, company):
-        config = parse(chezmoi.render(TEMPLATE, company=company))
+    def test_should_identify_the_user_from_the_template_data(self, chezmoi):
+        config = parse(chezmoi.render(TEMPLATE))
         assert dict(config["user"]) == {"name": "Test User", "email": "test@example.com"}
 
     def test_should_leave_the_editor_to_visual_and_editor(self, chezmoi, tmp_path):

@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Purpose: Apply the mounted dotfiles for one context, then start zsh or the VNC inspection session.
+# Purpose: Apply the mounted dotfiles, then start zsh or the VNC inspection session.
 # Usage:   entrypoint.sh [vnc | <zsh arguments>...]
-#
-# Environment:
-#   DOTFILES_COMPANY   Context written to the chezmoi config: "", "bkahlert" or "ista" (default: "").
 #
 # The apply's output goes to stdout so that stderr carries only what the zsh startup prints; the
 # integration test asserts that it stays empty. Stdin is left untouched: chezmoi reads one line as
-# the KeePassXC password when a template needs it. Fakes for op and keepassxc-cli are expected
+# the KeePassXC password when a template needs it. A keepassxc-cli shim is expected
 # under /opt/shims.
 
 set -euo pipefail
@@ -20,7 +17,6 @@ if [[ -d /dotfiles/home ]]; then
 [data]
     email = "test@example.com"
     name = "Test User"
-    company = "${DOTFILES_COMPANY:-}"
 TOML
   chezmoi init --apply --no-tty --source /dotfiles/home 2>&1
 fi

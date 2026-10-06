@@ -96,10 +96,6 @@ symbol = ' '
 [gcloud]
 format = 'on [$symbol$account]($style) [$project]($style dimmed) '
 symbol = '󱇶 '
-[gcloud.project_aliases]
-ista-express-development = 'ies-dev'
-ista-express-stage = 'ies-stage'
-ista-express-prod = 'ies-prod'
 
 [gleam]
 symbol = ' '

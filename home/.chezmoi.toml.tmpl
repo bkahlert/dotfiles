@@ -5,19 +5,8 @@ sourceDir = {{ .chezmoi.sourceDir | quote }}
 [data]
     email = {{ promptStringOnce . "email" "Email address" | quote }}
     name = {{ promptStringOnce . "name" "Full name" | quote }}
-{{- $company := promptStringOnce . "company" "Context name (bkahlert, ista, or empty for none)" }}
-    company = {{ $company | quote }}
-
-{{- /* 1Password is the ista secret store; bkahlert is a company too, so gate
-       on the context rather than on company being set. */}}
-{{- if eq $company "ista" }}
-
-[onepassword]
-    prompt = false # skip `op signin` before each read; the app integration authorizes per terminal anyway, so this halves the op processes (and prompts) per apply
-{{- else if $company }}
 
 [keepassxc]
     # Personal secrets come from the iCloud-synced vault. chezmoi asks for the
     # master password once per run, and only when a template reads from it.
     database = "{{ .chezmoi.homeDir }}/Library/Mobile Documents/com~apple~CloudDocs/Vault/choam.kdbx"
-{{- end }}

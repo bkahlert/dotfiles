@@ -12,14 +12,14 @@ HOMEBREW_PREFIXES = ("/opt/homebrew", "/usr/local")
 
 @pytest.fixture
 def script(sandbox, fake_bin, tmp_path):
-    def run(key, *args, uname="Darwin", stdin=None, env=None, timeout=30, prefix_root=None, company=""):
+    def run(key, *args, uname="Darwin", stdin=None, env=None, timeout=30, prefix_root=None):
         if uname:
             fake_bin("uname", stdout=f"{uname}\n")
         source = SOURCES[key]
         content = source.read_text()
         if source.suffix == ".tmpl":
-            config = tmp_path / f"{company or 'none'}.toml"
-            config.write_text(f'[data]\n  company = "{company}"\n')
+            config = tmp_path / "config.toml"
+            config.write_text('[data]\n  email = "test@example.com"\n  name = "Test User"\n')
             rendered = subprocess.run(
                 [require_chezmoi(), "execute-template", "--config", str(config), "--source", str(HOME_SOURCE)],
                 input=content, env=sandbox.env, cwd=sandbox.home, capture_output=True, text=True, timeout=timeout)
