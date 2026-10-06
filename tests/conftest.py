@@ -6,6 +6,14 @@ from pathlib import Path
 import pytest
 
 from repo import FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
+from agent_integration import CAPABILITIES
+
+
+def pytest_addoption(parser):
+    parser.addoption("--live-agent", choices=("claude", "copilot"), default=None,
+                     help="Explicitly opt into authenticated, billable capability smoke tests")
+    parser.addoption("--agent-capability", action="append", choices=CAPABILITIES,
+                     help="Test only this capability (repeatable); default: all four")
 
 # The only real tools a subject can reach, besides the fakes and the other scripts under test: shells,
 # coreutils and text tools. Everything else (docker, aws, node, claude, a Homebrew package) is not on the

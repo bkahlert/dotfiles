@@ -37,7 +37,10 @@ Not symlinked, but worth knowing:
 - **Agent skills** (Claude Code and friends) have one canonical copy in `~/.agents/skills/<name>/SKILL.md`,
   with a symlink `~/.claude/skills/<name> -> ../../.agents/skills/<name>` so each agent finds them.
   Two mechanisms produce that layout:
-  - third-party skills: [run_onchange_after_setup-skills.sh](../home/.chezmoiscripts/run_onchange_after_setup-skills.sh)
+  - third-party skills: each agent's setup script —
+    [Claude](../home/.chezmoiscripts/run_onchange_after_setup-claude.sh),
+    [Copilot](../home/.chezmoiscripts/run_onchange_after_setup-copilot.sh),
+    [Gemini](../home/.chezmoiscripts/run_onchange_after_setup-gemini.sh)
     detects `claude`, `gemini` and `copilot` on PATH (including Homebrew and fnm's default Node.js)
     and runs `skills add -g` (e.g. `grill-me`, `handoff`) for all available agents, independent of company.
     With no detected CLI, it installs nothing. The layout depends on the agents detected: with a

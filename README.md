@@ -114,16 +114,82 @@ app preference chezmoi can't manage — set it up once per machine:
 
 ## Testing
 
-```sh
-make lint                # shellcheck, zsh -n, workflow lint
-make unit                # pytest unit tests + node driver test
-make integration         # apply all three contexts in a Fedora container (needs Podman)
-make integration-native  # same, natively into a temp HOME (macOS)
-make ci                  # lint unit integration
-make run                 # start the VNC inspection container on :5901
-make vnc                 # open a VNC viewer
-make stop                # stop it
-make clean               # remove the images
-```
+| Command | Coverage |
+|---|---|
+| `make lint` | shellcheck, zsh syntax, workflow lint |
+| `make unit` | pytest unit tests and node driver test |
+| `make integration` | Apply three contexts in a Fedora container; needs Podman |
+| `make integration-native` | Apply into a temporary HOME on macOS; check Homebrew packages |
+| `make ci` | Lint, unit and container integration; no agent login or model usage |
+| `make integration-claude` | **Paid, opt-in:** effective Claude capabilities; needs Claude login |
+| `make integration-copilot` | **Paid, opt-in:** effective Copilot capabilities; needs Copilot login |
+| `make run` / `make vnc` | Start the inspection container / open its VNC viewer |
+| `make stop` / `make clean` | Stop the inspection container / remove its images |
 
 CI runs the same targets on every pull request; `main` requires the `ci` check. Details in [AGENTS.md](AGENTS.md#testing).
+
+### Live agent capabilities
+
+The authenticated targets test the **currently applied configuration**, not source
+JSON or installer commands. They do not apply dotfiles or install missing tools.
+Normal CLI sessions load user and project settings, plugins, skills and MCPs.
+They are never part of `make ci`, `make unit`, or either apply integration target.
+Running pytest directly skips them unless `--live-agent claude` or
+`--live-agent copilot` is supplied.
+
+| Capability | Required evidence |
+|---|---|
+| Context7 | Successful library resolution and a documentation query about Python's `len` |
+| Chrome DevTools | Successful `list_pages` response from a real browser; no navigation or page changes |
+| IntelliJ `idea` | Successful read of a tiny public fixture with a known marker |
+| Superpowers | Successful `verification-before-completion` skill invocation, followed by a real `printf` check and evidence cited in the answer |
+
+Assertions inspect structured tool calls and their results. An assistant's claim
+that a capability works is insufficient. These smoke tests prove explicit skill
+invocation, not automatic skill selection or consistent methodology adherence.
+The browser check proves connection and page listing, not every browser tool.
+
+Prerequisites: the chosen CLI must be installed and logged in; Node.js/npm must be
+on PATH for stdio MCPs; Chrome must be installed; IntelliJ must have this repository
+open and serve MCP at `http://127.0.0.1:64342/stream`. Start from your normal shell
+so exported secrets, including `CONTEXT7_API_KEY`, are available. Missing,
+disabled, unauthenticated or broken capabilities fail rather than silently skip.
+
+Copilot provisioning runs on `chezmoi apply`: its
+[agent setup](home/.chezmoiscripts/run_onchange_after_setup-copilot.sh) registers
+Context7 and Chrome DevTools alongside `idea`, installs Superpowers from its
+upstream marketplace, and installs third-party skills. The
+[Claude setup](home/.chezmoiscripts/run_onchange_after_setup-claude.sh) registers
+`idea` and installs skills; the
+[Gemini setup](home/.chezmoiscripts/run_onchange_after_setup-gemini.sh) installs skills.
+Each script runs only for its installed agent. Renaming these onchange scripts
+makes their setup run again on the next apply. Chrome uses an isolated,
+headless profile with usage statistics disabled; it does not attach to your
+personal browser. Claude keeps its existing plugin configuration, so its live
+check can expose the profile-picker failure recorded in the browser guidance.
+
+Each target shares **one session across all probes**, has a 180-second timeout,
+and performs no test-level retries. Claude uses Haiku, at most eight turns and a
+$0.50 budget. Copilot uses Auto's efficiency tier and a 30-AI-credit soft cap,
+the CLI's minimum. These are usage limits, not exact bill guarantees; an in-flight
+response can exceed a soft cap. Normal startup hooks and CLI-level API retries can
+also run. Only probe tools and `printf` receive explicit approval; file-write
+tools are denied in Copilot. This is not an OS sandbox.
+Copilot can read the shared agent guidance directory to follow its normal instructions.
+
+For a cheaper focused check:
+
+```sh
+make integration-copilot AGENT_TEST_ARGS='--agent-capability idea'
+```
+
+The selector is repeatable and works for either authenticated target. Private
+transcripts and stderr are saved under pytest's temporary directory, printed at
+startup, rather than committed or dumped into failures. Copilot's final usage
+statistics are saved alongside them as `usage.json`.
+
+Shared IntelliJ configurations live in [.run/](.run): **ci (no AI usage)**,
+**Claude capabilities (paid, opt-in)** and **Copilot capabilities (paid, opt-in)**.
+If IntelliJ does not discover externally added configurations, reopen the project.
+The CI target does not touch your real HOME or invoke paid agents, but still uses
+network downloads and container resources; “no AI usage” is not “no side effects.”
