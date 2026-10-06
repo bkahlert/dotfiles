@@ -5,6 +5,7 @@
   "includeCoAuthoredBy": false,
   "memory": false,
   "showTimestamps": true,
+  "transcriptView": "concise",
   "terminalProgress": true,
   "terminalNotifications": true,
   "updateTerminalTitle": true,
