@@ -150,7 +150,7 @@ Don't stack offers on follow-up turns; ask each one once, then drop it.
 |---|---|
 | shellcheck, `zsh -n`, actionlint + zizmor | `make lint` |
 | pytest (tests/bin, tests/functions, tests/zsh, conventions, shims) + node driver test | `make unit` |
-| Apply all three contexts in a Fedora container, require a silent zsh (needs Podman) | `make integration` |
+| Apply this checkout in a Fedora container, require a silent zsh (needs Podman) | `make integration` |
 | Same, into a temp HOME on this Mac, plus a check that every Brewfile package exists in Homebrew (network); what CI's macOS job runs. Opt-in locally | `make integration-native` |
 | Lint, unit and integration | `make ci` |
 | Effective Claude capabilities (login required; paid, opt-in) | `make integration-claude` |
