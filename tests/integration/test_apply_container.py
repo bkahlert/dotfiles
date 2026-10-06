@@ -4,7 +4,7 @@ import subprocess
 
 import pytest
 
-from repo import CONTEXTS, ROOT, SHIMS
+from repo import ROOT, SHIMS
 
 pytestmark = pytest.mark.integration
 
@@ -21,11 +21,10 @@ def image():
 
 
 class TestApplyInContainer:
-    @pytest.mark.parametrize("company", CONTEXTS, ids=lambda c: c or "none")
-    def test_should_apply_and_start_a_silent_interactive_login_shell(self, image, company):
+    def test_should_apply_and_start_a_silent_interactive_login_shell(self, image):
         result = subprocess.run(
             [ENGINE, "run", "--rm", "-i",
-             "-e", "TERM=xterm-256color", "-e", f"DOTFILES_COMPANY={company}",
+             "-e", "TERM=xterm-256color",
              "-v", f"{ROOT}:/dotfiles:ro", "-v", f"{SHIMS}:/opt/shims:ro",
              image, "-c", "true"],
             input="dummy-password\n", capture_output=True, text=True, timeout=900)

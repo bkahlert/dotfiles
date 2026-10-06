@@ -9,10 +9,5 @@ for config in $ZDOTDIR/conf.d/*.zsh(N); do
   source "$config"
 done
 
-# Work-only modules are deployed only for ista by .chezmoiignore.
-for config in $ZDOTDIR/conf.d/ista/*.zsh(N); do
-  source "$config"
-done
-
 # Machine-local overrides (not managed by chezmoi)
 [[ -f $ZDOTDIR/.zshrc.local ]] && source $ZDOTDIR/.zshrc.local

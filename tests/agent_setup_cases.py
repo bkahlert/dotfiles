@@ -4,13 +4,12 @@ AGENTS = {"claude": "claude-code", "copilot": "github-copilot", "gemini": "gemin
 
 
 class AgentSetupCases:
-    @pytest.mark.parametrize("company", ["", "bkahlert", "ista", "other"])
-    def test_should_install_skills_only_for_its_agent(self, script, fake_bin, calls, tmp_path, company):
+    def test_should_install_skills_only_for_its_agent(self, script, fake_bin, calls, tmp_path):
         for agent in AGENTS:
             fake_bin(agent, script='[[ $2 == marketplace && $3 == list ]] && printf "[]\\n"\nexit 0\n')
         fake_bin("fnm", stdout='export PATH="$HOME/node/bin:$PATH"')
         fake_bin("npx")
-        result = script(f"setup-{self.agent}", prefix_root=tmp_path, company=company)
+        result = script(f"setup-{self.agent}", prefix_root=tmp_path)
         assert result.returncode == 0, result.stderr
         assert calls("npx") == skill_calls(self.agent)
         assert all(calls(agent) == [] for agent in AGENTS if agent != self.agent)

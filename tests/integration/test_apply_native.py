@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from repo import CONTEXTS, HOME_SOURCE, SHIMS, SYSTEM_PATH, isolated_env
+from repo import HOME_SOURCE, SHIMS, SYSTEM_PATH, isolated_env
 
 pytestmark = [
     pytest.mark.integration,
@@ -13,7 +13,7 @@ pytestmark = [
 ]
 
 CORE_TOOLS = ("chezmoi", "sheldon", "starship", "zoxide")
-CHEZMOI_CONFIG = '[data]\n    email = "test@example.com"\n    name = "Test User"\n    company = "{company}"\n'
+CHEZMOI_CONFIG = '[data]\n    email = "test@example.com"\n    name = "Test User"\n'
 
 
 @pytest.fixture(scope="module")
@@ -24,8 +24,7 @@ def core_tools():
 
 
 class TestApplyNatively:
-    @pytest.mark.parametrize("company", CONTEXTS, ids=lambda c: c or "none")
-    def test_should_apply_and_start_a_silent_interactive_login_shell(self, core_tools, tmp_path, company):
+    def test_should_apply_and_start_a_silent_interactive_login_shell(self, core_tools, tmp_path):
         home = tmp_path / "home"
         # The container leg starts the shell under the same terminal; isolated_env's dumb one is for unit tests.
         env = {**isolated_env(home, [str(SHIMS), *SYSTEM_PATH]), "TERM": "xterm-256color"}
@@ -33,7 +32,7 @@ class TestApplyNatively:
         assert json.loads(seen.stdout)["chezmoi"]["homeDir"] == str(home), "chezmoi does not see the temp home; refusing to apply"
 
         (home / ".config" / "chezmoi").mkdir(parents=True)
-        (home / ".config" / "chezmoi" / "chezmoi.toml").write_text(CHEZMOI_CONFIG.format(company=company))
+        (home / ".config" / "chezmoi" / "chezmoi.toml").write_text(CHEZMOI_CONFIG)
         applied = chezmoi("init", "--apply", "--exclude=scripts", "--no-tty", env=env, stdin="dummy-password\n")
         assert applied.returncode == 0, report("apply failed", applied)
         locked = subprocess.run(["sheldon", "lock"], env=env, capture_output=True, text=True, timeout=600)

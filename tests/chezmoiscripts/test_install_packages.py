@@ -41,6 +41,10 @@ class TestInstallPackages:
             casks = [line.split('"')[1] for line in brewfile_lines() if line.startswith("cask ")]
             assert {"claude-code", "copilot-cli"} <= set(casks)
 
+        def test_should_not_install_work_only_packages(self):
+            packages = {line.split('"')[1] for line in brewfile_lines()}
+            assert not {"glab", "1password-cli"} & packages
+
         @pytest.mark.parametrize("line", brewfile_lines(), ids=lambda line: line.split("#")[0].strip())
         def test_should_be_one_entry_with_a_comment_saying_why(self, line):
             assert ENTRY.fullmatch(line), f"not a `brew|cask \"name\"  # why` line: {line!r}"

@@ -118,7 +118,7 @@ app preference chezmoi can't manage — set it up once per machine:
 |---|---|
 | `make lint` | shellcheck, zsh syntax, workflow lint |
 | `make unit` | pytest unit tests and node driver test |
-| `make integration` | Apply three contexts in a Fedora container; needs Podman |
+| `make integration` | Apply this checkout in a Fedora container; needs Podman |
 | `make integration-native` | Apply into a temporary HOME on macOS; check Homebrew packages |
 | `make ci` | Lint, unit and container integration; no agent login or model usage |
 | `make integration-claude` | **Paid, opt-in:** effective Claude capabilities; needs Claude login |

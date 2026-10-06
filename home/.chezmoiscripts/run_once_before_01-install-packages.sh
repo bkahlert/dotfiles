@@ -25,9 +25,7 @@ brew "bat"                         # cat replacement with syntax highlighting an
 brew "jq"                          # Command-line JSON processor; used by scripts and aliases
 brew "btop"                        # Terminal resource monitor (CPU, memory, disk, network)
 brew "coreutils"                   # GNU core utilities as g-prefixed binaries; macOS ships no timeout, ~/.local/bin/timeout forwards to gtimeout
-brew "glab"                        # GitLab CLI (glab); merge requests and pipelines from the terminal, installed up front instead of on first use
 brew "bash"                        # Bash 5; ~/.local/bin scripts need bash >= 4.4 (empty arrays under set -u, job notices, FIFO reads), macOS ships 3.2
-cask "1password-cli"               # 1Password CLI (op); required by chezmoi to read secrets at apply time
 cask "claude-code"                 # Claude Code AI CLI; managed by Homebrew on macOS instead of the native installer
 cask "copilot-cli"                 # GitHub Copilot AI CLI; used for terminal coding assistance and agent skills
 cask "keepassxc"                   # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent, and chezmoi reads personal secrets from its database at apply time

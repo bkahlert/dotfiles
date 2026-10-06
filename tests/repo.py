@@ -15,8 +15,6 @@ SCRIPT_SOURCES = (("bin", BIN_SOURCE), ("claude", CLAUDE_SOURCE))
 FUNCTIONS_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_functions"
 CONF_D_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_conf.d"
 SHIMS = ROOT / "tests" / "shims"
-CONTEXTS = ("", "bkahlert", "ista")
-
 # The directories of the tests that run the real chezmoi, which lives in Homebrew's. The unit-test
 # sandbox does not use them: it exposes only the REAL_TOOLS of conftest.py.
 SYSTEM_PATH = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")

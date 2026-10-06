@@ -16,7 +16,6 @@ chezmoi source root (`.chezmoiroot`), so chezmoi never sees them.
 | `quick-access/functions` | [home/private_dot_config/zsh/exact_functions/](../home/private_dot_config/zsh/exact_functions) | Autoloaded zsh functions, one file per function (none right now; `.keep` holds the directory) |
 | `quick-access/completions` | [home/private_dot_config/zsh/exact_completions/](../home/private_dot_config/zsh/exact_completions) | Hand-written completions, for tools that ship none |
 | `quick-access/conf.d` | [home/private_dot_config/zsh/exact_conf.d/](../home/private_dot_config/zsh/exact_conf.d) | Zsh modules — env setup, tool init, **and inline functions** |
-| `quick-access/conf.d/exact_ista` | [.../exact_conf.d/exact_ista/](../home/private_dot_config/zsh/exact_conf.d/exact_ista) | Same, but deployed and sourced only for `ista`; `.chezmoiignore` controls deployment |
 | `quick-access/aliases.zsh` | [.../06-aliases.zsh](../home/private_dot_config/zsh/exact_conf.d/06-aliases.zsh) | Most aliases, incl. suffix aliases (`alias -s md=idea`) |
 | `quick-access/keybindings.zsh` | [.../04-keybindings.zsh](../home/private_dot_config/zsh/exact_conf.d/04-keybindings.zsh) | ZLE keybindings |
 | `quick-access/scratch.zsh` | [.../90-scratch.zsh](../home/private_dot_config/zsh/exact_conf.d/90-scratch.zsh) | Not-yet-organized customizations; edit with `ec`, reload with `sc` (both defined in [.../89-scratch-workflow.zsh](../home/private_dot_config/zsh/exact_conf.d/89-scratch-workflow.zsh)) |
@@ -27,7 +26,7 @@ chezmoi source root (`.chezmoiroot`), so chezmoi never sees them.
 | `quick-access/git-config` | [home/dot_gitconfig.tmpl](../home/dot_gitconfig.tmpl) | Git identity and global defaults |
 
 Tests live beside the map: `bin` → `tests/bin/`, `functions` → `tests/functions/`, `conf.d` →
-`tests/zsh/` (`conf.d/exact_ista` → `tests/zsh/ista/`); see [AGENTS.md](../AGENTS.md#testing).
+`tests/zsh/`; see [AGENTS.md](../AGENTS.md#testing).
 
 Not symlinked, but worth knowing:
 
@@ -42,15 +41,15 @@ Not symlinked, but worth knowing:
     [Copilot](../home/.chezmoiscripts/run_onchange_after_setup-copilot.sh),
     [Gemini](../home/.chezmoiscripts/run_onchange_after_setup-gemini.sh)
     detects `claude`, `gemini` and `copilot` on PATH (including Homebrew and fnm's default Node.js)
-    and runs `skills add -g` (e.g. `grill-me`, `handoff`) for all available agents, independent of company.
+    and runs `skills add -g` (e.g. `grill-me`, `handoff`) for all available agents.
     With no detected CLI, it installs nothing. The layout depends on the agents detected: with a
     universal agent (Gemini CLI, GitHub Copilot) in the list, the CLI writes the canonical copy and the symlink;
     with `claude-code` alone it copies straight into `~/.claude/skills/<name>`.
     Without `-g` the CLI treats the working directory as a project and leaves a `skills-lock.json` in `$HOME`,
     because chezmoi runs scripts there;
   - repo-owned skills: the SKILL.md sits in [home/dot_agents/skills/](../home/dot_agents/skills) and the
-    symlink is a one-line `symlink_<name>` file in [home/private_dot_claude/skills/](../home/private_dot_claude/skills)
-    (e.g. `gcloud-auth`). Chezmoi applies edits on the next apply; context-gating goes through `.chezmoiignore`.
+    symlink is a one-line `symlink_<name>` file in [home/private_dot_claude/skills/](../home/private_dot_claude/skills).
+    Chezmoi applies edits on the next apply.
   Don't install repo-owned skills through the CLI: from a local path it copies straight into
   `~/.claude/skills` without the canonical copy, and the copy goes stale on every edit.
 
@@ -67,10 +66,8 @@ Not symlinked, but worth knowing:
      define it inside `conf.d/10-<tool>.zsh`.
 3. **Is it pure shorthand** for an existing command? → an alias in `aliases.zsh`,
    or next to its tool's module if it only makes sense there.
-4. **Work machine only?** → same rules, but under `conf.d/exact_ista/`. The
-   directory is the conditional; no template needed.
-5. **Not sure yet?** → `scratch.zsh`, then promote it once it proves useful.
-6. **Whatever you add, its test goes with it**: `tests/bin/test_<name>.py` for a script,
+4. **Not sure yet?** → `scratch.zsh`, then promote it once it proves useful.
+5. **Whatever you add, its test goes with it**: `tests/bin/test_<name>.py` for a script,
    `tests/functions/test_<name>.py` for a function, `tests/zsh/test_<name>.py` for a module that
    defines functions. `make unit` tells you when one is missing; a file with no logic of its own is
    listed in `tests/untested.toml` with the reason instead. See [AGENTS.md](../AGENTS.md#testing).
@@ -111,8 +108,7 @@ chezmoi source-path "$(whence -p foo)"   # map a script back to its source file
 Most completions are **not** here. Homebrew formulae install theirs into
 `$HOMEBREW_PREFIX/share/zsh/site-functions` (`_git`, `_kubectl`, `_op`, …),
 plugins bring their own, and some tools generate one at startup — gcloud
-sources `completion.zsh.inc` from [10-gcloud-sdk.zsh](../home/private_dot_config/zsh/exact_conf.d/10-gcloud-sdk.zsh),
-idp the output of `idp completion zsh` from [10-idp.zsh](../home/private_dot_config/zsh/exact_conf.d/exact_ista/10-idp.zsh).
+sources `completion.zsh.inc` from [10-gcloud-sdk.zsh](../home/private_dot_config/zsh/exact_conf.d/10-gcloud-sdk.zsh).
 
 `completions/` is for the rest: a tool with no formula, or one of the scripts
 in `bin/`. One file per command, named `_<command>`, starting with `#compdef
@@ -149,7 +145,5 @@ forces it.
   20-agents.zsh                 → installed AI CLIs (`clauded`, `copilotd`, `geminid` bypass permissions)
   89-scratch-workflow.zsh       → `ec` / `sc`, the scratch workflow
   90-scratch.zsh                → drafts, loaded last
-  conf.d/ista/                  → work-only modules (deployed only for ista,
-                                  sourced last)
   .zshrc.local                 → machine-local, unmanaged
 ```

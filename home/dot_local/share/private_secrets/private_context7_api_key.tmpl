@@ -1,7 +1,3 @@
 {{- /* Context7 API key for the context7 MCP plugin, exported by
-       conf.d/10-context7.zsh. Same item title in both vaults. */ -}}
-{{- if eq .company "ista" -}}
-{{ onepasswordRead "op://Employee/CONTEXT7_API_KEY/credential" }}
-{{- else -}}
-{{ (keepassxc "CONTEXT7_API_KEY").Password }}
-{{- end -}}
+       conf.d/10-context7.zsh. */ -}}
+{{ (keepassxc "CONTEXT7_API_KEY").Password -}}
