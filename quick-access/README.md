@@ -24,7 +24,7 @@ chezmoi source root (`.chezmoiroot`), so chezmoi never sees them.
 | `quick-access/zshrc` | [home/private_dot_config/zsh/dot_zshrc](../home/private_dot_config/zsh/dot_zshrc) | The loader: autoload + `conf.d` sourcing |
 | `quick-access/zshenv` | [home/dot_zshenv](../home/dot_zshenv) | Runs for **every** zsh, including non-interactive ones |
 | `quick-access/zprofile` | [home/private_dot_config/zsh/dot_zprofile](../home/private_dot_config/zsh/dot_zprofile) | Login shells only (Homebrew shellenv) |
-| `quick-access/git-aliases` | [home/dot_gitconfig.tmpl](../home/dot_gitconfig.tmpl) | `[alias]` section — `git …` subcommands typed like shell commands |
+| `quick-access/git-config` | [home/dot_gitconfig.tmpl](../home/dot_gitconfig.tmpl) | Git identity and global defaults |
 
 Tests live beside the map: `bin` → `tests/bin/`, `functions` → `tests/functions/`, `conf.d` →
 `tests/zsh/` (`conf.d/exact_ista` → `tests/zsh/ista/`); see [AGENTS.md](../AGENTS.md#testing).
