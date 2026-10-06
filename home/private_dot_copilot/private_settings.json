@@ -4,7 +4,7 @@
   "contextManagementTools": true,
   "includeCoAuthoredBy": false,
   "memory": false,
-  "showTimestamps": true,
+  "showTimestamps": false,
   "transcriptView": "concise",
   "terminalProgress": true,
   "terminalNotifications": true,

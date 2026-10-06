@@ -18,6 +18,13 @@ visitor() {
   curl -fsSL https://github.com/bkahlert/pihero/releases/latest/download/visitor | bash -s -- "$@"
 }
 
+if (( $+commands[claude] )); then
+  claudexd() {
+    export CLAUDE_CODE_AUTO_MODE_SERVER=1
+    omlx launch claude --dangerously-skip-permissions
+  }
+fi
+
 grafana-start() {
   local url="http://localhost:3000"
 
