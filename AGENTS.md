@@ -65,7 +65,7 @@ Zsh config lives in `~/.config/zsh/` (set by `~/.zshenv`); only `~/.zshenv` rema
 Invariants that bite when editing source state:
 
 - `exact_` on `exact_bin/`, `exact_conf.d/` and `exact_functions/` means **removing a file from the repo removes it from the target**, and a file created directly in `$HOME` is deleted on the next apply. Always edit source state.
-- Exception: `~/.local/bin/claude` is owned by the Claude installer (`https://claude.ai/install.sh`) and survives `exact_bin` via `.chezmoiignore`. Other installer-owned entries need the same treatment.
+- Exception: installer-owned entries such as `~/.local/bin/browser-harness` survive `exact_bin` via `.chezmoiignore`. Claude Code and GitHub Copilot CLI are installed only on macOS as Homebrew casks; the old native Claude symlink is no longer preserved.
 - Only use `.zsh.tmpl` when the file embeds a secret or needs `sha256sum` change detection; a module that differs by profile should normally be selected at apply time.
 - Work-only modules go in `exact_conf.d/exact_ista/` as plain `.zsh`; `.chezmoiignore` controls whether the directory is deployed.
 
@@ -77,7 +77,7 @@ Each package entry in install scripts must have an inline comment stating:
 
 Example: `cask "1password-cli" # 1Password CLI (op); required by chezmoi to read secrets at apply time`
 
-[.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`03` prefixes order the install scripts: Homebrew, packages (fnm among them), a default Node.js, Claude Code. A later script that needs one of these tools fails when it is missing instead of skipping. Only add `.tmpl` where the script itself needs a template value.
+[.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`02` prefixes order the install scripts: Homebrew, packages (fnm, Claude Code and GitHub Copilot CLI on macOS), a default Node.js. A later script that needs one of these tools fails when it is missing instead of skipping. Agent setup is optional: MCP setup skips when Claude is absent, and skill setup detects `claude`, `gemini` and `copilot` at runtime and installs for every available agent, independent of `.company`. Only add `.tmpl` where the script itself needs a template value.
 
 ### Versions
 

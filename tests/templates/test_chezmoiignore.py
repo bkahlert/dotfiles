@@ -3,7 +3,7 @@ import pytest
 SOURCE = ".chezmoiignore"
 GCLOUD_SKILLS = [".agents/skills/gcloud-auth", ".agents/skills/gcloud-login-automation",
                  ".claude/skills/gcloud-auth", ".claude/skills/gcloud-login-automation"]
-INSTALLER_OWNED = [".local/bin/claude", ".local/bin/browser-harness", ".local/bin/browser-harness-mcp",
+INSTALLER_OWNED = [".local/bin/browser-harness", ".local/bin/browser-harness-mcp",
                    ".local/bin/agy", ".local/bin/fnm"]
 MACOS_LIBRARY = "Library"
 ISTA_MODULES = ".config/zsh/conf.d/ista"
@@ -34,6 +34,12 @@ class TestChezmoiignore:
 
         def test_should_be_applied_on_macos_which_ships_none(self, chezmoi):
             assert ".local/bin/timeout" not in patterns(chezmoi, os="darwin")
+
+    @CONTEXTS
+    class TestClaudeInstaller:
+        @pytest.mark.parametrize("os", ["darwin", "linux"])
+        def test_should_not_preserve_the_retired_native_installer_binary(self, chezmoi, company, os):
+            assert ".local/bin/claude" not in patterns(chezmoi, company=company, os=os)
 
     class TestGcloudSkills:
         def test_should_be_applied_on_ista(self, chezmoi):

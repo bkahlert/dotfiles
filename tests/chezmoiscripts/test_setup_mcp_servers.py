@@ -1,3 +1,6 @@
+import pytest
+
+
 class TestSetupMcpServers:
     class TestOnClaude:
         def test_should_register_the_idea_server_over_http_at_user_scope(self, script, fake_bin, calls):
@@ -31,20 +34,23 @@ class TestSetupMcpServers:
             assert result.returncode == 1
 
     class TestOnClaudeOffPath:
-        def test_should_use_the_one_install_claude_put_in_local_bin(self, script, sandbox):
+        @pytest.mark.parametrize("prefix", ["/opt/homebrew", "/usr/local", ".local"])
+        def test_should_use_claude_in_an_install_location(self, script, sandbox, tmp_path, prefix):
             sandbox.only_tools()
-            local_bin = sandbox.home / ".local" / "bin"
+            local_bin = (sandbox.home / prefix if prefix == ".local" else tmp_path / prefix.lstrip("/")) / "bin"
             local_bin.mkdir(parents=True)
             (local_bin / "claude").write_text('#!/bin/sh\necho "$*" >> "$HOME/claude-calls"\n')
             (local_bin / "claude").chmod(0o755)
-            result = script("setup-mcp-servers")
+            result = script("setup-mcp-servers", prefix_root=tmp_path)
             assert result.returncode == 0, result.stderr
             assert "mcp add --scope user --transport http idea http://127.0.0.1:64342/stream" in (
                 sandbox.home / "claude-calls").read_text().splitlines()
 
     class TestOnMissingClaude:
-        def test_should_fail_and_name_the_script_that_installs_it(self, script, sandbox):
+        @pytest.mark.parametrize("os", ["Darwin", "Linux"])
+        def test_should_skip_setup_when_claude_is_not_installed(self, script, sandbox, tmp_path, calls, os):
             sandbox.only_tools()
-            result = script("setup-mcp-servers")
-            assert result.returncode == 1
-            assert result.stderr == "claude not found; run_once_before_03-install-claude installs it\n"
+            result = script("setup-mcp-servers", prefix_root=tmp_path, uname=os)
+            assert result.returncode == 0
+            assert result.stdout == result.stderr == ""
+            assert calls("claude") == []
