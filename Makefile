@@ -6,7 +6,9 @@ IMAGE := dotfiles-test
 CONTAINER_NAME := dotfiles-test
 VNC_PORT := 5901
 
-.PHONY: ci lint lint-shell lint-zsh lint-workflows unit integration integration-native image run vnc stop clean
+.PHONY: ci lint lint-shell lint-zsh lint-workflows unit integration integration-native integration-claude integration-copilot image run vnc stop clean
+
+AGENT_TEST_ARGS ?=
 
 ci: lint unit integration
 
@@ -37,6 +39,12 @@ integration:
 
 integration-native:
 	uv run --locked pytest tests/integration/test_apply_native.py tests/integration/test_brewfile.py
+
+integration-claude:
+	uv run --locked pytest -s tests/integration/test_agent_capabilities.py --live-agent claude $(AGENT_TEST_ARGS)
+
+integration-copilot:
+	uv run --locked pytest -s tests/integration/test_agent_capabilities.py --live-agent copilot $(AGENT_TEST_ARGS)
 
 image:
 	$(CONTAINER_ENGINE) build --target base -t $(IMAGE):base .

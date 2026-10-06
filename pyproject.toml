@@ -22,4 +22,5 @@ pythonpath = ["tests"]
 addopts = "--import-mode=importlib --strict-markers -ra"
 markers = [
     "integration: applies the dotfiles end to end; slow, needs a container engine or macOS",
+    "authenticated: opt-in live agent calls; needs login and can consume paid usage",
 ]

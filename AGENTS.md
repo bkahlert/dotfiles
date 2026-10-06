@@ -77,7 +77,7 @@ Each package entry in install scripts must have an inline comment stating:
 
 Example: `cask "1password-cli" # 1Password CLI (op); required by chezmoi to read secrets at apply time`
 
-[.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`02` prefixes order the install scripts: Homebrew, packages (fnm, Claude Code and GitHub Copilot CLI on macOS), a default Node.js. A later script that needs one of these tools fails when it is missing instead of skipping. Agent setup is optional: MCP setup registers IntelliJ's `idea` server for each available Claude Code or Copilot CLI, and skill setup detects `claude`, `gemini` and `copilot` at runtime and installs for every available agent, independent of `.company`. Only add `.tmpl` where the script itself needs a template value.
+[.chezmoiscripts/](home/.chezmoiscripts) holds the apply-time scripts; the `run_once_before_`/`run_once_after_`/`run_onchange_after_` prefix and the name say when each runs and what it sets up. `00`–`02` prefixes order the installation scripts: Homebrew, packages (fnm, Claude Code and GitHub Copilot CLI on macOS), a default Node.js. A later script that needs one of these tools fails when it is missing instead of skipping. Keep agent setup in one `setup-<agent>.sh` script per agent, not scripts per mechanism, so each agent's MCPs, plugins and skills change together. Each script detects its own CLI at runtime, independent of `.company`, and skips when it is absent. Claude registers IntelliJ's `idea` server and installs third-party skills. Copilot also registers Context7 and isolated headless Chrome DevTools and installs Superpowers. Gemini installs third-party skills. Only add `.tmpl` where the script itself needs a template value.
 
 ### Versions
 
@@ -97,7 +97,7 @@ Pin a version only where [Dependabot](.github/dependabot.yml) bumps it: actions 
 | `~/.copilot/copilot-instructions.md` | [copilot-instructions.md](home/private_dot_copilot/copilot-instructions.md) | Copilot user instructions; explicitly reads the shared agent guidance because Copilot does not expand `@~/` imports |
 | `~/.copilot/settings.json` | [private_settings.json](home/private_dot_copilot/private_settings.json) | Repo-owned Copilot settings; apply overwrites local changes, unlike Claude's modifier |
 | `~/.npmrc` | [private_dot_npmrc.tmpl](home/private_dot_npmrc.tmpl) | Business only (mode 0600, ignored elsewhere): GitLab and Artifactory registry tokens |
-| `~/.agents/skills/*`, `~/.claude/skills/*` | [dot_agents/skills](home/dot_agents/skills), [private_dot_claude/skills](home/private_dot_claude/skills) | Repo-owned agent skills + their symlinks; third-party ones via [setup-skills](home/.chezmoiscripts/run_onchange_after_setup-skills.sh). See [quick-access/README.md](quick-access/README.md) |
+| `~/.agents/skills/*`, `~/.claude/skills/*` | [dot_agents/skills](home/dot_agents/skills), [private_dot_claude/skills](home/private_dot_claude/skills) | Repo-owned agent skills + their symlinks; third-party ones via each agent's setup script. See [quick-access/README.md](quick-access/README.md) |
 | `~/.local/bin/gcloud-login` | [executable_gcloud-login](home/dot_local/exact_bin/executable_gcloud-login) | Unattended gcloud/ADC login (ista); design notes in git history (`git show 64f5401:docs/superpowers/plans/2026-09-22-gcloud-login-findings.md`) |
 
 ## Common Tasks
@@ -165,10 +165,15 @@ Don't stack offers on follow-up turns; ask each one once, then drop it.
 | Apply all three contexts in a Fedora container, require a silent zsh (needs Podman) | `make integration` |
 | Same, into a temp HOME on this Mac, plus a check that every Brewfile package exists in Homebrew (network); what CI's macOS job runs. Opt-in locally | `make integration-native` |
 | Lint, unit and integration | `make ci` |
+| Effective Claude capabilities (login required; paid, opt-in) | `make integration-claude` |
+| Effective Copilot capabilities (login required; paid, opt-in) | `make integration-copilot` |
 | Preview changes to `$HOME` | `chezmoi diff` |
 | Dry run | `chezmoi apply -n` |
 
 CI runs the same targets on every pull request and on `main`; the `ci` check is required to merge.
+Authenticated capability tests never run in CI or the ordinary test targets. See
+[README.md](README.md#live-agent-capabilities) for prerequisites, limits and focused
+checks. Shared [.run/](.run) configurations expose `ci` (no AI usage) and both paid targets.
 
 ### Where a test lives
 
