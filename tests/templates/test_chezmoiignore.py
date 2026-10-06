@@ -1,13 +1,10 @@
 import pytest
 
 SOURCE = ".chezmoiignore"
-GCLOUD_SKILLS = [".agents/skills/gcloud-auth", ".agents/skills/gcloud-login-automation",
-                 ".claude/skills/gcloud-auth", ".claude/skills/gcloud-login-automation"]
 INSTALLER_OWNED = [".local/bin/browser-harness", ".local/bin/browser-harness-mcp",
                    ".local/bin/agy", ".local/bin/fnm"]
 MACOS_LIBRARY = "Library"
 WORK_TARGETS = [
-    *GCLOUD_SKILLS,
     ".local/bin/gcloud-login",
     ".config/zsh/conf.d/ista/",
     ".local/share/secrets/gitlab_token",

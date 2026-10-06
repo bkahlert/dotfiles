@@ -22,10 +22,6 @@ Library
 .aws/cli/cache/
 
 # Work-only tools and configuration live in the separate work dotfiles checkout.
-.agents/skills/gcloud-auth
-.agents/skills/gcloud-login-automation
-.claude/skills/gcloud-auth
-.claude/skills/gcloud-login-automation
 .local/bin/gcloud-login
 .config/zsh/conf.d/ista/
 .local/share/secrets/gitlab_token
