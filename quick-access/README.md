@@ -143,7 +143,7 @@ forces it.
   08-completions.zsh            → compinit, after the plugins that extend $fpath
   09-path.zsh                   → $PATH, before anything resolves a command
   10-*.zsh                      → tool modules, one per tool
-  20-claude.zsh                 → Claude CLI
+  20-agents.zsh                 → installed AI CLIs (`clauded`, `copilotd`, `geminid` bypass permissions)
   89-scratch-workflow.zsh       → `ec` / `sc`, the scratch workflow
   90-scratch.zsh                → drafts, loaded last
   conf.d/ista/                  → work-only modules (deployed only for ista,
