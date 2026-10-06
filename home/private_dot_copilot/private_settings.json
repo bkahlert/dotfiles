@@ -32,5 +32,16 @@
   "allowedUrls": [
     "https://docs.github.com",
     "https://www.chezmoi.io"
-  ]
+  ],
+  "extraKnownMarketplaces": {
+    "superpowers-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers-marketplace"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true
+  }
 }
