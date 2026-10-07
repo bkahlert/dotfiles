@@ -179,7 +179,22 @@ class TestIntellijWorkspaceFix:
             result = run("intellij-workspace-fix")
             assert result.returncode == 1
             assert result.stderr.startswith("✖ failed: ./app/.idea/workspace.xml")
+            assert workspace.read_text() == WITHOUT_SAVE_OPTIONS
             assert sorted(p.name for p in workspace.parent.iterdir()) == ["workspace.xml"]
+
+        @pytest.mark.parametrize("mode", [0o444, 0o400, 0o555])
+        def test_should_refuse_files_without_write_bits_even_on_positive_access(self, workspace_fix, tmp_path, monkeypatch, capsys, mode):
+            workspace = tmp_path / "workspace.xml"
+            workspace.write_text(WITHOUT_SAVE_OPTIONS)
+            workspace.chmod(mode)
+            monkeypatch.setattr(workspace_fix.os, "access", lambda path, mode: True)
+
+            result = workspace_fix.fix_workspace(str(workspace), False, 1)
+
+            assert result is False
+            assert "not writable" in capsys.readouterr().err
+            assert workspace.read_text() == WITHOUT_SAVE_OPTIONS
+            assert sorted(p.name for p in tmp_path.iterdir()) == ["workspace.xml"]
 
         def test_should_leave_a_file_without_a_project_root_alone(self, run, sandbox):
             workspace = write(sandbox, "app/.idea/workspace.xml", "<settings />\n")
@@ -187,18 +202,12 @@ class TestIntellijWorkspaceFix:
             assert (result.returncode, workspace.read_text()) == (1, "<settings />\n")
 
     class TestOnExistingBackup:
-        def test_should_not_overwrite_it(self, tmp_path, monkeypatch):
-            # A .pyc next to the source would be applied into ~/.local/bin, chezmoi ignores .gitignore.
-            monkeypatch.setattr(sys, "dont_write_bytecode", True)
-            source = str(BIN_SOURCE / "executable_intellij-workspace-fix")
-            loader = importlib.machinery.SourceFileLoader("workspace_fix", source)
-            module = importlib.util.module_from_spec(importlib.util.spec_from_loader("workspace_fix", loader))
-            loader.exec_module(module)
+        def test_should_not_overwrite_it(self, tmp_path, workspace_fix):
             workspace = tmp_path / "workspace.xml"
             workspace.write_text(WITHOUT_SAVE_OPTIONS)
             backup = tmp_path / "workspace.1.xml"
             backup.write_text("PRECIOUS")
-            assert module.fix_workspace(str(workspace), False, 1) is False
+            assert workspace_fix.fix_workspace(str(workspace), False, 1) is False
             assert (backup.read_text(), workspace.read_text()) == ("PRECIOUS", WITHOUT_SAVE_OPTIONS)
 
     class TestOnBadArguments:
@@ -221,6 +230,17 @@ def write(sandbox, relative, body):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(body)
     return path
+
+
+@pytest.fixture
+def workspace_fix(monkeypatch):
+    # A .pyc next to the source would be applied into ~/.local/bin, chezmoi ignores .gitignore.
+    monkeypatch.setattr(sys, "dont_write_bytecode", True)
+    source = str(BIN_SOURCE / "executable_intellij-workspace-fix")
+    loader = importlib.machinery.SourceFileLoader("workspace_fix", source)
+    module = importlib.util.module_from_spec(importlib.util.spec_from_loader("workspace_fix", loader))
+    loader.exec_module(module)
+    return module
 
 
 # The state "Tools > Actions on Save > All file types" must end up in, as the IDE writes it, plus the explicit

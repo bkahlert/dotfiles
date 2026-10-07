@@ -229,7 +229,7 @@ def fix_workspace(shown, dry_run, timestamp):
         elif dry_run:
             report("ℹ", BLUE, f"would fix: {shown}")
         else:
-            if not os.access(path, os.W_OK):
+            if (path.stat().st_mode & 0o222) == 0 or not os.access(path, os.W_OK):
                 raise PermissionError("not writable")
             backup = path.with_name(f"{path.stem}.{timestamp}{path.suffix}")
             with open(backup, "xb") as file:
