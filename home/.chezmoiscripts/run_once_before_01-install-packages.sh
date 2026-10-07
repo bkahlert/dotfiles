@@ -22,10 +22,14 @@ brew "sheldon"                     # Zsh plugin manager; config in ~/.config/she
 brew "starship"                    # Cross-shell prompt; config in ~/.config/starship.toml
 brew "zoxide"                      # Smarter cd that learns frecency; aliased to z in conf.d
 brew "bat"                         # cat replacement with syntax highlighting and git diff support
+brew "ripgrep"                     # Fast recursive text search; commonly preferred by Copilot for code search
+brew "fd"                          # Fast file finder; complements ripgrep when locating files
 brew "jq"                          # Command-line JSON processor; used by scripts and aliases
+brew "yq"                          # Command-line YAML processor; lets Copilot query structured config
 brew "btop"                        # Terminal resource monitor (CPU, memory, disk, network)
 brew "coreutils"                   # GNU core utilities as g-prefixed binaries; macOS ships no timeout, ~/.local/bin/timeout forwards to gtimeout
 brew "bash"                        # Bash 5; ~/.local/bin scripts need bash >= 4.4 (empty arrays under set -u, job notices, FIFO reads), macOS ships 3.2
+brew "gh"                          # GitHub CLI; used for pull requests and issues by Copilot, and by upgrade-all
 cask "claude-code"                 # Claude Code AI CLI; managed by Homebrew on macOS instead of the native installer
 cask "copilot-cli"                 # GitHub Copilot AI CLI; used for terminal coding assistance and agent skills
 cask "keepassxc"                   # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent, and chezmoi reads personal secrets from its database at apply time

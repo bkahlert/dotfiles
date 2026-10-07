@@ -22,8 +22,8 @@ def pytest_addoption(parser):
 # the caller's PATH, so the same tool is found on every machine (bash must be Homebrew's 4.4+ on macOS).
 REAL_TOOLS = ("awk", "base64", "basename", "bash", "cat", "chmod", "cp", "cut", "date", "dirname", "env",
               "false", "find", "getconf", "grep", "gzip", "head", "jq", "ls", "mkdir", "mkfifo", "mktemp", "mv",
-              "nohup", "python3", "rm", "rmdir", "sed", "seq", "sh", "shasum", "sleep", "sort", "stat", "tail",
-              "tar", "test", "touch", "tr", "true", "uname", "uniq", "wc", "zsh")
+              "nohup", "python3", "rg", "rm", "rmdir", "sed", "seq", "sh", "shasum", "sleep", "sort", "stat",
+              "tail", "tar", "test", "touch", "tr", "true", "uname", "uniq", "wc", "zsh")
 TOOL_DIRECTORIES = ":".join(SYSTEM_PATH)
 
 # Tools that reach the network, a vault, system state or the user's own state (repositories,
@@ -90,6 +90,7 @@ class Sandbox:
     def __init__(self, home: Path, fakes: Path, bin_links: Path, real_tools: Path):
         self.home = home
         self.fakes = fakes
+        self.bin_links = bin_links
         self.calls_dir = fakes / ".calls"
         self.real_tools = real_tools
         self.calls_dir.mkdir(parents=True)

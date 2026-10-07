@@ -41,6 +41,10 @@ class TestInstallPackages:
             casks = [line.split('"')[1] for line in brewfile_lines() if line.startswith("cask ")]
             assert {"claude-code", "copilot-cli"} <= set(casks)
 
+        def test_should_install_command_line_tools_for_copilot(self):
+            packages = {line.split('"')[1] for line in brewfile_lines() if line.startswith("brew ")}
+            assert {"ripgrep", "gh", "fd", "yq"} <= packages
+
         def test_should_not_install_work_only_packages(self):
             packages = {line.split('"')[1] for line in brewfile_lines()}
             assert not {"glab", "1password-cli"} & packages
