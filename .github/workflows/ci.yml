@@ -29,7 +29,7 @@ jobs:
         # shellcheck, actionlint and zizmor come from uv.lock, so `make lint` runs the versions a developer machine runs.
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends zsh
+          sudo apt-get install -y --no-install-recommends ripgrep zsh
       - name: Install chezmoi
         # The template tests need it and fail rather than skip on CI without it. Latest, like the macOS job and the
         # image: a version pinned here is one Dependabot cannot bump.
@@ -60,7 +60,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-      - run: brew install bash chezmoi sheldon starship zoxide
+      - run: brew install bash chezmoi ripgrep sheldon starship zoxide
       - run: make unit integration-native
         env:
           CHROMIUM_BIN: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
