@@ -12,7 +12,7 @@ chezmoi source root (`.chezmoiroot`), so chezmoi never sees them.
 
 | Symlink | Source | Holds |
 |---|---|---|
-| `quick-access/bin` | [home/dot_local/exact_bin/](../home/dot_local/exact_bin) | Shell-agnostic executables, mirrored to `~/.local/bin` |
+| `quick-access/bin` | [home/dot_local/bin/](../home/dot_local/bin) | Shell-agnostic executables, mirrored to `~/.local/bin` |
 | `quick-access/functions` | [home/private_dot_config/zsh/exact_functions/](../home/private_dot_config/zsh/exact_functions) | Autoloaded zsh functions, one file per function (none right now; `.keep` holds the directory) |
 | `quick-access/completions` | [home/private_dot_config/zsh/exact_completions/](../home/private_dot_config/zsh/exact_completions) | Hand-written completions, for tools that ship none |
 | `quick-access/conf.d` | [home/private_dot_config/zsh/exact_conf.d/](../home/private_dot_config/zsh/exact_conf.d) | Zsh modules — env setup, tool init, **and inline functions** |
@@ -97,9 +97,10 @@ chezmoi source-path "$(whence -p foo)"   # map a script back to its source file
 
 ## Gotchas
 
-- `exact_` on `bin/`, `conf.d/`, and `functions/` means **deleting a file from
-  the repo deletes it from `$HOME`** on the next apply. Conversely, a file
-  created directly in the target is removed. Always edit the source.
+- `exact_` on `conf.d/` and `functions/` means **deleting a file from the repo
+  deletes it from `$HOME`** on the next apply. Conversely, a file created
+  directly in the target is removed. Always edit repo-managed scripts in the
+  source.
 - Editing through these symlinks edits the real source file, so `chezmoi apply`
   is still required. For `.tmpl` files use `chezmoi edit` instead.
 

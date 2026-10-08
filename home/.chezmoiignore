@@ -1,10 +1,4 @@
-# browser-harness shims — managed by `uv tool install browser-harness`,
-# kept out of exact_bin so chezmoi does not remove them.
-.local/bin/browser-harness
-.local/bin/browser-harness-mcp
-
-# fnm on Linux — put there by its installer (run_once_before_01-install-packages).
-.local/bin/fnm
+**/__pycache__/**
 
 {{- if ne .chezmoi.os "darwin" }}
 # The timeout wrapper only stands in for the GNU timeout macOS lacks; here it would shadow the real one.

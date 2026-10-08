@@ -1,4 +1,8 @@
+import shutil
+
 import pytest
+
+from repo import HOME_SOURCE
 
 SOURCE = ".chezmoiignore"
 INSTALLER_OWNED = [".local/bin/browser-harness", ".local/bin/browser-harness-mcp",
@@ -21,8 +25,22 @@ def patterns(chezmoi, *, os="darwin"):
 
 class TestChezmoiignore:
     class TestShared:
-        def test_should_leave_installer_owned_binaries_alone_so_exact_bin_does_not_remove_them(self, chezmoi):
-            assert set(INSTALLER_OWNED) <= set(patterns(chezmoi))
+        def test_should_not_ignore_installer_owned_binaries(self, chezmoi):
+            assert not set(INSTALLER_OWNED) & set(patterns(chezmoi))
+
+        def test_should_ignore_python_bytecode_caches(self, chezmoi, tmp_path):
+            source = tmp_path / "source"
+            source.mkdir()
+            shutil.copy(HOME_SOURCE / SOURCE, source / SOURCE)
+            bytecode = source / "dot_local/share/__pycache__/agent_statusline.cpython-314.pyc"
+            bytecode.parent.mkdir(parents=True)
+            bytecode.touch()
+
+            result = chezmoi.run(
+                "ignored", source=source, config=chezmoi.config(source=source), stdin=None)
+
+            assert result.returncode == 0, result.stderr
+            assert ".local/share/__pycache__" in result.stdout.split()
 
         def test_should_never_apply_aws_credentials_or_the_sso_cache(self, chezmoi):
             assert set(NEVER_COMMITTED) <= set(patterns(chezmoi))

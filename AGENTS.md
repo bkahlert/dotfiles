@@ -55,8 +55,8 @@ Zsh config lives in `~/.config/zsh/` (set by `~/.zshenv`); only `~/.zshenv` rema
 
 Invariants that bite when editing source state:
 
-- `exact_` on `exact_bin/`, `exact_conf.d/` and `exact_functions/` means **removing a file from the repo removes it from the target**, and a file created directly in `$HOME` is deleted on the next apply. Always edit source state.
-- Exception: installer-owned entries such as `~/.local/bin/browser-harness` survive `exact_bin` via `.chezmoiignore`. Claude Code and GitHub Copilot CLI are installed only on macOS as Homebrew casks; the old native Claude symlink is no longer preserved.
+- `exact_` on `exact_conf.d/` and `exact_functions/` means **removing a file from the repo removes it from the target**, and a file created directly in `$HOME` is deleted on the next apply. Always edit source state.
+- Installer-owned tools coexist with repo-managed scripts in `~/.local/bin`. Claude Code and GitHub Copilot CLI are installed only on macOS as Homebrew casks; the old native Claude symlink is no longer preserved.
 - Only use `.zsh.tmpl` when the file embeds a secret or needs `sha256sum` change detection.
 
 ## Install Scripts

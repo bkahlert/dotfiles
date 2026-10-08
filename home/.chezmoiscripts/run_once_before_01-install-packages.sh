@@ -62,7 +62,7 @@ else
     run_installer sh https://starship.rs/install.sh --yes
   fi
 
-  # fnm — Node.js version manager; its own installer puts it in ~/.local/bin, which .chezmoiignore keeps out of exact_bin
+  # fnm — Node.js version manager; its own installer puts it in ~/.local/bin
   if ! command -v fnm &>/dev/null; then
     run_installer bash https://fnm.vercel.app/install --skip-shell --install-dir ~/.local/bin
   fi
