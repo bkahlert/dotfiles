@@ -2,7 +2,7 @@ import re
 
 from repo import ROOT
 
-CONTAINERFILE = (ROOT / "Containerfile").read_text()
+CONTAINERFILE = (ROOT / "tests" / "harness" / "container" / "Containerfile").read_text()
 DEPENDABOT = (ROOT / ".github" / "dependabot.yml").read_text()
 INSTRUCTIONS = re.sub(r"\\\n\s*", " ", CONTAINERFILE).splitlines()
 CURL_CALLS = [line for line in INSTRUCTIONS if re.search(r"^RUN\s+curl\s|[;&|(]\s*curl\s|\$\(\s*curl\s", line)]
@@ -20,6 +20,11 @@ class TestShell:
         run = next(i for i, line in enumerate(INSTRUCTIONS) if line.startswith("RUN "))
         assert shell is not None and shell < run, "SHELL must come before the first RUN"
         assert "pipefail" in INSTRUCTIONS[shell]
+
+
+class TestEntrypoint:
+    def test_should_copy_the_harness_entrypoint_from_the_repository_context(self):
+        assert "COPY tests/harness/container/entrypoint.sh /entrypoint.sh" in CONTAINERFILE
 
 
 class TestDownloads:

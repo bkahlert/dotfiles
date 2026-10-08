@@ -16,6 +16,6 @@ class TestApplyContainer:
 
             assert result == "dotfiles-test:base"
             assert calls(engine) == [
-                ["build", "--target", "base", "-f", str(ROOT / "Containerfile"),
+                ["build", "--target", "base", "-f", str(ROOT / "tests" / "harness" / "container" / "Containerfile"),
                  "-t", "dotfiles-test:base", str(ROOT)]
             ]

@@ -36,7 +36,7 @@ RUN chsh -s /bin/zsh root
 
 HEALTHCHECK NONE
 
-COPY entrypoint.sh /entrypoint.sh
+COPY tests/harness/container/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
 

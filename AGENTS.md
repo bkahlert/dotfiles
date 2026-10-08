@@ -200,5 +200,5 @@ Classes nest as [testing.md](home/private_dot_config/exact_agents/exact_rules/te
 
 Both legs write a chezmoi config with the user's email and name, apply the source tree with `tests/harness/shims/keepassxc-cli` first on `PATH` and `--no-tty` with a dummy password on stdin, then run `zsh -li -c true` and require exit 0 and an empty stderr.
 
-- Container ([Containerfile](Containerfile) stage `base`, [entrypoint.sh](entrypoint.sh)): Fedora with chezmoi, sheldon, starship, zoxide. `make run` builds the `vnc` stage for manual inspection.
+- Container ([tests/harness/container/Containerfile](tests/harness/container/Containerfile) stage `base`, [tests/harness/container/entrypoint.sh](tests/harness/container/entrypoint.sh)): Fedora with chezmoi, sheldon, starship, zoxide. The build still uses the repository root as its context, and `make run` builds the `vnc` stage for manual inspection.
 - Native macOS: a temp home, `--exclude=scripts` (no `brew bundle`, no `defaults write`), `sheldon lock` by hand, and a preflight that `chezmoi data` reports the temp home. Every path chezmoi and the startup files touch derives from `HOME`, `ZDOTDIR` or an `XDG_*` variable, which is why this is safe to run on a developer Mac. **Startup code must keep it that way: write only under those directories, and stay silent when a tool you wrap is absent.**

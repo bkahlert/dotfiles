@@ -47,10 +47,10 @@ integration-copilot:
 	uv run --locked pytest -s tests/integration/test_agent_capabilities.py --live-agent copilot $(AGENT_TEST_ARGS)
 
 image:
-	$(CONTAINER_ENGINE) build --target base -t $(IMAGE):base .
+	$(CONTAINER_ENGINE) build --target base -f tests/harness/container/Containerfile -t $(IMAGE):base .
 
 run:
-	$(CONTAINER_ENGINE) build --target vnc -t $(IMAGE):vnc .
+	$(CONTAINER_ENGINE) build --target vnc -f tests/harness/container/Containerfile -t $(IMAGE):vnc .
 	$(CONTAINER_ENGINE) run -d --rm \
 		--name $(CONTAINER_NAME) \
 		-p $(VNC_PORT):5901 \
