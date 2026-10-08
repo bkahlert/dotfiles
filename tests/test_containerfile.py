@@ -2,7 +2,7 @@ import re
 
 from repo import ROOT
 
-CONTAINERFILE = (ROOT / "Containerfile").read_text()
+CONTAINERFILE = (ROOT / "tests" / "harness" / "container" / "Containerfile").read_text()
 DEPENDABOT = (ROOT / ".github" / "dependabot.yml").read_text()
 INSTRUCTIONS = re.sub(r"\\\n\s*", " ", CONTAINERFILE).splitlines()
 CURL_CALLS = [line for line in INSTRUCTIONS if re.search(r"^RUN\s+curl\s|[;&|(]\s*curl\s|\$\(\s*curl\s", line)]
@@ -22,6 +22,11 @@ class TestShell:
         assert "pipefail" in INSTRUCTIONS[shell]
 
 
+class TestEntrypoint:
+    def test_should_copy_the_harness_entrypoint_from_the_repository_context(self):
+        assert "COPY tests/harness/container/entrypoint.sh /entrypoint.sh" in CONTAINERFILE
+
+
 class TestDownloads:
     def test_should_fail_the_build_on_an_http_error(self):
         assert CURL_CALLS and all(re.search(r"\bcurl\b[^|;&]*\s-[A-Za-z]*f", call) for call in CURL_CALLS), CURL_CALLS
@@ -38,3 +43,8 @@ class TestDependabot:
         block = next((b for b in re.split(r"(?m)^  - ", DEPENDABOT) if b.startswith("package-ecosystem: docker")), None)
         assert block is not None, "no docker ecosystem entry"
         assert re.search(r"interval: weekly", block) and re.search(r"default-days: 3", block)
+
+    def test_should_discover_the_containerfile_in_its_directory(self):
+        block = next((b for b in re.split(r"(?m)^  - ", DEPENDABOT) if b.startswith("package-ecosystem: docker")), None)
+        assert block is not None, "no docker ecosystem entry"
+        assert re.search(r"directory: /tests/harness/container", block)

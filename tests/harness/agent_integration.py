@@ -9,7 +9,7 @@ from repo import ROOT
 
 CAPABILITIES = ("context7", "chrome-devtools", "idea", "superpowers")
 CHECK_MARKER = "DOTFILES_AGENT_CHECK_OK"
-IDE_FIXTURE = "tests/integration/fixtures/agent-capability.txt"
+IDE_FIXTURE = "tests/harness/fixtures/agent-capability.txt"
 
 
 class Transcript:

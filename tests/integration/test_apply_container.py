@@ -17,7 +17,8 @@ def image():
     if shutil.which(ENGINE) is None:
         pytest.fail(f"{ENGINE} not found; install it or point CONTAINER_ENGINE at docker")
     subprocess.run(
-        [ENGINE, "build", "--target", "base", "-f", str(ROOT / "Containerfile"), "-t", IMAGE, str(ROOT)],
+        [ENGINE, "build", "--target", "base", "-f", str(ROOT / "tests" / "harness" / "container" / "Containerfile"),
+         "-t", IMAGE, str(ROOT)],
         check=True, timeout=1200)
     return IMAGE
 
