@@ -1,6 +1,15 @@
+from pathlib import Path
+
 import pytest
 
+import repo
 from repo import require_chezmoi
+
+
+class TestRepositoryPaths:
+    def test_should_resolve_the_repository_root_from_harness(self):
+        assert repo.ROOT == Path(__file__).resolve().parents[1]
+        assert Path(repo.__file__).resolve() == repo.ROOT / "tests" / "harness" / "repo.py"
 
 
 class TestRequireChezmoi:

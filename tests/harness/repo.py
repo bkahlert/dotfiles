@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 HOME_SOURCE = ROOT / "home"
 CHEZMOISCRIPTS_SOURCE = HOME_SOURCE / ".chezmoiscripts"
 BIN_SOURCE = HOME_SOURCE / "dot_local" / "bin"
@@ -15,7 +15,7 @@ COPILOT_SOURCE = HOME_SOURCE / "private_dot_copilot"
 SCRIPT_SOURCES = (("bin", BIN_SOURCE), ("claude", CLAUDE_SOURCE), ("copilot", COPILOT_SOURCE))
 FUNCTIONS_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_functions"
 CONF_D_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_conf.d"
-SHIMS = ROOT / "tests" / "shims"
+SHIMS = ROOT / "tests" / "harness" / "shims"
 # The directories of the tests that run the real chezmoi, which lives in Homebrew's. The unit-test
 # sandbox does not use them: it exposes only the REAL_TOOLS of conftest.py.
 SYSTEM_PATH = ("/usr/bin", "/bin", "/usr/sbin", "/sbin")

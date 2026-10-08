@@ -18,7 +18,7 @@ package = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["tests"]
+pythonpath = ["tests/harness", "tests"]
 addopts = "--import-mode=importlib --strict-markers -ra"
 markers = [
     "integration: applies the dotfiles end to end; slow, needs a container engine or macOS",
