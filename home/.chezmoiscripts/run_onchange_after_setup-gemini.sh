@@ -12,6 +12,12 @@ fi
 command -v gemini >/dev/null || exit 0
 command -v fnm >/dev/null || { printf 'fnm not found; run_once_before_01-install-packages installs it\n' >&2; exit 1; }
 
-for skill in grill-me grilling handoff; do
-  npx --yes skills add -g "mattpocock/skills/skills/productivity/$skill" --agent gemini-cli -y
-done
+npx --yes skills add -g "https://github.com/mattpocock/skills" \
+  --skill grill-me \
+  --skill grilling \
+  --skill handoff \
+  --skill improve-codebase-architecture \
+  --skill codebase-design \
+  --skill domain-modeling \
+  --skill setup-matt-pocock-skills \
+  --agent gemini-cli -y

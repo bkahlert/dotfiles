@@ -58,9 +58,14 @@ class AgentSetupCases:
         (node_bin / "npx").chmod(0o755)
         result = script(f"setup-{self.agent}", prefix_root=tmp_path)
         assert result.returncode == 0, result.stderr
-        assert len((sandbox.home / "npx-calls").read_text().splitlines()) == 3
+        assert len((sandbox.home / "npx-calls").read_text().splitlines()) == 1
 
 
 def skill_calls(agent):
-    return [["--yes", "skills", "add", "-g", f"mattpocock/skills/skills/productivity/{skill}",
-             "--agent", AGENTS[agent], "-y"] for skill in ("grill-me", "grilling", "handoff")]
+    return [[
+        "--yes", "skills", "add", "-g", "https://github.com/mattpocock/skills",
+        "--skill", "grill-me", "--skill", "grilling", "--skill", "handoff",
+        "--skill", "improve-codebase-architecture", "--skill", "codebase-design",
+        "--skill", "domain-modeling", "--skill", "setup-matt-pocock-skills",
+        "--agent", AGENTS[agent], "-y",
+    ]]

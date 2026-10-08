@@ -27,6 +27,12 @@ if [[ $registered == false ]]; then
 fi
 copilot plugin install superpowers@superpowers-marketplace
 
-for skill in grill-me grilling handoff; do
-  npx --yes skills add -g "mattpocock/skills/skills/productivity/$skill" --agent github-copilot -y
-done
+npx --yes skills add -g "https://github.com/mattpocock/skills" \
+  --skill grill-me \
+  --skill grilling \
+  --skill handoff \
+  --skill improve-codebase-architecture \
+  --skill codebase-design \
+  --skill domain-modeling \
+  --skill setup-matt-pocock-skills \
+  --agent github-copilot -y
