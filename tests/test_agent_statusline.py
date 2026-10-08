@@ -13,6 +13,58 @@ from agent_statusline import render_parts
 
 
 class TestAgentStatusline:
+    class TestOnJsonInput:
+        @pytest.mark.parametrize("text,expected", [
+            ('{"session_id":"abc","nested":{"used":0}}', {"session_id": "abc", "nested": {"used": 0}}),
+            ("{}", {}), ("", {}), ("not json", {}), ("null", {}),
+            ("[]", {}), ('"session"', {}), ("42", {}), ("true", {}),
+        ])
+        def test_should_read_only_json_objects(self, text, expected):
+            assert agent_statusline.read_json(text) == expected
+
+        @pytest.mark.parametrize("value,path,expected", [
+            ({"nested": {"used": 0}}, ("nested", "used"), 0),
+            ({"nested": {"used": False}}, ("nested", "used"), False),
+            ({"nested": {"used": ""}}, ("nested", "used"), ""),
+            ({"nested": {}}, ("nested", "used"), None),
+            ({"nested": []}, ("nested", "used"), None),
+            (None, ("nested", "used"), None),
+            ({"used": 2}, (), {"used": 2}),
+        ])
+        def test_should_read_nested_fields_without_losing_falsey_values(self, value, path, expected):
+            assert agent_statusline.field(value, *path) == expected
+
+        @pytest.mark.parametrize("value,expected", [
+            (0, 0), (2, 2), (-1, -1), (0.5, 0.5),
+            (True, None), (False, None), ("2", None), (None, None), ({}, None),
+        ])
+        def test_should_accept_numbers_but_not_booleans(self, value, expected):
+            assert agent_statusline.number(value) == expected
+
+    class TestOnInputDump:
+        def test_should_replace_raw_input_with_owner_only_permissions(self, tmp_path, monkeypatch):
+            monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+            destination = tmp_path / "sample-input.json"
+            destination.write_text("previous")
+            destination.chmod(0o644)
+            raw = '{"session_name":"caf\u00e9"}\n'
+
+            agent_statusline.dump_input(raw, "sample-input.json")
+
+            assert destination.read_text() == raw
+            assert destination.stat().st_mode & 0o777 == 0o600
+            assert list(tmp_path.iterdir()) == [destination]
+
+        def test_should_surface_write_errors_and_clean_up_the_temporary_file(self, tmp_path, monkeypatch):
+            monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+            destination = tmp_path / "sample-input.json"
+            destination.mkdir()
+
+            with pytest.raises(OSError):
+                agent_statusline.dump_input("raw", "sample-input.json")
+
+            assert list(tmp_path.iterdir()) == [destination]
+
     class TestOnSession:
         @pytest.mark.parametrize("override,environment,icon", [
             ("1", "0", "\uf292"), ("0", "1", "#"),

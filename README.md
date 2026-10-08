@@ -86,7 +86,8 @@ See [Starship configuration](https://starship.rs/config/).
 [Copilot's formatter](home/private_dot_copilot/executable_statusline) share the
 session, model and context formatting.
 [The shared component](home/dot_local/share/agent_statusline.py) owns semantic
-icons, context gauges, hyperlinks and automatic Nerd Font detection. Both formatters use
+input dumping, JSON parsing, field lookup, numeric validation, icons, context
+gauges, hyperlinks and automatic Nerd Font detection. Both formatters use
 its cache at `$XDG_CACHE_HOME/agent-statusline/nerd-font-support`, defaulting to
 `~/.cache/agent-statusline/nerd-font-support`.
 `--nerd-fonts` and `--no-nerd-fonts` override `NERD_FONTS=1`/`0`;

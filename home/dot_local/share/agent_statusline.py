@@ -1,10 +1,43 @@
+import json
 import math
 import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Callable, NamedTuple
+
+
+def dump_input(text, filename):
+    destination = Path(tempfile.gettempdir()) / filename
+    dump = tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=destination.parent,
+        prefix=f".{destination.stem}-", delete=False)
+    try:
+        with dump:
+            dump.write(text)
+        Path(dump.name).replace(destination)
+    finally:
+        Path(dump.name).unlink(missing_ok=True)
+
+
+def read_json(text):
+    try:
+        value = json.loads(text)
+    except ValueError:
+        return {}
+    return value if isinstance(value, dict) else {}
+
+
+def field(value, *path):
+    for key in path:
+        value = value.get(key) if isinstance(value, dict) else None
+    return value
+
+
+def number(value):
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
 
 class Icons(NamedTuple):

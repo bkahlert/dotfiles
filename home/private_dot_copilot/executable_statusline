@@ -18,11 +18,9 @@
 # fields from the command input. All footer options remain enabled.
 # Requires Python >= 3.9 (standard library only).
 
-import json
 import math
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 script_dir = Path(__file__).absolute().parent
@@ -31,39 +29,9 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import part_session, render_parts, select_icons
+from agent_statusline import dump_input, field, number, part_session, read_json, render_parts, select_icons
 
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
-
-
-def dump_input(text):
-  destination = Path(tempfile.gettempdir()) / "copilot-statusline-input.json"
-  dump = tempfile.NamedTemporaryFile(
-    mode="w", encoding="utf-8", dir=destination.parent, prefix=".copilot-statusline-", delete=False)
-  try:
-    with dump:
-      dump.write(text)
-    Path(dump.name).replace(destination)
-  finally:
-    Path(dump.name).unlink(missing_ok=True)
-
-
-def read_status(text):
-  try:
-    status = json.loads(text)
-  except ValueError:
-    return {}
-  return status if isinstance(status, dict) else {}
-
-
-def field(value, *path):
-  for key in path:
-    value = value.get(key) if isinstance(value, dict) else None
-  return value
-
-
-def number(value):
-  return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
 
 
 def style(text, color=DIM):
@@ -171,8 +139,8 @@ def preview_input():
 def main():
   override, preview = parse_args(sys.argv[1:])
   text = preview_input() if preview else sys.stdin.read()
-  dump_input(text)
-  status = read_status(text)
+  dump_input(text, "copilot-statusline-input.json")
+  status = read_json(text)
   icons = select_icons(override)
   session_id = field(status, "session_id")
   name = field(status, "session_name")
