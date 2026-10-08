@@ -13,6 +13,38 @@ from agent_statusline import render_parts
 
 
 class TestAgentStatusline:
+    class TestOnContext:
+        @pytest.mark.parametrize("used,size,expected", [
+            (None, None, "\033[2m○ 0%\033[0m"),
+            (False, True, "\033[2m○ 0%\033[0m"),
+            ("28", "200000", "\033[2m○ 0%\033[0m"),
+            (0, 0, "\033[2m○ 0%\033[0m \033[2m╱0\033[0m"),
+            (28.8, 200000, "\033[2m◔ 28%\033[0m \033[2m╱200k\033[0m"),
+            (49.9, 999, "\033[2m◑ 49%\033[0m \033[2m╱999\033[0m"),
+            (50, 1000, "\033[33m◑ 50%\033[0m \033[33m╱1k\033[0m"),
+            (74.9, 1500, "\033[33m◕ 74%\033[0m \033[33m╱1.5k\033[0m"),
+            (75, 1000000, "\033[31m◕ 75%\033[0m \033[31m╱1m\033[0m"),
+            (100, 1500000, "\033[31m● 100%\033[0m \033[31m╱1.5m\033[0m"),
+        ])
+        def test_should_format_context_values_and_thresholds(self, used, size, expected):
+            assert agent_statusline.part_context(used, size, override="0") == expected
+
+        @pytest.mark.parametrize("override,environment,bar", [
+            ("1", "0", True), ("0", "1", False),
+            (None, "1", True), (None, "0", False),
+        ])
+        def test_should_select_its_own_gauge(self, monkeypatch, override, environment, bar):
+            monkeypatch.setenv("NERD_FONTS", environment)
+            gauge = "\uee03" + "\uee04" * 2 + "\uee01" * 6 + "\uee02" if bar else "◔"
+
+            result = agent_statusline.part_context(28, 200000, override=override)
+
+            assert result == f"\033[2m{gauge} 28%\033[0m \033[2m╱200k\033[0m"
+
+        def test_should_allow_missing_context(self, monkeypatch):
+            monkeypatch.setenv("NERD_FONTS", "0")
+            assert agent_statusline.part_context() == "\033[2m○ 0%\033[0m"
+
     class TestOnModel:
         @pytest.mark.parametrize("override,environment,icon", [
             ("1", "0", "\ue28c"), ("0", "1", "⚙\ufe0e"),
@@ -222,10 +254,14 @@ class TestStatuslineCommands:
             result = run(command, flag, stdin=json.dumps(payload))
 
             assert result.returncode == 0, result.stderr
-            assert result.stdout.split(" · ")[0] == (
-                expected.format(icon=icon) if expected else
-                ("\ue28c ?" if flag == "--nerd-fonts" else "⚙\ufe0e ?")
-            )
+            first = expected.format(icon=icon)
+            if not first:
+                if command == "statusline":
+                    first = "\ue28c ?" if flag == "--nerd-fonts" else "⚙\ufe0e ?"
+                else:
+                    gauge = "\uee00" + "\uee01" * 8 + "\uee02" if flag == "--nerd-fonts" else "○"
+                    first = f"\033[2m{gauge} 0%\033[0m\n"
+            assert result.stdout.split(" · ")[0] == first
 
     @pytest.mark.parametrize("command", ["statusline", "copilot-statusline"])
     def test_should_use_the_shared_cache_under_xdg_cache_home(
@@ -239,7 +275,10 @@ class TestStatuslineCommands:
         result = run("env", f"XDG_CACHE_HOME={cache_home}", command, stdin="{}")
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout.startswith("\ue28c ?")
+        if command == "statusline":
+            assert result.stdout.startswith("\ue28c ?")
+        else:
+            assert result.stdout == "\033[2m" + "\uee00" + "\uee01" * 8 + "\uee02 0%\033[0m\n"
 
     @pytest.mark.parametrize("command", ["statusline", "copilot-statusline"])
     def test_should_fail_visibly_when_the_shared_module_is_missing(self, command, run, sandbox):

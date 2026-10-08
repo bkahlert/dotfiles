@@ -84,7 +84,8 @@ See [Starship configuration](https://starship.rs/config/).
 
 [Claude's formatter](home/private_dot_claude/executable_statusline) and
 [Copilot's formatter](home/private_dot_copilot/executable_statusline) share the
-session, model and context formatting.
+session and context formatting. Claude also uses the shared model renderer;
+Copilot omits the model from its custom status line.
 [The shared component](home/dot_local/share/agent_statusline.py) owns semantic
 input dumping, JSON parsing, field lookup, numeric validation, icons, context
 gauges, hyperlinks and automatic Nerd Font detection. Both formatters use
@@ -99,6 +100,8 @@ The shared `part_session` renderer accepts an optional ID, name and URL, and
 selects its own session icon using the font override or automatic detection.
 The shared `part_model` renderer also selects its icon and handles missing-model
 text and optional configured-model highlighting; scripts only supply its arguments.
+The shared `part_context` renderer owns gauge selection, percentage thresholds and
+token formatting. Copilot supplies current context metrics, falling back to legacy fields.
 
 Preview Claude's sample:
 

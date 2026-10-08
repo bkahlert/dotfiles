@@ -181,17 +181,12 @@ class TestStatusline:
             assert expected in result.stdout
 
     class TestOnModel:
-        @pytest.mark.parametrize("display_name,model_id,expected", [
-            (None, "sonnet", "sonnet"),
-            ("", "sonnet", "sonnet"),
-            (42, "sonnet", "sonnet"),
-            ("displayed", "sonnet", "displayed"),
-            (None, None, "?"),
-            ("", "", "?"),
-            (None, 42, "?"),
+        @pytest.mark.parametrize("display_name,model_id", [
+            (None, "sonnet"), ("", "sonnet"), (42, "sonnet"),
+            ("displayed", "sonnet"), (None, None), ("", ""), (None, 42),
         ])
-        def test_should_fall_back_from_display_name_to_id(
-            self, sandbox, display_name, model_id, expected
+        def test_should_omit_model_data(
+            self, sandbox, display_name, model_id
         ):
             payload = session_payload()
             payload["model"] = {"display_name": display_name, "id": model_id}
@@ -199,17 +194,16 @@ class TestStatusline:
             result = render(sandbox, payload)
 
             assert result.returncode == 0, result.stderr
-            assert f" · ⚙︎ {expected} · " in result.stdout
+            assert result.stdout == preview_output()
 
-        def test_should_preserve_the_incoming_display_name(self, sandbox):
+        def test_should_omit_the_incoming_display_name_and_effort(self, sandbox):
             payload = session_payload()
             payload["model"].update(id="gpt-6.1-sol", display_name="gpt-6.1-sol · high")
 
             result = render(sandbox, payload)
 
             assert result.returncode == 0, result.stderr
-            assert "⚙︎ gpt-6.1-sol · high" in result.stdout
-            assert result.stdout.count("high") == 1
+            assert result.stdout == preview_output()
 
     class TestOnAiUsed:
         def test_should_render_zero_with_the_aic_unit(self, sandbox):
@@ -273,7 +267,8 @@ class TestStatusline:
             claude = run("statusline", flag, stdin=json.dumps(payload))
 
             assert copilot.returncode == claude.returncode == 0
-            assert copilot.stdout == claude.stdout
+            claude_parts = claude.stdout.split(" · ")
+            assert copilot.stdout == " · ".join([claude_parts[0], *claude_parts[2:]])
 
     class TestOnInputDump:
         def test_should_store_raw_input_with_owner_only_permissions(self, run, sandbox):
@@ -346,7 +341,7 @@ class TestStatusline:
         })
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout == f"⚙︎ gpt-5-mini · {DIM}○ 0%{RESET}\n"
+        assert result.stdout == f"{DIM}○ 0%{RESET}\n"
 
 
 def render(sandbox, payload, *args):
@@ -407,15 +402,14 @@ def session_payload():
 
 
 def preview_output(*, nerd_fonts=False):
-    session, model, gauge, warning = (
-        ("", "", "\uee03" + "\uee04" * 2 + "\uee01" * 6 + "\uee02", "")
-        if nerd_fonts else ("#", "⚙︎", "◔", "⚠︎"))
+    session, gauge, warning = (
+        ("", "\uee03" + "\uee04" * 2 + "\uee01" * 6 + "\uee02", "")
+        if nerd_fonts else ("#", "◔", "⚠︎"))
     return " · ".join([
         f"{session} " + link(
             f"file://{Path.home()}/.copilot/session-state/abc123def456",
             "abc123de",
         ) + " \033[3mmy-session\033[0m",
-        f"{model} claude-sonnet-4-6",
         f"{DIM}{gauge} 28%{RESET} {DIM}╱200k{RESET}",
         f"{DIM}0.32 AIC{RESET}",
         f"{DIM}{warning} YOLO{RESET}",

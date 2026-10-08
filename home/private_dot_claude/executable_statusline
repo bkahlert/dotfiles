@@ -31,7 +31,7 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import dump_input, field, link, number, part_model, part_session, read_json, render_parts, select_icons
+from agent_statusline import dump_input, field, link, number, part_context, part_model, part_session, read_json, render_parts, select_icons
 
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
 RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
@@ -63,14 +63,6 @@ def severity(value, thresholds):
     return RED if value >= error else YELLOW if value >= warn else DIM
 
 
-def format_tokens(count):
-    if count >= 1_000_000:
-        return f"{count / 1_000_000:g}m"
-    if count >= 1000:
-        return f"{count / 1000:g}k"
-    return str(int(count))
-
-
 def resets_in(epoch):
     delta = epoch - int(time.time())
     if delta <= 0:
@@ -89,19 +81,6 @@ def resets_in(epoch):
 def part_agent(session, icons):
     name = field(session, "agent", "name") or ""
     return f"{icons.agent} {name}" if name else ""
-
-
-def part_context(session, icons):
-    window = field(session, "context_window")
-    used = number(field(window, "used_percentage"))
-    pct = 0 if used is None else math.floor(used)
-    style = severity(pct, USAGE_THRESHOLDS)
-    out = f"{style}{icons.gauge(pct)} {pct}%{RESET}"
-    size = number(field(window, "context_window_size"))
-    if size is not None:
-        tokens = f" {icons.tokens}" if icons.tokens else ""
-        out += f" {style}╱{format_tokens(size)}{tokens}{RESET}"
-    return out
 
 
 def part_cost(session):
@@ -181,7 +160,8 @@ def main(args):
                      f"file://{transcript}" if transcript else None, override=override),
         part_model(field(session, "model", "id"), configured_model(), override=override),
         part_agent(session, icons),
-        part_context(session, icons),
+        part_context(field(session, "context_window", "used_percentage"),
+                     field(session, "context_window", "context_window_size"), override=override),
         part_cost(session),
         part_rate_limit(field(limits, "five_hour"), icons.clock, icons.restart),
         part_rate_limit(field(limits, "seven_day"), icons.calendar, icons.restart),

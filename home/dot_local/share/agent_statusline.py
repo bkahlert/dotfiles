@@ -148,6 +148,27 @@ def link(url, text):
     return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
 
 
+def format_tokens(count):
+    if count >= 1_000_000:
+        return f"{count / 1_000_000:g}m"
+    if count >= 1000:
+        return f"{count / 1000:g}k"
+    return str(int(count))
+
+
+def part_context(used=None, size=None, *, override=None):
+    icons = select_icons(override)
+    used = number(used)
+    pct = 0 if used is None else math.floor(used)
+    color = "\033[31m" if pct >= 75 else "\033[33m" if pct >= 50 else "\033[2m"
+    out = f"{color}{icons.gauge(pct)} {pct}%\033[0m"
+    size = number(size)
+    if size is not None:
+        tokens = f" {icons.tokens}" if icons.tokens else ""
+        out += f" {color}╱{format_tokens(size)}{tokens}\033[0m"
+    return out
+
+
 def part_model(model=None, configured=None, *, override=None):
     model = "?" if model is None else model
     text = f"{select_icons(override).model} {model}"
