@@ -28,22 +28,24 @@ class TestCopilotConfig:
         assert settings["statusLine"] == {
             "type": "command",
             "command": "~/.copilot/statusline",
+            "padding": 1,
         }
         assert settings["footer"] == {
-            "showAgent": True,
-            "showAiUsed": True,
-            "showContextWindow": True,
-            "showModelEffort": True,
-            "showQuota": True,
-            "showYolo": True,
-            "showCiStatus": True,
+            "showAgent": False,
+            "showAiUsed": False,
             "showBranch": True,
-            "showPullRequest": True,
-            "showDirectory": True,
-            "showCodeChanges": True,
-            "showUsername": True,
-            "showSandbox": True,
+            "showCiStatus": True,
+            "showCodeChanges": False,
+            "showContextWindow": False,
             "showCustom": True,
+            "showDirectory": True,
+            "showModelEffort": False,
+            "showPullRequest": True,
+            "showQuota": True,
+            "showSandbox": True,
+            "showSchedules": False,
+            "showUsername": False,
+            "showYolo": False,
         }
         assert stat.S_IMODE(copilot.stat().st_mode) == 0o700
         assert stat.S_IMODE((copilot / "settings.json").stat().st_mode) == 0o600
