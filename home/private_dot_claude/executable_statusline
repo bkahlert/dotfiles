@@ -31,7 +31,7 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import dump_input, field, link, number, part_session, read_json, render_parts, select_icons
+from agent_statusline import dump_input, field, link, number, part_model, part_session, read_json, render_parts, select_icons
 
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
 RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
@@ -85,17 +85,6 @@ def resets_in(epoch):
 
 
 # ── Parts ──────────────────────────────────────────────────
-
-def part_model(session, icons, configured):
-    model = field(session, "model", "id")
-    model = "?" if model is None else model
-    if not configured:
-        return f"{icons.model} {model}"
-    # settings may use short names ("haiku") or full IDs ("claude-haiku-4-5"); match both ways
-    a, b = model.lower(), configured.lower()
-    style = DIM if a in b or b in a else YELLOW
-    return f"{style}{icons.model} {model}{RESET}"
-
 
 def part_agent(session, icons):
     name = field(session, "agent", "name") or ""
@@ -190,7 +179,7 @@ def main(args):
     parts = [
         part_session(field(session, "session_id"), field(session, "session_name"),
                      f"file://{transcript}" if transcript else None, override=override),
-        part_model(session, icons, configured_model()),
+        part_model(field(session, "model", "id"), configured_model(), override=override),
         part_agent(session, icons),
         part_context(session, icons),
         part_cost(session),

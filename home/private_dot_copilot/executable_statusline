@@ -29,7 +29,7 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import dump_input, field, number, part_session, read_json, render_parts, select_icons
+from agent_statusline import dump_input, field, number, part_model, part_session, read_json, render_parts, select_icons
 
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
 
@@ -48,13 +48,6 @@ def format_tokens(count):
   if count >= 1000:
     return f"{count / 1000:g}k"
   return str(int(count))
-
-
-def part_model(status, icons):
-  model = field(status, "model", "display_name")
-  if not isinstance(model, str) or not model:
-    model = field(status, "model", "id")
-  return f"{icons.model} {model if isinstance(model, str) and model else '?'}"
 
 
 def part_context(status, icons):
@@ -145,6 +138,9 @@ def main():
   session_id = field(status, "session_id")
   name = field(status, "session_name")
   transcript = field(status, "transcript_path")
+  model = field(status, "model", "display_name")
+  if not isinstance(model, str) or not model:
+    model = field(status, "model", "id")
   parts = [
     part_session(
       session_id if isinstance(session_id, str) else None,
@@ -152,7 +148,7 @@ def main():
       f"file://{transcript}" if isinstance(transcript, str) and transcript else None,
       override=override,
     ),
-    part_model(status, icons),
+    part_model(model if isinstance(model, str) and model else None, override=override),
     part_context(status, icons),
     part_cost(status),
     *part_indicators(status, icons),

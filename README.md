@@ -97,6 +97,8 @@ Session IDs and names render independently: only the shortened ID links to the
 transcript, while the name appears in italics outside the link.
 The shared `part_session` renderer accepts an optional ID, name and URL, and
 selects its own session icon using the font override or automatic detection.
+The shared `part_model` renderer also selects its icon and handles missing-model
+text and optional configured-model highlighting; scripts only supply its arguments.
 
 Preview Claude's sample:
 

@@ -148,6 +148,17 @@ def link(url, text):
     return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
 
 
+def part_model(model=None, configured=None, *, override=None):
+    model = "?" if model is None else model
+    text = f"{select_icons(override).model} {model}"
+    if not configured:
+        return text
+    # Settings may use a short name or a full model ID.
+    actual, expected = model.lower(), configured.lower()
+    color = "\033[2m" if actual in expected or expected in actual else "\033[33m"
+    return f"{color}{text}\033[0m"
+
+
 def part_session(session_id=None, name=None, url=None, *, override=None):
     id_part = ""
     if session_id:

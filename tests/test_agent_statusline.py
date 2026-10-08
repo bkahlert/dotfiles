@@ -13,6 +13,31 @@ from agent_statusline import render_parts
 
 
 class TestAgentStatusline:
+    class TestOnModel:
+        @pytest.mark.parametrize("override,environment,icon", [
+            ("1", "0", "\ue28c"), ("0", "1", "⚙\ufe0e"),
+            (None, "1", "\ue28c"), (None, "0", "⚙\ufe0e"),
+        ])
+        @pytest.mark.parametrize("model,configured,expected", [
+            ("claude-sonnet-4-6", None, "{icon} claude-sonnet-4-6"),
+            (None, None, "{icon} ?"),
+            ("", None, "{icon} "),
+            ("Auto → GPT-6 Luna", "", "{icon} Auto → GPT-6 Luna"),
+            ("claude-sonnet-4-6", "sonnet", "\033[2m{icon} claude-sonnet-4-6\033[0m"),
+            ("sonnet", "claude-sonnet-4-6", "\033[2m{icon} sonnet\033[0m"),
+            ("CLAUDE-SONNET-4-6", "Sonnet", "\033[2m{icon} CLAUDE-SONNET-4-6\033[0m"),
+            ("claude-sonnet-4-6", "opus", "\033[33m{icon} claude-sonnet-4-6\033[0m"),
+            (None, "sonnet", "\033[33m{icon} ?\033[0m"),
+        ])
+        def test_should_render_the_model_and_select_its_own_icon(
+            self, monkeypatch, override, environment, icon, model, configured, expected
+        ):
+            monkeypatch.setenv("NERD_FONTS", environment)
+
+            result = agent_statusline.part_model(model, configured, override=override)
+
+            assert result == expected.format(icon=icon)
+
     class TestOnJsonInput:
         @pytest.mark.parametrize("text,expected", [
             ('{"session_id":"abc","nested":{"used":0}}', {"session_id": "abc", "nested": {"used": 0}}),

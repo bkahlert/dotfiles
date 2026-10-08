@@ -181,6 +181,26 @@ class TestStatusline:
             assert expected in result.stdout
 
     class TestOnModel:
+        @pytest.mark.parametrize("display_name,model_id,expected", [
+            (None, "sonnet", "sonnet"),
+            ("", "sonnet", "sonnet"),
+            (42, "sonnet", "sonnet"),
+            ("displayed", "sonnet", "displayed"),
+            (None, None, "?"),
+            ("", "", "?"),
+            (None, 42, "?"),
+        ])
+        def test_should_fall_back_from_display_name_to_id(
+            self, sandbox, display_name, model_id, expected
+        ):
+            payload = session_payload()
+            payload["model"] = {"display_name": display_name, "id": model_id}
+
+            result = render(sandbox, payload)
+
+            assert result.returncode == 0, result.stderr
+            assert f" · ⚙︎ {expected} · " in result.stdout
+
         def test_should_preserve_the_incoming_display_name(self, sandbox):
             payload = session_payload()
             payload["model"].update(id="gpt-6.1-sol", display_name="gpt-6.1-sol · high")
