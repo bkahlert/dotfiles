@@ -98,8 +98,8 @@ class Sandbox:
         self.env = isolated_env(home, [str(fakes), str(bin_links), str(real_tools)])
         shared = home / ".local" / "share"
         shared.mkdir(parents=True, exist_ok=True)
-        (shared / "statusline_render.py").symlink_to(
-            HOME_SOURCE / "dot_local" / "share" / "statusline_render.py")
+        (shared / "agent_statusline.py").symlink_to(
+            HOME_SOURCE / "dot_local" / "share" / "agent_statusline.py")
         for name in GUARDED:
             self._write(name, "printf '%s: not faked in this test\\n' \"${0##*/}\" >&2\nexit 127\n",
                         record=False)

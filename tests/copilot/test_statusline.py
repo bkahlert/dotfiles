@@ -70,7 +70,7 @@ class TestStatusline:
         def test_should_cache_the_probe_and_render_accordingly(self, run, sandbox):
             result = run("copilot-statusline", stdin=json.dumps(session_payload()))
 
-            cached = (sandbox.home / ".cache/copilot/nerd-font-support").read_text()
+            cached = (sandbox.home / ".cache/agent-statusline/nerd-font-support").read_text()
             assert cached in ("0", "1")
             assert result.returncode == 0, result.stderr
             assert result.stdout == preview_output(nerd_fonts=cached == "1")
@@ -126,7 +126,7 @@ class TestStatusline:
             assert (result.stdout, cache.read_text()) == (preview_output(nerd_fonts=True), "1")
 
         def test_should_still_render_on_an_unwritable_cache(self, run, sandbox):
-            (sandbox.home / ".cache/copilot").write_text("")
+            (sandbox.home / ".cache/agent-statusline").write_text("")
 
             result = run("copilot-statusline", stdin=json.dumps(session_payload()))
 
@@ -343,31 +343,30 @@ def render(sandbox, payload, *args):
 
 def session_payload():
     return {
-        "cwd": "/Users/bkahlert",
-        "session_id": "aac81c36-9534-4fc1-8eb7-f0f2bd728ba0",
-        "session_name": "Conduct Testing Session",
-        "transcript_path": (
-            "/Users/bkahlert/.copilot/session-state/aac81c36-9534-4fc1-8eb7-f0f2bd728ba0"),
+        "cwd": str(ROOT),
+        "session_id": "abc123def456",
+        "session_name": "my-session",
+        "transcript_path": str(Path.home() / ".copilot/session-state/abc123def456"),
         "model": {
-            "id": "auto",
-            "display_name": "Auto → GPT-6 Luna",
+            "id": "claude-sonnet-4-6",
+            "display_name": "claude-sonnet-4-6",
             "auto_tier": None,
             "pending_auto_tier": None,
         },
-        "workspace": {"current_dir": "/Users/bkahlert"},
+        "workspace": {"current_dir": str(ROOT), "project_dir": str(ROOT), "added_dirs": []},
         "username": "bkahlert",
         "remote": {"connected": False},
         "version": "1.0.93",
         "cost": {
-            "total_api_duration_ms": 10168,
-            "total_lines_added": 0,
-            "total_lines_removed": 0,
-            "total_duration_ms": 115479,
+            "total_api_duration_ms": 2300,
+            "total_lines_added": 156,
+            "total_lines_removed": 23,
+            "total_duration_ms": 45000,
             "total_premium_requests": 3,
         },
         "context_window": {
-            "total_input_tokens": 83731,
-            "total_output_tokens": 272,
+            "total_input_tokens": 15234,
+            "total_output_tokens": 4521,
             "total_cache_read_tokens": 61234,
             "total_cache_write_tokens": 22485,
             "total_reasoning_tokens": 215,
@@ -380,7 +379,7 @@ def session_payload():
             "last_call_output_tokens": 21,
             "current_context_tokens": 22663,
             "displayed_context_limit": 200000,
-            "current_context_used_percentage": 11,
+            "current_context_used_percentage": 28,
         },
         "ai_used": {"total_nano_aiu": 320414850, "formatted": "0.32"},
         "allow_all_enabled": True,
@@ -389,22 +388,22 @@ def session_payload():
 
 def preview_output(*, nerd_fonts=False):
     session, model, gauge, warning = (
-        ("", "", "\uee03" + "\uee01" * 8 + "\uee02", "")
-        if nerd_fonts else ("#", "⚙︎", "○", "⚠︎"))
+        ("", "", "\uee03" + "\uee04" * 2 + "\uee01" * 6 + "\uee02", "")
+        if nerd_fonts else ("#", "⚙︎", "◔", "⚠︎"))
     return " · ".join([
-        link(
-            "file:///Users/bkahlert/.copilot/session-state/aac81c36-9534-4fc1-8eb7-f0f2bd728ba0",
-            f"{session} aac81c36:Conduct Testing Session",
-        ),
-        f"{model} Auto → GPT-6 Luna",
-        f"{DIM}{gauge} 11%{RESET} {DIM}╱200k{RESET}",
+        f"{session} " + link(
+            f"file://{Path.home()}/.copilot/session-state/abc123def456",
+            "abc123de",
+        ) + " \033[3mmy-session\033[0m",
+        f"{model} claude-sonnet-4-6",
+        f"{DIM}{gauge} 28%{RESET} {DIM}╱200k{RESET}",
         f"{DIM}0.32 AIC{RESET}",
         f"{DIM}{warning} YOLO{RESET}",
     ]) + "\n"
 
 
 def cache_detection(sandbox, value):
-    cache = sandbox.home / ".cache/copilot/nerd-font-support"
+    cache = sandbox.home / ".cache/agent-statusline/nerd-font-support"
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text(value)
     return cache

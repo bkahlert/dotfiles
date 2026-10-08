@@ -25,7 +25,7 @@ class TestStatusline:
     class TestOnAutoDetection:
         def test_should_cache_the_probe_and_render_accordingly(self, run, sandbox):
             result = run("statusline", stdin=json.dumps(INPUT))
-            cached = (sandbox.home / ".cache/claude/nerd-font-support").read_text()
+            cached = (sandbox.home / ".cache/agent-statusline/nerd-font-support").read_text()
             assert cached in ("0", "1")
             assert result.stdout == {"1": NERD, "0": FALLBACK}[cached]
 
@@ -54,7 +54,7 @@ class TestStatusline:
             assert result.stdout == NERD
 
         def test_should_still_render_when_the_cache_cannot_be_written(self, run, sandbox):
-            (sandbox.home / ".cache/claude").write_text("")
+            (sandbox.home / ".cache/agent-statusline").write_text("")
             result = run("statusline", stdin=json.dumps(INPUT))
             assert result.returncode == 0
             assert result.stdout in (NERD, FALLBACK)
@@ -194,7 +194,7 @@ def render(run, fields):
 
 
 def cache_detection(sandbox, value):
-    cache = sandbox.home / ".cache/claude/nerd-font-support"
+    cache = sandbox.home / ".cache/agent-statusline/nerd-font-support"
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text(value)
     return cache
@@ -219,7 +219,7 @@ def sample(now):
         "session_id": "abc123def456",
         "session_name": "my-session",
         "transcript_path": f"{HOME}/.claude/transcripts/abc123def456.jsonl",
-        "model": {"id": "claude-sonnet-4-6", "display_name": "Sonnet"},
+        "model": {"id": "claude-sonnet-4-6", "display_name": "claude-sonnet-4-6"},
         "workspace": {"current_dir": ROOT, "project_dir": ROOT, "added_dirs": []},
         "version": "2.1.90",
         "output_style": {"name": "default"},
@@ -263,7 +263,7 @@ EMPTY_SEGMENTS = "" * 6
 INPUT = sample(int(time.time()))
 
 NERD = " · ".join([
-    link(TRANSCRIPT, " abc123de:my-session"),
+    " " + link(TRANSCRIPT, "abc123de") + " \033[3mmy-session\033[0m",
     " claude-sonnet-4-6",
     "\U000f06a9 security-reviewer",
     f"{DIM}{EMPTY_SEGMENTS} 28%{RESET} {DIM}╱200k{RESET}",
@@ -273,7 +273,7 @@ NERD = " · ".join([
 ]) + "\n"
 
 FALLBACK = " · ".join([
-    link(TRANSCRIPT, "# abc123de:my-session"),
+    "# " + link(TRANSCRIPT, "abc123de") + " \033[3mmy-session\033[0m",
     "⚙︎ claude-sonnet-4-6",
     "웃 security-reviewer",
     f"{DIM}◔ 28%{RESET} {DIM}╱200k{RESET}",

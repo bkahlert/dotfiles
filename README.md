@@ -84,8 +84,16 @@ See [Starship configuration](https://starship.rs/config/).
 
 [Claude's formatter](home/private_dot_claude/executable_statusline) and
 [Copilot's formatter](home/private_dot_copilot/executable_statusline) share the
-session, model and context formatting. Nerd Font detection is automatic;
-`--nerd-fonts`, `--no-nerd-fonts` and `NERD_FONTS=1`/`0` override it.
+session, model and context formatting.
+[The shared component](home/dot_local/share/agent_statusline.py) owns semantic
+icons, context gauges, hyperlinks and automatic Nerd Font detection. Both formatters use
+its cache at `$XDG_CACHE_HOME/agent-statusline/nerd-font-support`, defaulting to
+`~/.cache/agent-statusline/nerd-font-support`.
+`--nerd-fonts` and `--no-nerd-fonts` override `NERD_FONTS=1`/`0`;
+both override detection.
+
+Session IDs and names render independently: only the shortened ID links to the
+transcript, while the name appears in italics outside the link.
 
 Preview Claude's sample:
 
@@ -93,7 +101,7 @@ Preview Claude's sample:
 home/private_dot_claude/executable_statusline --preview --nerd-fonts
 ```
 
-Preview Copilot's captured session:
+Preview Copilot's sample, with matching session, model and context values:
 
 ```sh
 home/private_dot_copilot/executable_statusline --preview --nerd-fonts
