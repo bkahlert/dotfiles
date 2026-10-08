@@ -1,0 +1,247 @@
+#!/usr/bin/env python3
+# Purpose: Render a Claude-style status line from Copilot session JSON on stdin.
+# Usage:   statusline [--nerd-fonts | --no-nerd-fonts] [--preview]
+#
+# Options:
+#   --nerd-fonts      Force Nerd Font icons (overrides detection and NERD_FONTS).
+#   --no-nerd-fonts   Force Unicode fallbacks (overrides detection and NERD_FONTS).
+#   --preview         Render the sample Copilot session from the dotfiles repository instead of stdin.
+#   -h, --help        Show this help.
+#
+# Example:
+#   ~/.copilot/statusline --preview --nerd-fonts
+#
+# Configured in ~/.copilot/settings.json as statusLine.command.
+# Writes the latest raw input to copilot-statusline-input.json in Python's temporary
+# directory (TMPDIR when set), with owner-only permissions.
+# Agent, quota, effort and sandbox stay in the native footer: Copilot omits their
+# fields from the command input. All footer options remain enabled.
+# Requires Python >= 3.9 (standard library only).
+
+import json
+import math
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
+SEPARATOR = " · "
+CIRCLES = [(12, "○"), (37, "◔"), (62, "◑"), (87, "◕"), (math.inf, "●")]
+BAR = [("\uee00", "\uee03"), *[("\uee01", "\uee04")] * 8, ("\uee02", "\uee05")]
+
+
+def nerd_fonts_supported(override):
+  for forced in (override, os.environ.get("NERD_FONTS")):
+    if forced in ("0", "1"):
+      return forced == "1"
+  cache = Path(os.environ.get("XDG_CACHE_HOME") or Path.home() / ".cache") / "copilot" / "nerd-font-support"
+  try:
+    if not cache.is_file() or fonts_changed_since(cache):
+      cache.parent.mkdir(parents=True, exist_ok=True)
+      cache.write_text("1" if nerd_fonts_installed() else "0")
+    return cache.read_text().strip() == "1"
+  except OSError:
+    return nerd_fonts_installed()
+
+
+def fonts_changed_since(path):
+  since = path.stat().st_mtime_ns
+  return any(Path(directory).stat().st_mtime_ns > since
+             for root in font_directories() for directory, _, _ in os.walk(root))
+
+
+def font_directories():
+  if sys.platform == "darwin":
+    return [Path.home() / "Library/Fonts", Path("/Library/Fonts")]
+  data = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local/share")
+  return [data / "fonts", Path.home() / ".fonts", Path("/usr/local/share/fonts"), Path("/usr/share/fonts")]
+
+
+def nerd_fonts_installed():
+  if sys.platform == "darwin":
+    for directory in font_directories():
+      if directory.is_dir() and any("nerd" in entry.name.lower() for entry in directory.iterdir()):
+        return True
+  if shutil.which("fc-list"):
+    fonts = subprocess.run(["fc-list"], capture_output=True, text=True).stdout
+    return "nerd font" in fonts.lower()
+  return False
+
+
+def dump_input(text):
+  destination = Path(tempfile.gettempdir()) / "copilot-statusline-input.json"
+  dump = tempfile.NamedTemporaryFile(
+    mode="w", encoding="utf-8", dir=destination.parent, prefix=".copilot-statusline-", delete=False)
+  try:
+    with dump:
+      dump.write(text)
+    Path(dump.name).replace(destination)
+  finally:
+    Path(dump.name).unlink(missing_ok=True)
+
+
+def read_status(text):
+  try:
+    status = json.loads(text)
+  except ValueError:
+    return {}
+  return status if isinstance(status, dict) else {}
+
+
+def field(value, *path):
+  for key in path:
+    value = value.get(key) if isinstance(value, dict) else None
+  return value
+
+
+def number(value):
+  return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def style(text, color=DIM):
+  return f"{color}{text}{RESET}"
+
+
+def severity(value):
+  return RED if value >= 75 else YELLOW if value >= 50 else DIM
+
+
+def format_tokens(count):
+  if count >= 1_000_000:
+    return f"{count / 1_000_000:g}m"
+  if count >= 1000:
+    return f"{count / 1000:g}k"
+  return str(int(count))
+
+
+def bar(pct):
+  return "".join(full if pct >= 5 + 10 * i else empty for i, (empty, full) in enumerate(BAR))
+
+
+def part_session(status, nerd_fonts):
+  session_id = field(status, "session_id")
+  if not isinstance(session_id, str) or not session_id:
+    return ""
+  name = field(status, "session_name")
+  suffix = f":{name}" if isinstance(name, str) and name else ""
+  icon = "\uf292" if nerd_fonts else "#"
+  text = f"{icon} {session_id[:8]}{suffix}"
+  transcript = field(status, "transcript_path")
+  return link(f"file://{transcript}", text) if isinstance(transcript, str) and transcript else text
+
+
+def part_model(status, nerd_fonts):
+  model = field(status, "model", "display_name")
+  if not isinstance(model, str) or not model:
+    model = field(status, "model", "id")
+  icon = "\ue28c" if nerd_fonts else "⚙︎"
+  return f"{icon} {model if isinstance(model, str) and model else '?'}"
+
+
+def part_context(status, nerd_fonts):
+  used = number(field(status, "context_window", "current_context_used_percentage"))
+  if used is None:
+    used = number(field(status, "context_window", "used_percentage"))
+  pct = 0 if used is None else math.floor(used)
+  color = severity(pct)
+  gauge = bar(pct) if nerd_fonts else next(glyph for bound, glyph in CIRCLES if pct < bound)
+  out = [style(f"{gauge} {pct}%", color)]
+  size = number(field(status, "context_window", "displayed_context_limit"))
+  if size is None:
+    size = number(field(status, "context_window", "context_window_size"))
+  if size is not None:
+    out.append(style(f"╱{format_tokens(size)}", color))
+  return " ".join(out)
+
+
+def part_cost(status):
+  ai_used = field(status, "ai_used", "formatted")
+  return style(f"{ai_used} AIC") if isinstance(ai_used, str) and ai_used else ""
+
+
+def part_indicators(status, nerd_fonts):
+  parts = []
+  if field(status, "remote", "connected") is True:
+    icon = "\uf0ac" if nerd_fonts else "↗"
+    parts.append(style(f"{icon} remote"))
+  if field(status, "allow_all_enabled") is True:
+    icon = "\uf071" if nerd_fonts else "⚠︎"
+    parts.append(style(f"{icon} YOLO"))
+  return parts
+
+
+def link(url, text):
+  return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
+
+
+def usage():
+  for line in Path(__file__).read_text().splitlines()[1:]:
+    if not line.startswith("#"):
+      break
+    print(line[2:] if line.startswith("# ") else line[1:])
+
+
+def die(message):
+  name = Path(sys.argv[0]).name
+  print(f"{name}: {message}\nSee '{name} --help'", file=sys.stderr)
+  sys.exit(2)
+
+
+def parse_args(args):
+  override, preview = None, False
+  for arg in args:
+    if arg in ("-h", "--help"):
+      usage()
+      sys.exit(0)
+    elif arg == "--preview":
+      preview = True
+    elif arg == "--nerd-fonts":
+      override = "1"
+    elif arg == "--no-nerd-fonts":
+      override = "0"
+    elif arg.startswith("-"):
+      die(f"unknown option: {arg}")
+    else:
+      die(f"unexpected argument: {arg}")
+  return override, preview
+
+
+def preview_input():
+  source = subprocess.run(["chezmoi", "source-path"], capture_output=True, text=True)
+  if source.returncode:
+    sys.stderr.write(source.stderr)
+    sys.exit(source.returncode)
+  repo = Path(source.stdout.strip()).parent
+  sample = subprocess.run(
+    ["uv", "run", "--locked", "tests/copilot/test_statusline.py", "--print-input"],
+    cwd=repo,
+    capture_output=True,
+    text=True,
+  )
+  if sample.returncode:
+    sys.stderr.write(sample.stderr)
+    sys.exit(sample.returncode)
+  return sample.stdout
+
+
+def main():
+  override, preview = parse_args(sys.argv[1:])
+  text = preview_input() if preview else sys.stdin.read()
+  dump_input(text)
+  status = read_status(text)
+  nerd_fonts = nerd_fonts_supported(override)
+  parts = [
+    part_session(status, nerd_fonts),
+    part_model(status, nerd_fonts),
+    part_context(status, nerd_fonts),
+    part_cost(status),
+    *part_indicators(status, nerd_fonts),
+  ]
+  print(SEPARATOR.join(part for part in parts if part))
+
+
+if __name__ == "__main__":
+  main()

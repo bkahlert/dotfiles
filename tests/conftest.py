@@ -44,8 +44,9 @@ RECORD_SEPARATOR = "\x1e\0"
 @pytest.fixture(scope="session")
 def bin_links(tmp_path_factory):
     links = tmp_path_factory.mktemp("bin")
-    for _, name, source in scripts():
-        (links / name).symlink_to(source)
+    for area, name, source in scripts():
+        link_name = f"copilot-{name}" if area == "copilot" else name
+        (links / link_name).symlink_to(source)
     return links
 
 

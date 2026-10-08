@@ -132,6 +132,44 @@ class TestStatusline:
             assert calls("chezmoi") == [["source-path"]]
             assert calls("uv") == [["run", "--locked", "tests/claude/test_statusline.py", "--print-input"]]
             assert (sandbox.home / "uv.cwd").read_text() == f"{sandbox.home}/dotfiles\n"
+            assert dump_path(sandbox).read_text() == json.dumps(INPUT)
+
+    class TestOnInputDump:
+        def test_should_store_raw_input_with_owner_only_permissions(self, run, sandbox):
+            raw = json.dumps(INPUT, indent=2) + "\n"
+
+            result = run("statusline", "--no-nerd-fonts", stdin=raw)
+
+            assert result.returncode == 0, result.stderr
+            assert dump_path(sandbox).read_text() == raw
+            assert dump_path(sandbox).stat().st_mode & 0o777 == 0o600
+            assert result.stdout == FALLBACK
+
+        def test_should_replace_the_previous_dump(self, run, sandbox):
+            first = run("statusline", "--no-nerd-fonts", stdin='{"session_id":"first"}')
+            second = run("statusline", "--no-nerd-fonts", stdin='{"session_id":"second"}')
+
+            assert first.returncode == second.returncode == 0
+            assert dump_path(sandbox).read_text() == '{"session_id":"second"}'
+
+        def test_should_dump_malformed_input_before_parsing(self, run, sandbox):
+            result = run("statusline", "--no-nerd-fonts", stdin="not json\n")
+
+            assert result.returncode == 0, result.stderr
+            assert dump_path(sandbox).read_text() == "not json\n"
+
+        def test_should_replace_a_symlink_without_touching_its_target(self, run, sandbox):
+            target = sandbox.home / "untouched.json"
+            target.write_text("untouched")
+            dump_path(sandbox).symlink_to(target)
+
+            result = run("statusline", "--no-nerd-fonts", stdin="{}")
+
+            assert result.returncode == 0, result.stderr
+            assert target.read_text() == "untouched"
+            assert not dump_path(sandbox).is_symlink()
+            assert dump_path(sandbox).read_text() == "{}"
+            assert dump_path(sandbox).stat().st_mode & 0o777 == 0o600
 
     class TestOnHelp:
         def test_should_print_the_header(self, run):
@@ -165,6 +203,10 @@ def cache_detection(sandbox, value):
 def configure_model(sandbox, name, model):
     (sandbox.home / ".claude").mkdir(exist_ok=True)
     (sandbox.home / ".claude" / name).write_text(json.dumps({"model": model}))
+
+
+def dump_path(sandbox):
+    return Path(sandbox.env["TMPDIR"]) / "claude-statusline-input.json"
 
 
 def link(url, text):

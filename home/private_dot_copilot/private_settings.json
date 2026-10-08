@@ -9,20 +9,31 @@
   "terminalProgress": true,
   "terminalNotifications": true,
   "updateTerminalTitle": true,
+  "statusLine": {
+    "type": "command",
+    "command": "~/.copilot/statusline",
+    "padding": 1
+  },
   "dynamicRetrieval": {
     "skills": true,
     "mcp": true
   },
   "footer": {
-    "showAgent": true,
-    "showAiUsed": true,
-    "showContextWindow": true,
-    "showModelEffort": true,
-    "showQuota": true,
-    "showYolo": true,
-    "showCiStatus": true,
+    "showAgent": false,
+    "showAiUsed": false,
     "showBranch": true,
-    "showPullRequest": true
+    "showCiStatus": true,
+    "showCodeChanges": false,
+    "showContextWindow": false,
+    "showCustom": true,
+    "showDirectory": true,
+    "showModelEffort": false,
+    "showPullRequest": true,
+    "showQuota": true,
+    "showSandbox": true,
+    "showSchedules": false,
+    "showUsername": false,
+    "showYolo": false
   },
   "ide": {
     "autoConnect": true
@@ -44,5 +55,15 @@
   },
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true
-  }
+  },
+  "mouse": false,
+  "tabs": {
+    "enabled": false
+  },
+  "sidebar": {
+    "enabled": false
+  },
+  "scrollbar": false,
+  "showReasoning": false,
+  "mouse": false
 }

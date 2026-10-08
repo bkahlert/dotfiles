@@ -80,6 +80,36 @@ Changes take effect on the next prompt render (no restart needed).
 
 See [Starship configuration](https://starship.rs/config/).
 
+### Agent status lines
+
+[Claude's formatter](home/private_dot_claude/executable_statusline) and
+[Copilot's formatter](home/private_dot_copilot/executable_statusline) share the
+session, model and context formatting. Nerd Font detection is automatic;
+`--nerd-fonts`, `--no-nerd-fonts` and `NERD_FONTS=1`/`0` override it.
+
+Preview Claude's sample:
+
+```sh
+home/private_dot_claude/executable_statusline --preview --nerd-fonts
+```
+
+Preview Copilot's captured session:
+
+```sh
+home/private_dot_copilot/executable_statusline --preview --nerd-fonts
+```
+
+Copilot shows session AI credits (`AIC`) in Claude's cost position, followed by
+remote and allow-all indicators when active. Its command input does not include
+the plan allowance, active agent, reasoning effort or sandbox state. Those stay
+in the native footer; all native footer options remain enabled.
+
+Both formatters save their latest raw input, including previews, as
+`claude-statusline-input.json` and `copilot-statusline-input.json` in Python's
+temporary directory (`TMPDIR` when set). Each file is replaced atomically with
+owner-only permissions. The files contain session metadata and are overwritten
+on the next render.
+
 ### Ghostty
 
 Edit the terminal configuration:
