@@ -224,7 +224,7 @@ def sample(now):
         "version": "2.1.90",
         "output_style": {"name": "default"},
         "cost": {
-            "total_cost_usd": 0.01234,
+            "total_cost_usd": 5.21,
             "total_duration_ms": 45000,
             "total_api_duration_ms": 2300,
             "total_lines_added": 156,
@@ -267,7 +267,7 @@ NERD = " · ".join([
     " claude-sonnet-4-6",
     "\U000f06a9 security-reviewer",
     f"{DIM}{EMPTY_SEGMENTS} 28%{RESET} {DIM}╱200k{RESET}",
-    f"{DIM}$0.01{RESET}",
+    f"{YELLOW}$5.21{RESET}",
     link(LIMITS, f"{DIM} 28% ¹⁸·¹ʰ{RESET}"),
     link(LIMITS, f"{RED} 92% ⁴·¹ᵈ{RESET}"),
 ]) + "\n"
@@ -277,7 +277,7 @@ FALLBACK = " · ".join([
     "⚙︎ claude-sonnet-4-6",
     "웃 security-reviewer",
     f"{DIM}◔ 28%{RESET} {DIM}╱200k{RESET}",
-    f"{DIM}$0.01{RESET}",
+    f"{YELLOW}$5.21{RESET}",
     link(LIMITS, f"{DIM}⏱︎ 28% ¹⁸·¹ʰ{RESET}"),
     link(LIMITS, f"{RED}⧗︎ 92% ⁴·¹ᵈ{RESET}"),
 ]) + "\n"

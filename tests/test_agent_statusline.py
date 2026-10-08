@@ -13,6 +13,31 @@ from agent_statusline import render_parts
 
 
 class TestAgentStatusline:
+    class TestOnCost:
+        @pytest.mark.parametrize("usd,expected", [
+            (None, ""), (False, ""), ("5", ""),
+            (0, "\033[2m$0.00\033[0m"),
+            (0.01234, "\033[2m$0.01\033[0m"),
+            (4.99, "\033[2m$4.99\033[0m"),
+            (5, "\033[33m$5.00\033[0m"),
+            (9.99, "\033[33m$9.99\033[0m"),
+            (10, "\033[31m$10.00\033[0m"),
+        ])
+        def test_should_render_dollars_with_cost_thresholds(self, usd, expected):
+            result = agent_statusline.part_cost(usd=usd, thresholds=(5, 10))
+
+            assert result == expected
+
+        def test_should_use_caller_thresholds(self):
+            result = agent_statusline.part_cost(usd=2, thresholds=(1, 2))
+
+            assert result == "\033[31m$2.00\033[0m"
+
+        def test_should_allow_missing_cost(self):
+            result = agent_statusline.part_cost(thresholds=(5, 10))
+
+            assert result == ""
+
     class TestOnContext:
         @pytest.mark.parametrize("used,size,expected", [
             (None, None, "\033[2m○ 0%\033[0m"),
@@ -162,22 +187,22 @@ class TestAgentStatusline:
             )
 
     class TestOnIconSelection:
-        @pytest.mark.parametrize("override,environment,session,model,remote,yolo", [
-            ("1", "0", "\uf292", "\ue28c", "\uf0ac", "\uf071"),
-            ("0", "1", "#", "⚙\ufe0e", "↗", "⚠\ufe0e"),
-            (None, "1", "\uf292", "\ue28c", "\uf0ac", "\uf071"),
-            (None, "0", "#", "⚙\ufe0e", "↗", "⚠\ufe0e"),
+        @pytest.mark.parametrize("override,environment,session,model", [
+            ("1", "0", "\uf292", "\ue28c"),
+            ("0", "1", "#", "⚙\ufe0e"),
+            (None, "1", "\uf292", "\ue28c"),
+            (None, "0", "#", "⚙\ufe0e"),
         ])
         def test_should_select_semantic_icons_with_flag_precedence(
-            self, monkeypatch, override, environment, session, model, remote, yolo
+            self, monkeypatch, override, environment, session, model
         ):
             monkeypatch.setenv("NERD_FONTS", environment)
 
             result = agent_statusline.select_icons(override)
 
-            assert (result.session, result.model, result.remote, result.yolo) == (
-                session, model, remote, yolo
-            )
+            assert (result.session, result.model) == (session, model)
+            assert "remote" not in result._fields
+            assert "yolo" not in result._fields
 
         @pytest.mark.parametrize("percentage,expected", [
             (0, "○"), (11, "○"), (12, "◔"), (36, "◔"), (37, "◑"),

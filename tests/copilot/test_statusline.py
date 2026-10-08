@@ -206,21 +206,37 @@ class TestStatusline:
             assert result.stdout == preview_output()
 
     class TestOnAiUsed:
-        def test_should_render_zero_with_the_aic_unit(self, sandbox):
+        @pytest.mark.parametrize("nano_aiu,expected", [
+            (0, "\033[2m$0.00\033[0m"),
+            (320414850, "\033[2m$0.00\033[0m"),
+            (499990000000, "\033[2m$5.00\033[0m"),
+            (500000000000, "\033[33m$5.00\033[0m"),
+            (999990000000, "\033[33m$10.00\033[0m"),
+            (1000000000000, "\033[31m$10.00\033[0m"),
+        ])
+        def test_should_convert_raw_credits_to_dollars_with_provider_thresholds(self, sandbox, nano_aiu, expected):
             payload = session_payload()
-            payload["ai_used"] = {"total_nano_aiu": 0, "formatted": "0.00"}
+            payload["ai_used"] = {"total_nano_aiu": nano_aiu, "formatted": "ignored"}
 
             result = render(sandbox, payload)
 
             assert result.returncode == 0, result.stderr
-            assert f"{DIM}0.00 AIC{RESET}" in result.stdout
+            assert expected in result.stdout
+            assert "ignored" not in result.stdout
+
+        @pytest.mark.parametrize("nano_aiu", [None, False, "320414850"])
+        def test_should_omit_missing_or_invalid_raw_credits(self, sandbox, nano_aiu):
+            payload = session_payload()
+            payload["ai_used"] = {"total_nano_aiu": nano_aiu, "formatted": "0.32"}
+
+            result = render(sandbox, payload)
+
+            assert result.returncode == 0, result.stderr
+            assert "$" not in result.stdout
 
     class TestOnIndicators:
-        @pytest.mark.parametrize("flag,remote,yolo", [
-            ("--nerd-fonts", " remote", " YOLO"),
-            ("--no-nerd-fonts", "↗ remote", "⚠︎ YOLO"),
-        ])
-        def test_should_render_enabled_states_on_the_first_row(self, sandbox, flag, remote, yolo):
+        @pytest.mark.parametrize("flag", ["--nerd-fonts", "--no-nerd-fonts"])
+        def test_should_omit_remote_state_and_icons(self, sandbox, flag):
             payload = session_payload()
             payload["remote"] = {
                 "connected": True,
@@ -236,15 +252,24 @@ class TestStatusline:
 
             assert result.returncode == 0, result.stderr
             assert len(result.stdout.splitlines()) == 1
-            assert f"{DIM}{remote}{RESET}" in result.stdout
-            assert f"{DIM}{yolo}{RESET}" in result.stdout
-            assert result.stdout.index("AIC") < result.stdout.index(remote) < result.stdout.index(yolo)
+            assert result.stdout == preview_output(nerd_fonts=flag == "--nerd-fonts")
+            assert "remote" not in result.stdout
+            assert "\uf0ac" not in result.stdout
+            assert "↗" not in result.stdout
+
+        @pytest.mark.parametrize("flag", ["--nerd-fonts", "--no-nerd-fonts"])
+        def test_should_omit_allow_all_state_and_icons(self, sandbox, flag):
+            result = render(sandbox, session_payload(), flag)
+
+            assert result.returncode == 0, result.stderr
+            assert "YOLO" not in result.stdout
+            assert "\uf071" not in result.stdout
+            assert "⚠" not in result.stdout
 
         @pytest.mark.parametrize("enabled", [False, None, "true", 1])
         def test_should_omit_states_that_are_not_enabled(self, sandbox, enabled):
             payload = session_payload()
             payload["remote"]["connected"] = enabled
-            payload["allow_all_enabled"] = enabled
 
             result = render(sandbox, payload)
 
@@ -396,23 +421,22 @@ def session_payload():
             "displayed_context_limit": 200000,
             "current_context_used_percentage": 28,
         },
-        "ai_used": {"total_nano_aiu": 320414850, "formatted": "0.32"},
+        "ai_used": {"total_nano_aiu": 521000414850, "formatted": "521.00"},
         "allow_all_enabled": True,
     }
 
 
 def preview_output(*, nerd_fonts=False):
-    session, gauge, warning = (
-        ("", "\uee03" + "\uee04" * 2 + "\uee01" * 6 + "\uee02", "")
-        if nerd_fonts else ("#", "◔", "⚠︎"))
+    session, gauge = (
+        ("", "\uee03" + "\uee04" * 2 + "\uee01" * 6 + "\uee02")
+        if nerd_fonts else ("#", "◔"))
     return " · ".join([
         f"{session} " + link(
             f"file://{Path.home()}/.copilot/session-state/abc123def456",
             "abc123de",
         ) + " \033[3mmy-session\033[0m",
         f"{DIM}{gauge} 28%{RESET} {DIM}╱200k{RESET}",
-        f"{DIM}0.32 AIC{RESET}",
-        f"{DIM}{warning} YOLO{RESET}",
+        f"\033[33m$5.21{RESET}",
     ]) + "\n"
 
 

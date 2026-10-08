@@ -51,8 +51,6 @@ class Icons(NamedTuple):
     clock: str
     calendar: str
     restart: str
-    remote: str
-    yolo: str
 
 
 _BAR = [("\uee00", "\uee03"), *[("\uee01", "\uee04")] * 8, ("\uee02", "\uee05")]
@@ -77,8 +75,6 @@ _NERD_ICONS = Icons(
     clock="\uf017",
     calendar="\uf272",
     restart="",
-    remote="\uf0ac",
-    yolo="\uf071",
 )
 
 # U+FE0E keeps characters with emoji presentation monochrome.
@@ -91,8 +87,6 @@ _TEXT_ICONS = Icons(
     clock="⏱\ufe0e",
     calendar="⧗\ufe0e",
     restart="",
-    remote="↗",
-    yolo="⚠\ufe0e",
 )
 
 
@@ -167,6 +161,15 @@ def part_context(used=None, size=None, *, override=None):
         tokens = f" {icons.tokens}" if icons.tokens else ""
         out += f" {color}╱{format_tokens(size)}{tokens}\033[0m"
     return out
+
+
+def part_cost(usd=None, *, thresholds):
+    usd = number(usd)
+    if usd is None:
+        return ""
+    warn, error = thresholds
+    color = "\033[31m" if usd >= error else "\033[33m" if usd >= warn else "\033[2m"
+    return f"{color}${usd:.2f}\033[0m"
 
 
 def part_model(model=None, configured=None, *, override=None):

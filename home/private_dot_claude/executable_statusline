@@ -31,14 +31,14 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import dump_input, field, link, number, part_context, part_model, part_session, read_json, render_parts, select_icons
+from agent_statusline import dump_input, field, link, number, part_context, part_cost, part_model, part_session, read_json, render_parts, select_icons
 
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
 RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
 
 # (warn, error) lower bounds
 USAGE_THRESHOLDS = (50, 75)
-COST_THRESHOLDS_CENTS = (500, 1000)
+COST_THRESHOLDS = (5, 10)
 
 SUPERSCRIPT = str.maketrans("0123456789dehimprx.", "⁰¹²³⁴⁵⁶⁷⁸⁹ᵈᵉʰⁱᵐᵖʳˣ·")
 
@@ -81,13 +81,6 @@ def resets_in(epoch):
 def part_agent(session, icons):
     name = field(session, "agent", "name") or ""
     return f"{icons.agent} {name}" if name else ""
-
-
-def part_cost(session):
-    usd = number(field(session, "cost", "total_cost_usd"))
-    if usd is None:
-        return ""
-    return f"{severity(int(usd * 100), COST_THRESHOLDS_CENTS)}${usd:.2f}{RESET}"
 
 
 def part_rate_limit(limit, icon, restart):
@@ -162,7 +155,7 @@ def main(args):
         part_agent(session, icons),
         part_context(field(session, "context_window", "used_percentage"),
                      field(session, "context_window", "context_window_size"), override=override),
-        part_cost(session),
+        part_cost(usd=field(session, "cost", "total_cost_usd"), thresholds=COST_THRESHOLDS),
         part_rate_limit(field(limits, "five_hour"), icons.clock, icons.restart),
         part_rate_limit(field(limits, "seven_day"), icons.calendar, icons.restart),
     ]

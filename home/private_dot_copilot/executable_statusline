@@ -28,27 +28,11 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import dump_input, field, number, part_context, part_session, read_json, render_parts, select_icons
+from agent_statusline import dump_input, field, number, part_context, part_cost, part_session, read_json, render_parts
 
-DIM, RESET = "\033[2m", "\033[0m"
-
-
-def style(text, color=DIM):
-  return f"{color}{text}{RESET}"
-
-
-def part_cost(status):
-  ai_used = field(status, "ai_used", "formatted")
-  return style(f"{ai_used} AIC") if isinstance(ai_used, str) and ai_used else ""
-
-
-def part_indicators(status, icons):
-  parts = []
-  if field(status, "remote", "connected") is True:
-    parts.append(style(f"{icons.remote} remote"))
-  if field(status, "allow_all_enabled") is True:
-    parts.append(style(f"{icons.yolo} YOLO"))
-  return parts
+COST_THRESHOLDS = (5, 10)
+# Estimated equivalent at 100 AI credits per dollar, not a billed amount.
+NANO_AIU_PER_USD = 100_000_000_000
 
 
 def usage():
@@ -106,7 +90,6 @@ def main():
   text = preview_input() if preview else sys.stdin.read()
   dump_input(text, "copilot-statusline-input.json")
   status = read_json(text)
-  icons = select_icons(override)
   session_id = field(status, "session_id")
   name = field(status, "session_name")
   transcript = field(status, "transcript_path")
@@ -116,6 +99,8 @@ def main():
   size = number(field(status, "context_window", "displayed_context_limit"))
   if size is None:
     size = number(field(status, "context_window", "context_window_size"))
+  nano_aiu = number(field(status, "ai_used", "total_nano_aiu"))
+  usd = nano_aiu / NANO_AIU_PER_USD if nano_aiu is not None else None
   parts = [
     part_session(
       session_id if isinstance(session_id, str) else None,
@@ -124,8 +109,7 @@ def main():
       override=override,
     ),
     part_context(used, size, override=override),
-    part_cost(status),
-    *part_indicators(status, icons),
+    part_cost(usd=usd, thresholds=COST_THRESHOLDS),
   ]
   print(render_parts(parts))
 

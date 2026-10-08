@@ -84,7 +84,7 @@ See [Starship configuration](https://starship.rs/config/).
 
 [Claude's formatter](home/private_dot_claude/executable_statusline) and
 [Copilot's formatter](home/private_dot_copilot/executable_statusline) share the
-session and context formatting. Claude also uses the shared model renderer;
+session, context and cost formatting. Claude also uses the shared model renderer;
 Copilot omits the model from its custom status line.
 [The shared component](home/dot_local/share/agent_statusline.py) owns semantic
 input dumping, JSON parsing, field lookup, numeric validation, icons, context
@@ -102,6 +102,10 @@ The shared `part_model` renderer also selects its icon and handles missing-model
 text and optional configured-model highlighting; scripts only supply its arguments.
 The shared `part_context` renderer owns gauge selection, percentage thresholds and
 token formatting. Copilot supplies current context metrics, falling back to legacy fields.
+The shared `part_cost` renderer formats dollar amounts with two decimals.
+Each script supplies its own yellow/red thresholds, both set to 5/10 USD.
+Copilot converts raw nano-AIU to an estimated dollar equivalent using
+100 AIC per USD; this is a display estimate, not a verified billed amount.
 
 Preview Claude's sample:
 
@@ -115,10 +119,12 @@ Preview Copilot's sample, with matching session, model and context values:
 home/private_dot_copilot/executable_statusline --preview --nerd-fonts
 ```
 
-Copilot shows session AI credits (`AIC`) in Claude's cost position, followed by
-remote and allow-all indicators when active. Its command input does not include
+Copilot shows the estimated session dollar cost in Claude's cost position.
+Remote and allow-all indicators are omitted from the custom status line;
+all native footer options remain enabled.
+Its command input does not include
 the plan allowance, active agent, reasoning effort or sandbox state. Those stay
-in the native footer; all native footer options remain enabled.
+in the native footer.
 
 Both formatters save their latest raw input, including previews, as
 `claude-statusline-input.json` and `copilot-statusline-input.json` in Python's
