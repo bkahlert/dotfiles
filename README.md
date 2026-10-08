@@ -83,57 +83,25 @@ See [Starship configuration](https://starship.rs/config/).
 ### Agent status lines
 
 [Claude's formatter](home/private_dot_claude/executable_statusline) and
-[Copilot's formatter](home/private_dot_copilot/executable_statusline) share the
-session, context and cost formatting. Claude also uses the shared model renderer;
-Copilot omits the model from its custom status line.
-[The shared component](home/dot_local/share/agent_statusline.py) owns semantic
-CLI help and argument parsing, preview and input loading, input dumping, JSON
-parsing, field lookup, numeric validation, severity colors, icons, context
-gauges, hyperlinks and automatic Nerd Font detection. Both formatters use
-its cache at `$XDG_CACHE_HOME/agent-statusline/nerd-font-support`, defaulting to
-`~/.cache/agent-statusline/nerd-font-support`.
-`--nerd-fonts` and `--no-nerd-fonts` override `NERD_FONTS=1`/`0`;
-both override detection.
-Each script supplies its own help header, preview fixture and input-dump filename.
-Preview command failures preserve stderr and the failed command's exit status.
+[Copilot's formatter](home/private_dot_copilot/executable_statusline) use
+[a shared component](home/dot_local/share/agent_statusline.py).
+See each script for its rendered parts and `--help` for options.
+Copilot's dollar cost is a display estimate at 100 AIC per USD, not a verified
+billed amount.
 
-Session IDs and names render independently: only the shortened ID links to the
-transcript, while the name appears in italics outside the link.
-The shared `part_session` renderer accepts an optional ID, name and URL, and
-selects its own session icon using the font override or automatic detection.
-The shared `part_model` renderer also selects its icon and handles missing-model
-text and optional configured-model highlighting; scripts only supply its arguments.
-The shared `part_context` renderer owns gauge selection, percentage thresholds and
-token formatting. Copilot supplies current context metrics, falling back to legacy fields.
-The shared `part_cost` renderer formats dollar amounts with two decimals.
-Each script supplies its own yellow/red thresholds, both set to 5/10 USD.
-Copilot converts raw nano-AIU to an estimated dollar equivalent using
-100 AIC per USD; this is a display estimate, not a verified billed amount.
-
-Preview Claude's sample:
+Use [the preview helper](scripts/statusline-preview) when editing status lines.
+It runs both providers' source and installed formatters with Nerd Font icons
+and emoji fallbacks, so differences before and after applying are visible.
+Run it from the repository root:
 
 ```sh
-home/private_dot_claude/executable_statusline --preview --nerd-fonts
+./scripts/statusline-preview
 ```
 
-Preview Copilot's sample, with matching session, model and context values:
-
-```sh
-home/private_dot_copilot/executable_statusline --preview --nerd-fonts
-```
-
-Copilot shows the estimated session dollar cost in Claude's cost position.
-Remote and allow-all indicators are omitted from the custom status line;
-all native footer options remain enabled.
-Its command input does not include
-the plan allowance, active agent, reasoning effort or sandbox state. Those stay
-in the native footer.
-
-Both formatters save their latest raw input, including previews, as
+For debugging, both formatters save their latest raw input as
 `claude-statusline-input.json` and `copilot-statusline-input.json` in Python's
-temporary directory (`TMPDIR` when set). Each file is replaced atomically with
-owner-only permissions. The files contain session metadata and are overwritten
-on the next render.
+temporary directory (`TMPDIR` when set). These owner-only files contain session
+metadata and are overwritten on every render.
 
 ### Ghostty
 
