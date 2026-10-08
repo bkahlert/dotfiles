@@ -51,7 +51,11 @@ class TestStatusline:
             assert "--preview" in result.stdout
             assert "--nerd-fonts" in result.stdout
             assert "--no-nerd-fonts" in result.stdout
-            assert "Copilot session JSON" in result.stdout
+            assert "Render the Copilot status line from the session JSON on stdin." in result.stdout
+            assert "tests/copilot/test_statusline.py" in result.stdout
+            assert "Examples:\n" in result.stdout
+            assert "statusline --preview --nerd-fonts      # the sample session with Nerd Font icons" in result.stdout
+            assert "statusline --preview --no-nerd-fonts   # the same with emoji fallbacks" in result.stdout
 
     class TestOnNerdFonts:
         def test_should_render_nerd_font_icons_and_a_segment_bar_when_forced(self, sandbox):

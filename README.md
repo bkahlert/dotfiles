@@ -87,12 +87,15 @@ See [Starship configuration](https://starship.rs/config/).
 session, context and cost formatting. Claude also uses the shared model renderer;
 Copilot omits the model from its custom status line.
 [The shared component](home/dot_local/share/agent_statusline.py) owns semantic
-input dumping, JSON parsing, field lookup, numeric validation, icons, context
+CLI help and argument parsing, preview and input loading, input dumping, JSON
+parsing, field lookup, numeric validation, severity colors, icons, context
 gauges, hyperlinks and automatic Nerd Font detection. Both formatters use
 its cache at `$XDG_CACHE_HOME/agent-statusline/nerd-font-support`, defaulting to
 `~/.cache/agent-statusline/nerd-font-support`.
 `--nerd-fonts` and `--no-nerd-fonts` override `NERD_FONTS=1`/`0`;
 both override detection.
+Each script supplies its own help header, preview fixture and input-dump filename.
+Preview command failures preserve stderr and the failed command's exit status.
 
 Session IDs and names render independently: only the shortened ID links to the
 transcript, while the name appears in italics outside the link.

@@ -172,10 +172,19 @@ class TestStatusline:
             assert dump_path(sandbox).stat().st_mode & 0o777 == 0o600
 
     class TestOnHelp:
-        def test_should_print_the_header(self, run):
+        def test_should_print_usage_and_preview_documentation(self, run):
             result = run("statusline", "--help")
+
             assert result.returncode == 0
             assert result.stdout.startswith("Purpose:")
+            assert "--preview" in result.stdout
+            assert "--nerd-fonts" in result.stdout
+            assert "--no-nerd-fonts" in result.stdout
+            assert "Render the Claude Code status line from the session JSON on stdin." in result.stdout
+            assert "tests/claude/test_statusline.py" in result.stdout
+            assert "Examples:\n" in result.stdout
+            assert "statusline --preview --nerd-fonts      # the sample session with Nerd Font icons" in result.stdout
+            assert "statusline --preview --no-nerd-fonts   # the same with emoji fallbacks" in result.stdout
 
     class TestOnBadArguments:
         def test_should_exit_2_on_an_unknown_option(self, run):

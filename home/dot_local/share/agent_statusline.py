@@ -9,6 +9,59 @@ from pathlib import Path
 from typing import Callable, NamedTuple
 
 
+def usage(script):
+    for line in Path(script).read_text().splitlines()[1:]:
+        if not line.startswith("#"):
+            break
+        print(line[2:] if line.startswith("# ") else line[1:])
+
+
+def die(message):
+    name = Path(sys.argv[0]).name
+    print(f"{name}: {message}\nSee '{name} --help'", file=sys.stderr)
+    sys.exit(2)
+
+
+def parse_args(args, script):
+    override, preview = None, False
+    for arg in args:
+        if arg in ("-h", "--help"):
+            usage(script)
+            sys.exit(0)
+        elif arg == "--nerd-fonts":
+            override = "1"
+        elif arg == "--no-nerd-fonts":
+            override = "0"
+        elif arg == "--preview":
+            preview = True
+        elif arg.startswith("-"):
+            die(f"unknown option: {arg}")
+        else:
+            die(f"unexpected argument: {arg}")
+    return override, preview
+
+
+def preview_input(fixture):
+    source = subprocess.run(["chezmoi", "source-path"], capture_output=True, text=True)
+    if source.returncode:
+        sys.stderr.write(source.stderr)
+        sys.exit(source.returncode)
+    repo = Path(source.stdout.strip()).parent
+    sample = subprocess.run(
+        ["uv", "run", "--locked", fixture, "--print-input"],
+        cwd=repo, capture_output=True, text=True)
+    if sample.returncode:
+        sys.stderr.write(sample.stderr)
+        sys.exit(sample.returncode)
+    return sample.stdout
+
+
+def load_input(preview, fixture, dump_filename):
+    text = preview_input(fixture) if preview else sys.stdin.read()
+    dump_input(text, dump_filename)
+    return read_json(text)
+
+
 def dump_input(text, filename):
     destination = Path(tempfile.gettempdir()) / filename
     dump = tempfile.NamedTemporaryFile(
@@ -150,11 +203,16 @@ def format_tokens(count):
     return str(int(count))
 
 
+def severity(value, thresholds):
+    warn, error = thresholds
+    return "\033[31m" if value >= error else "\033[33m" if value >= warn else "\033[2m"
+
+
 def part_context(used=None, size=None, *, override=None):
     icons = select_icons(override)
     used = number(used)
     pct = 0 if used is None else math.floor(used)
-    color = "\033[31m" if pct >= 75 else "\033[33m" if pct >= 50 else "\033[2m"
+    color = severity(pct, (50, 75))
     out = f"{color}{icons.gauge(pct)} {pct}%\033[0m"
     size = number(size)
     if size is not None:
@@ -167,8 +225,7 @@ def part_cost(usd=None, *, thresholds):
     usd = number(usd)
     if usd is None:
         return ""
-    warn, error = thresholds
-    color = "\033[31m" if usd >= error else "\033[33m" if usd >= warn else "\033[2m"
+    color = severity(usd, thresholds)
     return f"{color}${usd:.2f}\033[0m"
 
 

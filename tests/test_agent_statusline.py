@@ -1,6 +1,8 @@
 import json
+import io
 import shutil
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -13,6 +15,109 @@ from agent_statusline import render_parts
 
 
 class TestAgentStatusline:
+    class TestOnArguments:
+        @pytest.mark.parametrize("args,expected", [
+            ([], (None, False)),
+            (["--preview"], (None, True)),
+            (["--nerd-fonts"], ("1", False)),
+            (["--no-nerd-fonts"], ("0", False)),
+            (["--nerd-fonts", "--no-nerd-fonts", "--preview"], ("0", True)),
+        ])
+        def test_should_parse_flags(self, args, expected):
+            result = agent_statusline.parse_args(args, __file__)
+
+            assert result == expected
+
+        @pytest.mark.parametrize("flag", ["-h", "--help"])
+        def test_should_print_the_script_header_and_exit(self, flag, tmp_path, capsys):
+            script = tmp_path / "statusline"
+            script.write_text("#!/usr/bin/env python3\n# Purpose: sample\n#\n# Usage: sample\n\nprint('no')\n")
+
+            with pytest.raises(SystemExit) as exit_info:
+                agent_statusline.parse_args([flag], script)
+
+            assert exit_info.value.code == 0
+            assert capsys.readouterr().out == "Purpose: sample\n\nUsage: sample\n"
+
+        @pytest.mark.parametrize("arg,message", [
+            ("--invalid", "unknown option: --invalid"),
+            ("invalid", "unexpected argument: invalid"),
+        ])
+        def test_should_report_invalid_arguments(self, arg, message, monkeypatch, capsys):
+            monkeypatch.setattr(sys, "argv", ["/tmp/statusline"])
+
+            with pytest.raises(SystemExit) as exit_info:
+                agent_statusline.parse_args([arg], __file__)
+
+            assert exit_info.value.code == 2
+            assert capsys.readouterr().err == f"statusline: {message}\nSee 'statusline --help'\n"
+
+    class TestOnPreview:
+        def test_should_run_the_fixture_in_the_source_repository(self, monkeypatch):
+            calls = []
+
+            def run(args, **kwargs):
+                calls.append((args, kwargs))
+                return agent_statusline.subprocess.CompletedProcess(
+                    args, 0, "/repo/home\n" if args[0] == "chezmoi" else '{"sample": true}', "")
+
+            monkeypatch.setattr(agent_statusline.subprocess, "run", run)
+
+            result = agent_statusline.preview_input("tests/provider/test_statusline.py")
+
+            assert result == '{"sample": true}'
+            assert calls == [
+                (["chezmoi", "source-path"], {"capture_output": True, "text": True}),
+                (["uv", "run", "--locked", "tests/provider/test_statusline.py", "--print-input"],
+                 {"cwd": Path("/repo"), "capture_output": True, "text": True}),
+            ]
+
+        @pytest.mark.parametrize("stage", ["chezmoi", "uv"])
+        def test_should_propagate_failures_without_sample_output(self, stage, monkeypatch, capsys):
+            def run(args, **kwargs):
+                failed = args[0] == stage
+                return agent_statusline.subprocess.CompletedProcess(
+                    args, 7 if failed else 0, "/repo/home\n", "preview failed\n" if failed else "")
+
+            monkeypatch.setattr(agent_statusline.subprocess, "run", run)
+
+            with pytest.raises(SystemExit) as exit_info:
+                agent_statusline.preview_input("tests/provider/test_statusline.py")
+
+            assert exit_info.value.code == 7
+            assert capsys.readouterr().err == "preview failed\n"
+
+    class TestOnInputLoading:
+        @pytest.mark.parametrize("preview", [False, True])
+        def test_should_dump_and_parse_the_selected_input(self, preview, monkeypatch):
+            dumped = []
+            fixtures = []
+            monkeypatch.setattr(sys, "stdin", io.StringIO('{"source": "stdin"}'))
+            monkeypatch.setattr(agent_statusline, "dump_input", lambda text, filename: dumped.append((text, filename)))
+
+            def preview_input(fixture):
+                fixtures.append(fixture)
+                return '{"source": "preview"}'
+
+            monkeypatch.setattr(agent_statusline, "preview_input", preview_input)
+
+            result = agent_statusline.load_input(preview, "tests/sample.py", "sample-input.json")
+
+            source = "preview" if preview else "stdin"
+            assert result == {"source": source}
+            assert dumped == [(f'{{"source": "{source}"}}', "sample-input.json")]
+            assert fixtures == (["tests/sample.py"] if preview else [])
+
+    class TestOnSeverity:
+        @pytest.mark.parametrize("value,expected", [
+            (4.99, "\033[2m"), (5, "\033[33m"),
+            (9.99, "\033[33m"), (10, "\033[31m"),
+        ])
+        def test_should_use_the_supplied_thresholds(self, value, expected):
+            result = agent_statusline.severity(value, (5, 10))
+
+            assert result == expected
+
     class TestOnCost:
         @pytest.mark.parametrize("usd,expected", [
             (None, ""), (False, ""), ("5", ""),
@@ -254,6 +359,24 @@ class TestAgentStatusline:
 
 
 class TestStatuslineCommands:
+    class TestOnPreviewFailure:
+        @pytest.mark.parametrize("command", ["statusline", "copilot-statusline"])
+        @pytest.mark.parametrize("stage", ["chezmoi", "uv"])
+        def test_should_exit_with_the_failed_command_and_stderr(
+            self, command, stage, run, fake_bin, sandbox
+        ):
+            source = sandbox.home / "dotfiles/home"
+            source.mkdir(parents=True)
+            fake_bin("chezmoi", stdout=f"{source}\n")
+            fake_bin("uv", stdout="{}")
+            fake_bin(stage, script="printf 'preview failed\\n' >&2\nexit 7\n")
+
+            result = run(command, "--preview", "--no-nerd-fonts")
+
+            assert result.returncode == 7
+            assert result.stdout == ""
+            assert result.stderr == "preview failed\n"
+
     class TestOnSession:
         @pytest.mark.parametrize("command", ["statusline", "copilot-statusline"])
         @pytest.mark.parametrize("flag,icon", [

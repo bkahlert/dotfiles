@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-# Purpose: Render a Claude-style status line from Copilot session JSON on stdin.
+# Purpose: Render the Copilot status line from the session JSON on stdin.
 # Usage:   statusline [--nerd-fonts | --no-nerd-fonts] [--preview]
 #
 # Options:
 #   --nerd-fonts      Force Nerd Font icons (overrides detection and NERD_FONTS).
-#   --no-nerd-fonts   Force Unicode fallbacks (overrides detection and NERD_FONTS).
-#   --preview         Render the sample Copilot session from the dotfiles repository instead of stdin.
+#   --no-nerd-fonts   Force emoji fallbacks (overrides detection and NERD_FONTS).
+#   --preview         Read the sample input of tests/copilot/test_statusline.py in the dotfiles
+#                     repo (chezmoi source-path) instead of stdin.
 #   -h, --help        Show this help.
 #
-# Example:
-#   ~/.copilot/statusline --preview --nerd-fonts
+# Examples:
+#   statusline --preview --nerd-fonts      # the sample session with Nerd Font icons
+#   statusline --preview --no-nerd-fonts   # the same with emoji fallbacks
 #
 # Configured in ~/.copilot/settings.json as statusLine.command.
 # Writes the latest raw input to copilot-statusline-input.json in Python's temporary
@@ -18,7 +20,6 @@
 # fields from the command input. All footer options remain enabled.
 # Requires Python >= 3.9 (standard library only).
 
-import subprocess
 import sys
 from pathlib import Path
 
@@ -28,91 +29,44 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import dump_input, field, number, part_context, part_cost, part_session, read_json, render_parts
+from agent_statusline import (
+    field, load_input, number, parse_args, part_context, part_cost,
+    part_session, render_parts,
+)
 
 COST_THRESHOLDS = (5, 10)
 # Estimated equivalent at 100 AI credits per dollar, not a billed amount.
 NANO_AIU_PER_USD = 100_000_000_000
 
 
-def usage():
-  for line in Path(__file__).read_text().splitlines()[1:]:
-    if not line.startswith("#"):
-      break
-    print(line[2:] if line.startswith("# ") else line[1:])
+# ── Entry point ────────────────────────────────────────────
 
-
-def die(message):
-  name = Path(sys.argv[0]).name
-  print(f"{name}: {message}\nSee '{name} --help'", file=sys.stderr)
-  sys.exit(2)
-
-
-def parse_args(args):
-  override, preview = None, False
-  for arg in args:
-    if arg in ("-h", "--help"):
-      usage()
-      sys.exit(0)
-    elif arg == "--preview":
-      preview = True
-    elif arg == "--nerd-fonts":
-      override = "1"
-    elif arg == "--no-nerd-fonts":
-      override = "0"
-    elif arg.startswith("-"):
-      die(f"unknown option: {arg}")
-    else:
-      die(f"unexpected argument: {arg}")
-  return override, preview
-
-
-def preview_input():
-  source = subprocess.run(["chezmoi", "source-path"], capture_output=True, text=True)
-  if source.returncode:
-    sys.stderr.write(source.stderr)
-    sys.exit(source.returncode)
-  repo = Path(source.stdout.strip()).parent
-  sample = subprocess.run(
-    ["uv", "run", "--locked", "tests/copilot/test_statusline.py", "--print-input"],
-    cwd=repo,
-    capture_output=True,
-    text=True,
-  )
-  if sample.returncode:
-    sys.stderr.write(sample.stderr)
-    sys.exit(sample.returncode)
-  return sample.stdout
-
-
-def main():
-  override, preview = parse_args(sys.argv[1:])
-  text = preview_input() if preview else sys.stdin.read()
-  dump_input(text, "copilot-statusline-input.json")
-  status = read_json(text)
-  session_id = field(status, "session_id")
-  name = field(status, "session_name")
-  transcript = field(status, "transcript_path")
-  used = number(field(status, "context_window", "current_context_used_percentage"))
-  if used is None:
-    used = number(field(status, "context_window", "used_percentage"))
-  size = number(field(status, "context_window", "displayed_context_limit"))
-  if size is None:
-    size = number(field(status, "context_window", "context_window_size"))
-  nano_aiu = number(field(status, "ai_used", "total_nano_aiu"))
-  usd = nano_aiu / NANO_AIU_PER_USD if nano_aiu is not None else None
-  parts = [
-    part_session(
-      session_id if isinstance(session_id, str) else None,
-      name if isinstance(name, str) else None,
-      f"file://{transcript}" if isinstance(transcript, str) and transcript else None,
-      override=override,
-    ),
-    part_context(used, size, override=override),
-    part_cost(usd=usd, thresholds=COST_THRESHOLDS),
-  ]
-  print(render_parts(parts))
+def main(args):
+    override, preview = parse_args(args, __file__)
+    session = load_input(preview, "tests/copilot/test_statusline.py", "copilot-statusline-input.json")
+    session_id = field(session, "session_id")
+    name = field(session, "session_name")
+    transcript = field(session, "transcript_path")
+    used = number(field(session, "context_window", "current_context_used_percentage"))
+    if used is None:
+        used = number(field(session, "context_window", "used_percentage"))
+    size = number(field(session, "context_window", "displayed_context_limit"))
+    if size is None:
+        size = number(field(session, "context_window", "context_window_size"))
+    nano_aiu = number(field(session, "ai_used", "total_nano_aiu"))
+    usd = nano_aiu / NANO_AIU_PER_USD if nano_aiu is not None else None
+    parts = [
+        part_session(
+            session_id if isinstance(session_id, str) else None,
+            name if isinstance(name, str) else None,
+            f"file://{transcript}" if isinstance(transcript, str) and transcript else None,
+            override=override,
+        ),
+        part_context(used, size, override=override),
+        part_cost(usd=usd, thresholds=COST_THRESHOLDS),
+    ]
+    print(render_parts(parts))
 
 
 if __name__ == "__main__":
-  main()
+    main(sys.argv[1:])

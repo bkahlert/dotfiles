@@ -20,7 +20,6 @@
 
 import json
 import math
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -31,9 +30,12 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import dump_input, field, link, number, part_context, part_cost, part_model, part_session, read_json, render_parts, select_icons
+from agent_statusline import (
+    field, link, load_input, number, parse_args, part_context, part_cost,
+    part_model, part_session, render_parts, select_icons, severity,
+)
 
-DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
+RESET = "\033[0m"
 RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
 
 # (warn, error) lower bounds
@@ -57,11 +59,6 @@ def configured_model():
 
 
 # ── Formatting ─────────────────────────────────────────────
-
-def severity(value, thresholds):
-    warn, error = thresholds
-    return RED if value >= error else YELLOW if value >= warn else DIM
-
 
 def resets_in(epoch):
     delta = epoch - int(time.time())
@@ -97,54 +94,9 @@ def part_rate_limit(limit, icon, restart):
 
 # ── Entry point ────────────────────────────────────────────
 
-def usage():
-    for line in Path(__file__).read_text().splitlines()[1:]:
-        if not line.startswith("#"):
-            break
-        print(line[2:] if line.startswith("# ") else line[1:])
-
-
-def die(message):
-    name = Path(sys.argv[0]).name
-    print(f"{name}: {message}\nSee '{name} --help'", file=sys.stderr)
-    sys.exit(2)
-
-
-def parse_args(args):
-    """Return the Nerd Font override ("0", "1" or None) and whether to preview."""
-    override, preview = None, False
-    for arg in args:
-        if arg in ("-h", "--help"):
-            usage()
-            sys.exit(0)
-        elif arg == "--nerd-fonts":
-            override = "1"
-        elif arg == "--no-nerd-fonts":
-            override = "0"
-        elif arg == "--preview":
-            preview = True
-        elif arg.startswith("-"):
-            die(f"unknown option: {arg}")
-        else:
-            die(f"unexpected argument: {arg}")
-    return override, preview
-
-
-def preview_input():
-    source = subprocess.run(["chezmoi", "source-path"], stdout=subprocess.PIPE, text=True)
-    if source.returncode:
-        sys.exit(1)
-    repo = Path(source.stdout.strip()).parent
-    sample = subprocess.run(["uv", "run", "--locked", "tests/claude/test_statusline.py", "--print-input"],
-                            cwd=repo, stdout=subprocess.PIPE, text=True)
-    return sample.stdout
-
-
 def main(args):
-    override, preview = parse_args(args)
-    text = preview_input() if preview else sys.stdin.read()
-    dump_input(text, "claude-statusline-input.json")
-    session = read_json(text)
+    override, preview = parse_args(args, __file__)
+    session = load_input(preview, "tests/claude/test_statusline.py", "claude-statusline-input.json")
     icons = select_icons(override)
     limits = field(session, "rate_limits")
     transcript = field(session, "transcript_path")
