@@ -29,8 +29,13 @@ It returns the rendered string without printing or adding a newline. The
 separator is configurable by the caller, with the existing middle dot as the
 default.
 
-Each statusline entry point adds `~/.local/share` to Python's import path and
-calls `render_parts` with its own provider-specific parts. Input parsing,
+Each installed statusline entry point adds `~/.local/share` to Python's import
+path. Direct execution from the source directory (`private_dot_claude` or
+`private_dot_copilot`) instead uses the sibling `dot_local/share` directory,
+so repository invocations work before `chezmoi apply`, including `--preview`.
+The script selects one location from its path, not from module availability;
+a missing source module does not fall back to the installed module.
+Each entry point calls `render_parts` with its own provider-specific parts. Input parsing,
 formatting, ANSI styling, icon selection, font detection, and part ordering
 remain in their current scripts. There is no subprocess boundary or fallback
 implementation: a missing shared module should fail visibly rather than
@@ -44,6 +49,8 @@ silently diverge.
   harness, so both statusline commands exercise the same module as production.
 - Keep both existing statusline golden-output suites passing to prove their
   visible output remains unchanged.
+- Run both source executables without an applied module, with stdin and
+  `--preview`, and verify missing source modules fail visibly.
 - Run the targeted Python tests and `make unit`.
 
 ## Scope boundaries

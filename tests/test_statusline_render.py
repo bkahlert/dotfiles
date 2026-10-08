@@ -1,8 +1,9 @@
+import shutil
 import sys
 
 import pytest
 
-from repo import ROOT
+from repo import HOME_SOURCE, ROOT
 
 sys.path.insert(0, str(ROOT / "home" / "dot_local" / "share"))
 
@@ -43,3 +44,37 @@ class TestStatuslineCommands:
 
         assert result.returncode != 0
         assert "statusline_render" in result.stderr
+
+    class TestOnSourceExecution:
+        @pytest.mark.parametrize("provider", ["claude", "copilot"])
+        @pytest.mark.parametrize("preview", [False, True])
+        def test_should_render_without_an_applied_module(
+            self, provider, preview, run, sandbox, fake_bin
+        ):
+            (sandbox.home / ".local/share/statusline_render.py").unlink()
+            fake_bin("chezmoi", stdout=f"{HOME_SOURCE}\n")
+            fake_bin("uv", stdout="{}")
+            script = HOME_SOURCE / f"private_dot_{provider}" / "executable_statusline"
+            args = ["--no-nerd-fonts", *(["--preview"] if preview else [])]
+
+            result = run(str(script), *args, stdin="{}")
+
+            assert result.returncode == 0, result.stderr
+            assert result.stderr == ""
+            assert result.stdout.strip()
+
+        @pytest.mark.parametrize("provider", ["claude", "copilot"])
+        def test_should_fail_visibly_on_missing_source_module(
+            self, provider, run, sandbox, tmp_path
+        ):
+            source = tmp_path / "source"
+            script = source / f"private_dot_{provider}" / "executable_statusline"
+            script.parent.mkdir(parents=True)
+            shutil.copy2(HOME_SOURCE / f"private_dot_{provider}" / "executable_statusline", script)
+            (source / "dot_local/share").mkdir(parents=True)
+            assert (sandbox.home / ".local/share/statusline_render.py").is_file()
+
+            result = run(str(script), "--no-nerd-fonts", stdin="{}")
+
+            assert result.returncode != 0
+            assert "statusline_render" in result.stderr

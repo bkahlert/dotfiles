@@ -27,7 +27,11 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path.home() / ".local" / "share"))
+script_dir = Path(__file__).absolute().parent
+shared_dir = (script_dir.parent / "dot_local" / "share"
+              if script_dir.name == "private_dot_copilot"
+              else Path.home() / ".local" / "share")
+sys.path.insert(0, str(shared_dir))
 
 from statusline_render import render_parts
 
