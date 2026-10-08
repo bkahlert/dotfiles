@@ -32,7 +32,7 @@ shared_dir = (script_dir.parent / "dot_local" / "share"
               else Path.home() / ".local" / "share")
 sys.path.insert(0, str(shared_dir))
 
-from agent_statusline import link, render_parts, select_icons
+from agent_statusline import link, part_session, render_parts, select_icons
 
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
 RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
@@ -116,20 +116,6 @@ def resets_in(epoch):
 
 
 # ── Parts ──────────────────────────────────────────────────
-
-def part_session_id(session, icons):
-    session_id = (field(session, "session_id") or "")[:8]
-    if not session_id:
-        return ""
-    path = field(session, "transcript_path") or ""
-    text = link(f"file://{path}", session_id) if path else session_id
-    return f"{icons.session} {text}"
-
-
-def part_session_name(session):
-    name = field(session, "session_name") or ""
-    return f"\033[3m{name}{RESET}" if name else ""
-
 
 def part_model(session, icons, configured):
     model = field(session, "model", "id")
@@ -231,8 +217,10 @@ def main(args):
     session = read_session(text)
     icons = select_icons(override)
     limits = field(session, "rate_limits")
+    transcript = field(session, "transcript_path")
     parts = [
-        render_parts([part_session_id(session, icons), part_session_name(session)], separator=" "),
+        part_session(field(session, "session_id"), field(session, "session_name"),
+                     f"file://{transcript}" if transcript else None, override=override),
         part_model(session, icons, configured_model()),
         part_agent(session, icons),
         part_context(session, icons),

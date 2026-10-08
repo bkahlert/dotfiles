@@ -115,5 +115,16 @@ def link(url, text):
     return f"\033]8;;{url}\033\\{text}\033]8;;\033\\"
 
 
+def part_session(session_id=None, name=None, url=None, *, override=None):
+    id_part = ""
+    if session_id:
+        text = session_id[:8]
+        if url:
+            text = link(url, text)
+        id_part = f"{select_icons(override).session} {text}"
+    name_part = f"\033[3m{name}\033[0m" if name else ""
+    return render_parts([id_part, name_part], separator=" ")
+
+
 def render_parts(parts, separator=" · "):
     return separator.join(part for part in parts if part)

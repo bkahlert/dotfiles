@@ -13,6 +13,37 @@ from agent_statusline import render_parts
 
 
 class TestAgentStatusline:
+    class TestOnSession:
+        @pytest.mark.parametrize("override,environment,icon", [
+            ("1", "0", "\uf292"), ("0", "1", "#"),
+            (None, "1", "\uf292"), (None, "0", "#"),
+        ])
+        @pytest.mark.parametrize("session_id,name,url,expected", [
+            ("abc123def456", "my-session", "file:///tmp/session.jsonl",
+             "{icon} \033]8;;file:///tmp/session.jsonl\033\\abc123de\033]8;;\033\\ \033[3mmy-session\033[0m"),
+            ("abc123def456", "my-session", None,
+             "{icon} abc123de \033[3mmy-session\033[0m"),
+            ("abc123def456", None, "file:///tmp/session.jsonl",
+             "{icon} \033]8;;file:///tmp/session.jsonl\033\\abc123de\033]8;;\033\\"),
+            ("abc", None, None, "{icon} abc"),
+            (None, "my-session", "file:///tmp/session.jsonl", "\033[3mmy-session\033[0m"),
+            (None, "my-session", None, "\033[3mmy-session\033[0m"),
+            (None, None, "file:///tmp/session.jsonl", ""),
+            (None, None, None, ""),
+            ("", "", "", ""),
+        ])
+        def test_should_render_optional_fields_and_select_its_own_icon(
+            self, monkeypatch, override, environment, icon, session_id, name, url, expected
+        ):
+            monkeypatch.setenv("NERD_FONTS", environment)
+
+            result = agent_statusline.part_session(session_id, name, url, override=override)
+
+            assert result == expected.format(icon=icon)
+
+        def test_should_allow_all_fields_to_be_omitted(self):
+            assert agent_statusline.part_session() == ""
+
     class TestOnLinks:
         def test_should_wrap_only_the_supplied_text(self):
             result = agent_statusline.link("file:///tmp/transcript.jsonl", "abc123de")

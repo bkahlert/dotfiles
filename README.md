@@ -94,6 +94,8 @@ both override detection.
 
 Session IDs and names render independently: only the shortened ID links to the
 transcript, while the name appears in italics outside the link.
+The shared `part_session` renderer accepts an optional ID, name and URL, and
+selects its own session icon using the font override or automatic detection.
 
 Preview Claude's sample:
 
