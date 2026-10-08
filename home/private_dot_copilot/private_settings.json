@@ -56,7 +56,6 @@
   "enabledPlugins": {
     "superpowers@superpowers-marketplace": true
   },
-  "mouse": false,
   "tabs": {
     "enabled": false
   },
@@ -65,5 +64,8 @@
   },
   "scrollbar": false,
   "showReasoning": false,
-  "mouse": false
+  "mouse": false,
+  "autoTier": "intelligence",
+  "remoteExport": true,
+  "remoteSessions": true
 }

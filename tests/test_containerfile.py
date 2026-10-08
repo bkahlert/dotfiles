@@ -43,3 +43,8 @@ class TestDependabot:
         block = next((b for b in re.split(r"(?m)^  - ", DEPENDABOT) if b.startswith("package-ecosystem: docker")), None)
         assert block is not None, "no docker ecosystem entry"
         assert re.search(r"interval: weekly", block) and re.search(r"default-days: 3", block)
+
+    def test_should_discover_the_containerfile_in_its_directory(self):
+        block = next((b for b in re.split(r"(?m)^  - ", DEPENDABOT) if b.startswith("package-ecosystem: docker")), None)
+        assert block is not None, "no docker ecosystem entry"
+        assert re.search(r"directory: /tests/harness/container", block)

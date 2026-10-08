@@ -35,7 +35,7 @@ class TestAgentIntegration:
     class TestOnPrompts:
         def test_should_use_the_public_harness_fixture(self):
             assert IDE_FIXTURE == "tests/harness/fixtures/agent-capability.txt"
-            assert Path(IDE_FIXTURE).read_text() == "DOTFILES_IDEA_CAPABILITY_OK\n"
+            assert (ROOT / IDE_FIXTURE).read_text() == "DOTFILES_IDEA_CAPABILITY_OK\n"
 
         def test_should_request_only_selected_capabilities(self):
             prompt = probe_prompt(("idea",))
