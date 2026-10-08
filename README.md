@@ -80,6 +80,29 @@ Changes take effect on the next prompt render (no restart needed).
 
 See [Starship configuration](https://starship.rs/config/).
 
+### Agent status lines
+
+[Claude's formatter](home/private_dot_claude/executable_statusline) and
+[Copilot's formatter](home/private_dot_copilot/executable_statusline) use
+[a shared component](home/dot_local/share/agent_statusline.py).
+See each script for its rendered parts and `--help` for options.
+Copilot's dollar cost is a display estimate at 100 AIC per USD, not a verified
+billed amount.
+
+Use [the preview helper](scripts/statusline-preview) when editing status lines.
+It runs both providers' source and installed formatters with Nerd Font icons
+and emoji fallbacks, so differences before and after applying are visible.
+Run it from the repository root:
+
+```sh
+./scripts/statusline-preview
+```
+
+For debugging, both formatters save their latest raw input as
+`claude-statusline-input.json` and `copilot-statusline-input.json` in Python's
+temporary directory (`TMPDIR` when set). These owner-only files contain session
+metadata and are overwritten on every render.
+
 ### Ghostty
 
 Edit the terminal configuration:

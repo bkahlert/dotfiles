@@ -25,7 +25,7 @@ class TestStatusline:
     class TestOnAutoDetection:
         def test_should_cache_the_probe_and_render_accordingly(self, run, sandbox):
             result = run("statusline", stdin=json.dumps(INPUT))
-            cached = (sandbox.home / ".cache/claude/nerd-font-support").read_text()
+            cached = (sandbox.home / ".cache/agent-statusline/nerd-font-support").read_text()
             assert cached in ("0", "1")
             assert result.stdout == {"1": NERD, "0": FALLBACK}[cached]
 
@@ -54,7 +54,7 @@ class TestStatusline:
             assert result.stdout == NERD
 
         def test_should_still_render_when_the_cache_cannot_be_written(self, run, sandbox):
-            (sandbox.home / ".cache/claude").write_text("")
+            (sandbox.home / ".cache/agent-statusline").write_text("")
             result = run("statusline", stdin=json.dumps(INPUT))
             assert result.returncode == 0
             assert result.stdout in (NERD, FALLBACK)
@@ -132,12 +132,59 @@ class TestStatusline:
             assert calls("chezmoi") == [["source-path"]]
             assert calls("uv") == [["run", "--locked", "tests/claude/test_statusline.py", "--print-input"]]
             assert (sandbox.home / "uv.cwd").read_text() == f"{sandbox.home}/dotfiles\n"
+            assert dump_path(sandbox).read_text() == json.dumps(INPUT)
+
+    class TestOnInputDump:
+        def test_should_store_raw_input_with_owner_only_permissions(self, run, sandbox):
+            raw = json.dumps(INPUT, indent=2) + "\n"
+
+            result = run("statusline", "--no-nerd-fonts", stdin=raw)
+
+            assert result.returncode == 0, result.stderr
+            assert dump_path(sandbox).read_text() == raw
+            assert dump_path(sandbox).stat().st_mode & 0o777 == 0o600
+            assert result.stdout == FALLBACK
+
+        def test_should_replace_the_previous_dump(self, run, sandbox):
+            first = run("statusline", "--no-nerd-fonts", stdin='{"session_id":"first"}')
+            second = run("statusline", "--no-nerd-fonts", stdin='{"session_id":"second"}')
+
+            assert first.returncode == second.returncode == 0
+            assert dump_path(sandbox).read_text() == '{"session_id":"second"}'
+
+        def test_should_dump_malformed_input_before_parsing(self, run, sandbox):
+            result = run("statusline", "--no-nerd-fonts", stdin="not json\n")
+
+            assert result.returncode == 0, result.stderr
+            assert dump_path(sandbox).read_text() == "not json\n"
+
+        def test_should_replace_a_symlink_without_touching_its_target(self, run, sandbox):
+            target = sandbox.home / "untouched.json"
+            target.write_text("untouched")
+            dump_path(sandbox).symlink_to(target)
+
+            result = run("statusline", "--no-nerd-fonts", stdin="{}")
+
+            assert result.returncode == 0, result.stderr
+            assert target.read_text() == "untouched"
+            assert not dump_path(sandbox).is_symlink()
+            assert dump_path(sandbox).read_text() == "{}"
+            assert dump_path(sandbox).stat().st_mode & 0o777 == 0o600
 
     class TestOnHelp:
-        def test_should_print_the_header(self, run):
+        def test_should_print_usage_and_preview_documentation(self, run):
             result = run("statusline", "--help")
+
             assert result.returncode == 0
             assert result.stdout.startswith("Purpose:")
+            assert "--preview" in result.stdout
+            assert "--nerd-fonts" in result.stdout
+            assert "--no-nerd-fonts" in result.stdout
+            assert "Render the Claude Code status line from the session JSON on stdin." in result.stdout
+            assert "tests/claude/test_statusline.py" in result.stdout
+            assert "Examples:\n" in result.stdout
+            assert "statusline --preview --nerd-fonts      # the sample session with Nerd Font icons" in result.stdout
+            assert "statusline --preview --no-nerd-fonts   # the same with emoji fallbacks" in result.stdout
 
     class TestOnBadArguments:
         def test_should_exit_2_on_an_unknown_option(self, run):
@@ -156,7 +203,7 @@ def render(run, fields):
 
 
 def cache_detection(sandbox, value):
-    cache = sandbox.home / ".cache/claude/nerd-font-support"
+    cache = sandbox.home / ".cache/agent-statusline/nerd-font-support"
     cache.parent.mkdir(parents=True, exist_ok=True)
     cache.write_text(value)
     return cache
@@ -165,6 +212,10 @@ def cache_detection(sandbox, value):
 def configure_model(sandbox, name, model):
     (sandbox.home / ".claude").mkdir(exist_ok=True)
     (sandbox.home / ".claude" / name).write_text(json.dumps({"model": model}))
+
+
+def dump_path(sandbox):
+    return Path(sandbox.env["TMPDIR"]) / "claude-statusline-input.json"
 
 
 def link(url, text):
@@ -177,12 +228,12 @@ def sample(now):
         "session_id": "abc123def456",
         "session_name": "my-session",
         "transcript_path": f"{HOME}/.claude/transcripts/abc123def456.jsonl",
-        "model": {"id": "claude-sonnet-4-6", "display_name": "Sonnet"},
+        "model": {"id": "claude-sonnet-4-6", "display_name": "claude-sonnet-4-6"},
         "workspace": {"current_dir": ROOT, "project_dir": ROOT, "added_dirs": []},
         "version": "2.1.90",
         "output_style": {"name": "default"},
         "cost": {
-            "total_cost_usd": 0.01234,
+            "total_cost_usd": 5.21,
             "total_duration_ms": 45000,
             "total_api_duration_ms": 2300,
             "total_lines_added": 156,
@@ -221,21 +272,21 @@ EMPTY_SEGMENTS = "" * 6
 INPUT = sample(int(time.time()))
 
 NERD = " · ".join([
-    link(TRANSCRIPT, " abc123de:my-session"),
+    " " + link(TRANSCRIPT, "abc123de") + " \033[3mmy-session\033[0m",
     " claude-sonnet-4-6",
     "\U000f06a9 security-reviewer",
     f"{DIM}{EMPTY_SEGMENTS} 28%{RESET} {DIM}╱200k{RESET}",
-    f"{DIM}$0.01{RESET}",
+    f"{YELLOW}$5.21{RESET}",
     link(LIMITS, f"{DIM} 28% ¹⁸·¹ʰ{RESET}"),
     link(LIMITS, f"{RED} 92% ⁴·¹ᵈ{RESET}"),
 ]) + "\n"
 
 FALLBACK = " · ".join([
-    link(TRANSCRIPT, "# abc123de:my-session"),
+    "# " + link(TRANSCRIPT, "abc123de") + " \033[3mmy-session\033[0m",
     "⚙︎ claude-sonnet-4-6",
     "웃 security-reviewer",
     f"{DIM}◔ 28%{RESET} {DIM}╱200k{RESET}",
-    f"{DIM}$0.01{RESET}",
+    f"{YELLOW}$5.21{RESET}",
     link(LIMITS, f"{DIM}⏱︎ 28% ¹⁸·¹ʰ{RESET}"),
     link(LIMITS, f"{RED}⧗︎ 92% ⁴·¹ᵈ{RESET}"),
 ]) + "\n"

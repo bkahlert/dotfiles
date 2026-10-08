@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from repo import FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
+from repo import FUNCTIONS_SOURCE, HOME_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
 from agent_integration import CAPABILITIES
 
 
@@ -44,8 +44,9 @@ RECORD_SEPARATOR = "\x1e\0"
 @pytest.fixture(scope="session")
 def bin_links(tmp_path_factory):
     links = tmp_path_factory.mktemp("bin")
-    for _, name, source in scripts():
-        (links / name).symlink_to(source)
+    for area, name, source in scripts():
+        link_name = f"copilot-{name}" if area == "copilot" else name
+        (links / link_name).symlink_to(source)
     return links
 
 
@@ -95,6 +96,10 @@ class Sandbox:
         self.real_tools = real_tools
         self.calls_dir.mkdir(parents=True)
         self.env = isolated_env(home, [str(fakes), str(bin_links), str(real_tools)])
+        shared = home / ".local" / "share"
+        shared.mkdir(parents=True, exist_ok=True)
+        (shared / "agent_statusline.py").symlink_to(
+            HOME_SOURCE / "dot_local" / "share" / "agent_statusline.py")
         for name in GUARDED:
             self._write(name, "printf '%s: not faked in this test\\n' \"${0##*/}\" >&2\nexit 127\n",
                         record=False)

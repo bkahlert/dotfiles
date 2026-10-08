@@ -11,7 +11,8 @@ HOME_SOURCE = ROOT / "home"
 CHEZMOISCRIPTS_SOURCE = HOME_SOURCE / ".chezmoiscripts"
 BIN_SOURCE = HOME_SOURCE / "dot_local" / "exact_bin"
 CLAUDE_SOURCE = HOME_SOURCE / "private_dot_claude"
-SCRIPT_SOURCES = (("bin", BIN_SOURCE), ("claude", CLAUDE_SOURCE))
+COPILOT_SOURCE = HOME_SOURCE / "private_dot_copilot"
+SCRIPT_SOURCES = (("bin", BIN_SOURCE), ("claude", CLAUDE_SOURCE), ("copilot", COPILOT_SOURCE))
 FUNCTIONS_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_functions"
 CONF_D_SOURCE = HOME_SOURCE / "private_dot_config" / "zsh" / "exact_conf.d"
 SHIMS = ROOT / "tests" / "shims"
@@ -56,7 +57,7 @@ def isolated_env(home: Path, path: list[str]) -> dict[str, str]:
 
 def scripts() -> list[tuple[str, str, Path]]:
     """Every file in bin/, so one missing its `executable_` prefix is still a script, and each `executable_` file
-    in ~/.claude, which also holds CLAUDE.md, skills and a modify_ script."""
+    in ~/.claude and ~/.copilot, which also hold their respective configuration files."""
     return [(area, source.name.removeprefix("executable_"), source)
             for area, root in SCRIPT_SOURCES for source in sorted(root.iterdir())
             if source.is_file() and (area == "bin" or source.name.startswith("executable_"))]

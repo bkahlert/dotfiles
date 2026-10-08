@@ -23,7 +23,30 @@ class TestCopilotConfig:
         source = HOME_SOURCE / "private_dot_copilot"
         assert (copilot / "copilot-instructions.md").read_bytes() == (source / "copilot-instructions.md").read_bytes()
         assert (copilot / "settings.json").read_bytes() == (source / "private_settings.json").read_bytes()
-        assert json.loads((copilot / "settings.json").read_text())["model"] == "auto"
+        settings = json.loads((copilot / "settings.json").read_text())
+        assert settings["model"] == "auto"
+        assert settings["statusLine"] == {
+            "type": "command",
+            "command": "~/.copilot/statusline",
+            "padding": 1,
+        }
+        assert settings["footer"] == {
+            "showAgent": False,
+            "showAiUsed": False,
+            "showBranch": True,
+            "showCiStatus": True,
+            "showCodeChanges": False,
+            "showContextWindow": False,
+            "showCustom": True,
+            "showDirectory": True,
+            "showModelEffort": False,
+            "showPullRequest": True,
+            "showQuota": True,
+            "showSandbox": True,
+            "showSchedules": False,
+            "showUsername": False,
+            "showYolo": False,
+        }
         assert stat.S_IMODE(copilot.stat().st_mode) == 0o700
         assert stat.S_IMODE((copilot / "settings.json").stat().st_mode) == 0o600
         assert (copilot / "mcp-config.json").read_text() == '{"mcpServers":{}}'

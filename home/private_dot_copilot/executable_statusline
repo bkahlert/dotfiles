@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+# Purpose: Render the Copilot status line from the session JSON on stdin.
+# Usage:   statusline [--nerd-fonts | --no-nerd-fonts] [--preview]
+#
+# Options:
+#   --nerd-fonts      Force Nerd Font icons (overrides detection and NERD_FONTS).
+#   --no-nerd-fonts   Force emoji fallbacks (overrides detection and NERD_FONTS).
+#   --preview         Read the sample input of tests/copilot/test_statusline.py in the dotfiles
+#                     repo (chezmoi source-path) instead of stdin.
+#   -h, --help        Show this help.
+#
+# Examples:
+#   statusline --preview --nerd-fonts      # the sample session with Nerd Font icons
+#   statusline --preview --no-nerd-fonts   # the same with emoji fallbacks
+#
+# Configured in ~/.copilot/settings.json as statusLine.command.
+# Writes the latest raw input to copilot-statusline-input.json in Python's temporary
+# directory (TMPDIR when set), with owner-only permissions.
+# Agent, quota, effort and sandbox stay in the native footer: Copilot omits their
+# fields from the command input. All footer options remain enabled.
+# Requires Python >= 3.9 (standard library only).
+
+import sys
+from pathlib import Path
+
+script_dir = Path(__file__).absolute().parent
+shared_dir = (script_dir.parent / "dot_local" / "share"
+              if script_dir.name == "private_dot_copilot"
+              else Path.home() / ".local" / "share")
+sys.path.insert(0, str(shared_dir))
+
+from agent_statusline import (
+    field, load_input, number, parse_args, part_context, part_cost,
+    part_session, render_parts,
+)
+
+COST_THRESHOLDS = (5, 10)
+# Estimated equivalent at 100 AI credits per dollar, not a billed amount.
+NANO_AIU_PER_USD = 100_000_000_000
+
+
+# ── Entry point ────────────────────────────────────────────
+
+def main(args):
+    override, preview = parse_args(args, __file__)
+    session = load_input(preview, "tests/copilot/test_statusline.py", "copilot-statusline-input.json")
+    session_id = field(session, "session_id")
+    name = field(session, "session_name")
+    transcript = field(session, "transcript_path")
+    used = number(field(session, "context_window", "current_context_used_percentage"))
+    if used is None:
+        used = number(field(session, "context_window", "used_percentage"))
+    size = number(field(session, "context_window", "displayed_context_limit"))
+    if size is None:
+        size = number(field(session, "context_window", "context_window_size"))
+    nano_aiu = number(field(session, "ai_used", "total_nano_aiu"))
+    usd = nano_aiu / NANO_AIU_PER_USD if nano_aiu is not None else None
+    parts = [
+        part_session(
+            session_id if isinstance(session_id, str) else None,
+            name if isinstance(name, str) else None,
+            f"file://{transcript}" if isinstance(transcript, str) and transcript else None,
+            override=override,
+        ),
+        part_context(used, size, override=override),
+        part_cost(usd=usd, thresholds=COST_THRESHOLDS),
+    ]
+    print(render_parts(parts))
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])

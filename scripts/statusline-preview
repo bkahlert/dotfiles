@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+"$(chezmoi source-path)/private_dot_claude/executable_statusline" --nerd-fonts --preview
+~/.claude/statusline --nerd-fonts --preview
+
+"$(chezmoi source-path)/private_dot_claude/executable_statusline" --no-nerd-fonts --preview
+~/.claude/statusline --no-nerd-fonts --preview
+
+echo ""
+
+"$(chezmoi source-path)/private_dot_copilot/executable_statusline" --nerd-fonts --preview
+~/.copilot/statusline --nerd-fonts --preview
+
+"$(chezmoi source-path)/private_dot_copilot/executable_statusline" --no-nerd-fonts --preview
+~/.copilot/statusline --no-nerd-fonts --preview
