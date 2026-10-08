@@ -9,7 +9,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 HOME_SOURCE = ROOT / "home"
 CHEZMOISCRIPTS_SOURCE = HOME_SOURCE / ".chezmoiscripts"
-BIN_SOURCE = HOME_SOURCE / "dot_local" / "exact_bin"
+BIN_SOURCE = HOME_SOURCE / "dot_local" / "bin"
 CLAUDE_SOURCE = HOME_SOURCE / "private_dot_claude"
 COPILOT_SOURCE = HOME_SOURCE / "private_dot_copilot"
 SCRIPT_SOURCES = (("bin", BIN_SOURCE), ("claude", CLAUDE_SOURCE), ("copilot", COPILOT_SOURCE))
