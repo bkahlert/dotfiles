@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from repo import FUNCTIONS_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
+from repo import FUNCTIONS_SOURCE, HOME_SOURCE, SYSTEM_PATH, isolated_env, module_path, scripts
 from agent_integration import CAPABILITIES
 
 
@@ -96,6 +96,10 @@ class Sandbox:
         self.real_tools = real_tools
         self.calls_dir.mkdir(parents=True)
         self.env = isolated_env(home, [str(fakes), str(bin_links), str(real_tools)])
+        shared = home / ".local" / "share"
+        shared.mkdir(parents=True, exist_ok=True)
+        (shared / "statusline_render.py").symlink_to(
+            HOME_SOURCE / "dot_local" / "share" / "statusline_render.py")
         for name in GUARDED:
             self._write(name, "printf '%s: not faked in this test\\n' \"${0##*/}\" >&2\nexit 127\n",
                         record=False)

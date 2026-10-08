@@ -29,8 +29,11 @@ import time
 from pathlib import Path
 from typing import Callable, NamedTuple
 
+sys.path.insert(0, str(Path.home() / ".local" / "share"))
+
+from statusline_render import render_parts
+
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
-SEPARATOR = " · "
 RATE_LIMIT_URL = "https://console.anthropic.com/settings/limits"
 
 # (warn, error) lower bounds
@@ -332,7 +335,7 @@ def main(args):
         part_rate_limit(field(limits, "five_hour"), icons.clock, icons.restart),
         part_rate_limit(field(limits, "seven_day"), icons.calendar, icons.restart),
     ]
-    print(SEPARATOR.join(part for part in parts if part))
+    print(render_parts(parts))
 
 
 if __name__ == "__main__":

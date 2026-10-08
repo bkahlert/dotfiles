@@ -27,8 +27,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path.home() / ".local" / "share"))
+
+from statusline_render import render_parts
+
 DIM, YELLOW, RED, RESET = "\033[2m", "\033[33m", "\033[31m", "\033[0m"
-SEPARATOR = " · "
 CIRCLES = [(12, "○"), (37, "◔"), (62, "◑"), (87, "◕"), (math.inf, "●")]
 BAR = [("\uee00", "\uee03"), *[("\uee01", "\uee04")] * 8, ("\uee02", "\uee05")]
 
@@ -240,7 +243,7 @@ def main():
     part_cost(status),
     *part_indicators(status, nerd_fonts),
   ]
-  print(SEPARATOR.join(part for part in parts if part))
+  print(render_parts(parts))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,1 @@
+../home/dot_local/share/statusline_render.py

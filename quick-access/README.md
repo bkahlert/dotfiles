@@ -13,6 +13,7 @@ chezmoi source root (`.chezmoiroot`), so chezmoi never sees them.
 | Symlink | Source | Holds |
 |---|---|---|
 | `quick-access/bin` | [home/dot_local/exact_bin/](../home/dot_local/exact_bin) | Shell-agnostic executables, mirrored to `~/.local/bin` |
+| `quick-access/statusline-render.py` | [home/dot_local/share/statusline_render.py](../home/dot_local/share/statusline_render.py) | Shared text-part renderer for Claude and Copilot statuslines |
 | `quick-access/functions` | [home/private_dot_config/zsh/exact_functions/](../home/private_dot_config/zsh/exact_functions) | Autoloaded zsh functions, one file per function (none right now; `.keep` holds the directory) |
 | `quick-access/completions` | [home/private_dot_config/zsh/exact_completions/](../home/private_dot_config/zsh/exact_completions) | Hand-written completions, for tools that ship none |
 | `quick-access/conf.d` | [home/private_dot_config/zsh/exact_conf.d/](../home/private_dot_config/zsh/exact_conf.d) | Zsh modules — env setup, tool init, **and inline functions** |

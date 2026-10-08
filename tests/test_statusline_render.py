@@ -1,5 +1,7 @@
 import sys
 
+import pytest
+
 from repo import ROOT
 
 sys.path.insert(0, str(ROOT / "home" / "dot_local" / "share"))
@@ -29,3 +31,15 @@ class TestStatuslineRender:
         hyperlink = "\033]8;;file:///tmp/session\033\\session\033]8;;\033\\"
         result = render_parts([ansi, hyperlink])
         assert result == f"{ansi} · {hyperlink}"
+
+
+class TestStatuslineCommands:
+    @pytest.mark.parametrize("command", ["statusline", "copilot-statusline"])
+    def test_should_fail_visibly_when_the_shared_module_is_missing(self, command, run, sandbox):
+        module = sandbox.home / ".local/share/statusline_render.py"
+        module.unlink(missing_ok=True)
+
+        result = run(command, "--no-nerd-fonts", stdin="{}")
+
+        assert result.returncode != 0
+        assert "statusline_render" in result.stderr
