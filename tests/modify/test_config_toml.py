@@ -117,6 +117,13 @@ class TestModifyConfigToml:
             assert first.returncode == second.returncode == 0
             assert second.stdout == first.stdout
 
+    class TestOnChezmoiOutsidePath:
+        def test_should_use_the_executable_provided_by_the_parent(self, modify, sandbox):
+            (sandbox.fakes / "chezmoi").unlink()
+            result = modify(SCRIPT, "", CHEZMOI_EXECUTABLE=require_chezmoi())
+            assert result.returncode == 0, result.stderr
+            assert tomllib.loads(result.stdout)["plugins"]["superpowers@superpowers-dev"]["enabled"] is True
+
     class TestOnInvalidToml:
         def test_should_fail_without_emitting_content(self, modify):
             result = modify(SCRIPT, "[broken")

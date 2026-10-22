@@ -102,5 +102,5 @@ TEMPLATE
 # Chezmoi runs modifiers from a shared temporary directory, not their source directory.
 source_dir=$(mktemp -d)
 trap 'rmdir "$source_dir"' EXIT
-chezmoi execute-template --config /dev/null --config-format toml \
+"${CHEZMOI_EXECUTABLE:-chezmoi}" execute-template --config /dev/null --config-format toml \
   --source "$source_dir" --with-stdin "$template"
