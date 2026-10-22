@@ -37,9 +37,9 @@ class TestInstallPackages:
                 assert calls("brew") == [["bundle", "--file=/dev/stdin"]]
 
     class TestBrewfile:
-        def test_should_install_claude_code_and_github_copilot_via_casks(self):
+        def test_should_install_agent_clis_via_casks(self):
             casks = [line.split('"')[1] for line in brewfile_lines() if line.startswith("cask ")]
-            assert {"claude-code", "copilot-cli"} <= set(casks)
+            assert {"claude-code", "copilot-cli", "codex"} <= set(casks)
 
         def test_should_install_command_line_tools_for_copilot(self):
             packages = {line.split('"')[1] for line in brewfile_lines() if line.startswith("brew ")}

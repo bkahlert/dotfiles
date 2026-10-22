@@ -25,7 +25,7 @@ chezmoi init --apply bkahlert
 - **[Sheldon](https://sheldon.cli.rs/)** — zsh plugin manager (TOML config, Rust-based).
 - **[Starship](https://starship.rs/)** — cross-shell prompt (TOML config, Rust-based).
 - **Shell features** — scripts, functions, aliases and keybindings are spread over several prefixed source paths. [quick-access/](quick-access/README.md) maps them with prefix-free symlinks and explains where a new one belongs.
-- **AI assistant configs** — `~/.claude/`, `~/.copilot/`, `~/.gemini/`, and `~/.config/agents/` are tracked so settings, prompt rules and slash commands stay in sync across machines.
+- **AI assistant configs** — `~/.claude/`, `~/.copilot/`, `~/.codex/`, `~/.gemini/`, and `~/.config/agents/` are tracked so settings, prompt rules and slash commands stay in sync across machines.
 
 ## Making changes
 
@@ -79,6 +79,28 @@ chezmoi edit ~/.config/starship.toml
 Changes take effect on the next prompt render (no restart needed).
 
 See [Starship configuration](https://starship.rs/config/).
+
+### Codex
+
+On macOS, the Brewfile installs the Codex CLI. On Linux, install the CLI before
+applying if you want its setup to run. The
+[Codex setup](home/.chezmoiscripts/run_onchange_after_setup-codex.sh)
+installs Superpowers through its upstream Codex marketplace and installs the
+same third-party skills as the other agents. Node.js comes from fnm.
+
+[User instructions](home/private_dot_codex/AGENTS.md) explicitly read the shared
+guidance at `~/.config/agents/AGENTS.md`. Codex discovers repo-owned skills in
+`~/.agents/skills/` directly. The
+[config modifier](home/private_dot_codex/modify_private_config.toml) manages
+MCP definitions, plugin enablement, status line and desktop preferences.
+Model selections, project trust, onboarding state and local integrations survive
+applies. Authentication and session history stay local.
+
+After applying, run `codex login` once, then start a new `codex` session.
+`codexd` provides the same permission-bypass shortcut as the other agents;
+it disables both approvals and the sandbox. Ordinary `codex` keeps its defaults.
+Provisioning is covered by sandboxed tests; the paid capability targets below
+currently cover Claude and Copilot only.
 
 ### Agent status lines
 

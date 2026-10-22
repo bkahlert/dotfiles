@@ -39,17 +39,19 @@ Not symlinked, but worth knowing:
   - third-party skills: each agent's setup script —
     [Claude](../home/.chezmoiscripts/run_onchange_after_setup-claude.sh),
     [Copilot](../home/.chezmoiscripts/run_onchange_after_setup-copilot.sh),
+    [Codex](../home/.chezmoiscripts/run_onchange_after_setup-codex.sh),
     [Gemini](../home/.chezmoiscripts/run_onchange_after_setup-gemini.sh)
-    detects `claude`, `gemini` and `copilot` on PATH (including Homebrew and fnm's default Node.js)
-    and runs `skills add -g` (e.g. `grill-me`, `handoff`) for all available agents.
-    With no detected CLI, it installs nothing. The layout depends on the agents detected: with a
-    universal agent (Gemini CLI, GitHub Copilot) in the list, the CLI writes the canonical copy and the symlink;
+    detects its own CLI on PATH (including Homebrew and fnm's default Node.js)
+    and runs `skills add -g` (e.g. `grill-me`, `handoff`) for that agent.
+    With no detected CLI, it installs nothing. The layout depends on the agent selected: with a
+    universal agent (Codex, Gemini CLI, GitHub Copilot), the CLI writes the canonical copy;
     with `claude-code` alone it copies straight into `~/.claude/skills/<name>`.
     Without `-g` the CLI treats the working directory as a project and leaves a `skills-lock.json` in `$HOME`,
     because chezmoi runs scripts there;
   - repo-owned skills: the SKILL.md sits in [home/dot_agents/skills/](../home/dot_agents/skills) and the
     symlink is a one-line `symlink_<name>` file in [home/private_dot_claude/skills/](../home/private_dot_claude/skills).
     Chezmoi applies edits on the next apply.
+  Codex discovers `~/.agents/skills/` directly, so it needs no additional symlinks.
   Don't install repo-owned skills through the CLI: from a local path it copies straight into
   `~/.claude/skills` without the canonical copy, and the copy goes stale on every edit.
 
@@ -143,7 +145,7 @@ forces it.
   08-completions.zsh            → compinit, after the plugins that extend $fpath
   09-path.zsh                   → $PATH, before anything resolves a command
   10-*.zsh                      → tool modules, one per tool
-  20-agents.zsh                 → installed AI CLIs (`clauded`, `copilotd`, `geminid` bypass permissions)
+  20-agents.zsh                 → installed AI CLIs (`clauded`, `copilotd`, `codexd`, `geminid` bypass permissions)
   89-scratch-workflow.zsh       → `ec` / `sc`, the scratch workflow
   90-scratch.zsh                → drafts, loaded last
   .zshrc.local                 → machine-local, unmanaged
