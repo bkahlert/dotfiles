@@ -32,6 +32,7 @@ brew "bash"                        # Bash 5; ~/.local/bin scripts need bash >= 4
 brew "gh"                          # GitHub CLI; used for pull requests and issues by Copilot, and by upgrade-all
 cask "claude-code"                 # Claude Code AI CLI; managed by Homebrew on macOS instead of the native installer
 cask "copilot-cli"                 # GitHub Copilot AI CLI; used for terminal coding assistance and agent skills
+cask "codex"                       # OpenAI Codex CLI; used for terminal coding assistance, MCP servers and agent skills
 cask "keepassxc"                   # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent, and chezmoi reads personal secrets from its database at apply time
 cask "font-jetbrains-mono-nerd-font" # Nerd Font variant of JetBrains Mono; required by Starship glyphs
 EOF

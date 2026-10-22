@@ -1,12 +1,13 @@
 import pytest
 
-AGENTS = {"claude": "claude-code", "copilot": "github-copilot", "gemini": "gemini-cli"}
+AGENTS = {"claude": "claude-code", "copilot": "github-copilot", "gemini": "gemini-cli", "codex": "codex"}
 
 
 class AgentSetupCases:
     def test_should_install_skills_only_for_its_agent(self, script, fake_bin, calls, tmp_path):
         for agent in AGENTS:
-            fake_bin(agent, script='[[ $2 == marketplace && $3 == list ]] && printf "[]\\n"\nexit 0\n')
+            inventory = '{"marketplaces":[]}' if agent == "codex" else "[]"
+            fake_bin(agent, script=f'[[ $2 == marketplace && $3 == list ]] && printf \'%s\\n\' \'{inventory}\'\nexit 0\n')
         fake_bin("fnm", stdout='export PATH="$HOME/node/bin:$PATH"')
         fake_bin("npx")
         result = script(f"setup-{self.agent}", prefix_root=tmp_path)
@@ -35,7 +36,8 @@ class AgentSetupCases:
         assert calls(self.agent) == []
 
     def test_should_stop_after_the_first_failed_skill_install(self, script, fake_bin, calls, tmp_path):
-        fake_bin(self.agent, script='[[ $2 == marketplace && $3 == list ]] && printf "[]\\n"\nexit 0\n')
+        inventory = '{"marketplaces":[]}' if self.agent == "codex" else "[]"
+        fake_bin(self.agent, script=f'[[ $2 == marketplace && $3 == list ]] && printf \'%s\\n\' \'{inventory}\'\nexit 0\n')
         fake_bin("fnm")
         fake_bin("npx", exit_code=4)
         result = script(f"setup-{self.agent}", prefix_root=tmp_path)
@@ -49,8 +51,9 @@ class AgentSetupCases:
         bin_dir = ((sandbox.home / prefix) if prefix in (".local", "node")
                    else tmp_path / prefix.lstrip("/")) / "bin"
         bin_dir.mkdir(parents=True)
+        inventory = '{"marketplaces":[]}' if self.agent == "codex" else "[]"
         (bin_dir / self.agent).write_text(
-            '#!/bin/sh\n[ "$3" = list ] && printf "[]\\n"\nexit 0\n')
+            f'#!/bin/sh\n[ "$3" = list ] && printf \'%s\\n\' \'{inventory}\'\nexit 0\n')
         (bin_dir / self.agent).chmod(0o755)
         node_bin = sandbox.home / "node" / "bin"
         node_bin.mkdir(parents=True, exist_ok=True)

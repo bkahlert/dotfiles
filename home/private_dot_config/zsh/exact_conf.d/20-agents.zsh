@@ -5,6 +5,9 @@ fi
 if (( $+commands[copilot] )); then
   alias copilotd="copilot --yolo"
 fi
+if (( $+commands[codex] )); then
+  alias codexd="codex --dangerously-bypass-approvals-and-sandbox"
+fi
 if (( $+commands[gemini] )); then
   alias geminid="gemini --yolo"
 fi

@@ -1,0 +1,106 @@
+#!/usr/bin/env bash
+# Purpose: Write Codex settings from source state, preserving model selections,
+#          project trust, onboarding state and machine-specific integrations.
+# Usage:   Run by chezmoi on apply; receives the current TOML on stdin.
+
+set -euo pipefail
+
+template=$(cat <<'TEMPLATE'
+{{- $live := fromToml .chezmoi.stdin -}}
+{{- $source := fromToml `
+[mcp_servers.idea]
+url = "http://127.0.0.1:64342/stream"
+
+[mcp_servers.context7]
+command = "npx"
+args = ["--yes", "@upstash/context7-mcp@latest"]
+
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = ["--yes", "chrome-devtools-mcp@latest", "--headless", "--isolated", "--no-usage-statistics"]
+
+[plugins."superpowers@superpowers-dev"]
+enabled = true
+
+[tui]
+status_line = ["thread-name", "model-with-reasoning", "current-dir", "context-used", "context-window-size", "estimated-thread-cost", "five-hour-limit", "weekly-limit"]
+status_line_use_colors = true
+
+[desktop]
+followUpQueueMode = "steer"
+external-agent-import-sync-enabled = false
+conversationDetailMode = "STEPS_COMMANDS"
+ambient-suggestions-enabled = false
+preventSleepWhileRunning = true
+appearanceDarkCodeThemeId = "codex"
+selected-avatar-id = "codex"
+
+[desktop.external-agent-import-sync-item-types]
+SESSIONS = "original"
+AGENTS_MD = false
+CONFIG = "original"
+SKILLS = "original"
+PLUGINS = "original"
+
+[desktop.open-in-target-preferences]
+global = "intellij"
+
+[desktop.appearanceDarkChromeTheme]
+accent = "#0169cc"
+accentSource = "custom"
+contrast = 60
+ink = "#fcfcfc"
+opaqueWindows = false
+surface = "#111111"
+fonts = {}
+
+[desktop.appearanceDarkChromeTheme.semanticColors]
+diffAdded = "#00a240"
+diffRemoved = "#e02e2a"
+skill = "#b06dff"
+
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"
+ENABLE_PROMPT_CACHING_1H = "1"
+CLAUDE_CODE_DISABLE_ALTERNATE_SCREEN = "1"
+` -}}
+{{- range $key := list "model" "model_provider" "model_reasoning_effort" "model_reasoning_summary" "service_tier" "projects" "notice" "notify" -}}
+  {{- if hasKey $live $key -}}
+    {{- $_ := set $source $key (get $live $key) -}}
+  {{- end -}}
+{{- end -}}
+{{- range $key := list "mcp_servers" "marketplaces" "plugins" "model_providers" -}}
+  {{- $entries := get $live $key | default dict -}}
+  {{- range $name, $value := get $source $key | default dict -}}
+    {{- if eq $key "mcp_servers" -}}
+      {{- $local := get $entries $name | default dict -}}
+      {{- range $field := list "env" "env_vars" "http_headers" "env_http_headers" "bearer_token_env_var" "http_headers_helper" -}}
+        {{- if and (hasKey $local $field) (not (hasKey $value $field)) -}}
+          {{- $_ := set $value $field (get $local $field) -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $_ := set $entries $name $value -}}
+  {{- end -}}
+  {{- if $entries -}}
+    {{- $_ := set $source $key $entries -}}
+  {{- end -}}
+{{- end -}}
+{{- $tui := get $live "tui" | default dict -}}
+{{- range $key := list "screen_reader_detection_done" "model_availability_nux" -}}
+  {{- if hasKey $tui $key -}}
+    {{- $_ := set $source.tui $key (get $tui $key) -}}
+  {{- end -}}
+{{- end -}}
+{{- toToml $source -}}
+TEMPLATE
+)
+
+# Chezmoi runs modifiers from a shared temporary directory, not their source directory.
+source_dir=$(mktemp -d)
+trap 'rmdir "$source_dir"' EXIT
+"${CHEZMOI_EXECUTABLE:-chezmoi}" execute-template --config /dev/null --config-format toml \
+  --source "$source_dir" --with-stdin "$template"
