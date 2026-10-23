@@ -16,25 +16,40 @@ if [[ $(uname) == Darwin ]]; then
   fi
 
   brew bundle --file=/dev/stdin <<EOF
-brew "uv"                          # Python package/project manager (replaces pip + venv + pyenv)
-brew "fnm"                         # Node.js version manager; run_once_before_02-install-node installs the default, conf.d/10-fnm.zsh puts it on PATH
-brew "sheldon"                     # Zsh plugin manager; config in ~/.config/sheldon/plugins.toml
-brew "starship"                    # Cross-shell prompt; config in ~/.config/starship.toml
-brew "zoxide"                      # Smarter cd that learns frecency; aliased to z in conf.d
-brew "bat"                         # cat replacement with syntax highlighting and git diff support
-brew "ripgrep"                     # Fast recursive text search; commonly preferred by Copilot for code search
-brew "fd"                          # Fast file finder; complements ripgrep when locating files
-brew "jq"                          # Command-line JSON processor; used by scripts and aliases
-brew "yq"                          # Command-line YAML processor; lets Copilot query structured config
-brew "btop"                        # Terminal resource monitor (CPU, memory, disk, network)
-brew "coreutils"                   # GNU core utilities as g-prefixed binaries; macOS ships no timeout, ~/.local/bin/timeout forwards to gtimeout
-brew "bash"                        # Bash 5; ~/.local/bin scripts need bash >= 4.4 (empty arrays under set -u, job notices, FIFO reads), macOS ships 3.2
-brew "gh"                          # GitHub CLI; used for pull requests and issues by Copilot, and by upgrade-all
-cask "claude-code"                 # Claude Code AI CLI; managed by Homebrew on macOS instead of the native installer
-cask "copilot-cli"                 # GitHub Copilot AI CLI; used for terminal coding assistance and agent skills
-cask "codex"                       # OpenAI Codex CLI; used for terminal coding assistance, MCP servers and agent skills
-cask "keepassxc"                   # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent, and chezmoi reads personal secrets from its database at apply time
+brew "uv"                            # Python package/project manager (replaces pip + venv + pyenv)
+brew "fnm"                           # Node.js version manager; run_once_before_02-install-node installs the default, conf.d/10-fnm.zsh puts it on PATH
+brew "sheldon"                       # Zsh plugin manager; config in ~/.config/sheldon/plugins.toml
+brew "starship"                      # Cross-shell prompt; config in ~/.config/starship.toml
+brew "zoxide"                        # Smarter cd that learns frecency; aliased to z in conf.d
+brew "bat"                           # cat replacement with syntax highlighting and git diff support
+brew "ripgrep"                       # Fast recursive text search; commonly preferred by Copilot for code search
+brew "fd"                            # Fast file finder; complements ripgrep when locating files
+brew "jq"                            # Command-line JSON processor; used by scripts and aliases
+brew "yq"                            # Command-line YAML processor; lets Copilot query structured config
+brew "btop"                          # Terminal resource monitor (CPU, memory, disk, network)
+brew "coreutils"                     # GNU core utilities as g-prefixed binaries; macOS ships no timeout, ~/.local/bin/timeout forwards to gtimeout
+brew "bash"                          # Bash 5; ~/.local/bin scripts need bash >= 4.4 (empty arrays under set -u, job notices, FIFO reads), macOS ships 3.2
+brew "gh"                            # GitHub CLI; used for pull requests and issues by Copilot, and by upgrade-all
+cask "claude-code"                   # Claude Code AI CLI; managed by Homebrew on macOS instead of the native installer
+cask "copilot-cli"                   # GitHub Copilot AI CLI; used for terminal coding assistance and agent skills
+cask "codex"                         # OpenAI Codex CLI; used for terminal coding assistance, MCP servers and agent skills
+cask "keepassxc"                     # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent, and chezmoi reads personal secrets from its database at apply time
 cask "font-jetbrains-mono-nerd-font" # Nerd Font variant of JetBrains Mono; required by Starship glyphs
+cask "artcraft-launcher"             # Craft app installer and updater; opens and manages the suite
+cask "artcraft"                      # AI image and video studio; part of the Craft suite
+cask "cadcraft"                      # CAD and drafting tool; part of the Craft suite
+cask "deckcraft"                     # Presentation editor; part of the Craft suite
+cask "designcraft"                   # Page layout and publishing tool; part of the Craft suite
+cask "effectcraft"                   # Motion graphics and visual effects compositor; part of the Craft suite
+cask "figcraft"                      # Interface design and prototyping tool; part of the Craft suite
+cask "filmcraft"                     # Video editor; part of the Craft suite
+cask "gridcraft"                     # Spreadsheet editor; part of the Craft suite
+cask "lightcraft"                    # Photo library and RAW image developer; part of the Craft suite
+cask "pdfcraft"                      # PDF editor; part of the Craft suite
+cask "photocraft"                    # Image editor; part of the Craft suite
+cask "soundcraft"                    # Digital audio workstation; part of the Craft suite
+cask "vectorcraft"                   # Vector illustration editor; part of the Craft suite
+cask "wordcraft"                     # Word processor; part of the Craft suite
 EOF
 
 else
