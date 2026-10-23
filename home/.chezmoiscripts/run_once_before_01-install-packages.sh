@@ -35,6 +35,8 @@ cask "copilot-cli"                   # GitHub Copilot AI CLI; used for terminal 
 cask "codex"                         # OpenAI Codex CLI; used for terminal coding assistance, MCP servers and agent skills
 cask "keepassxc"                     # KeePassXC; its KeeAgent feeds personal SSH keys into the launchd ssh-agent, and chezmoi reads personal secrets from its database at apply time
 cask "font-jetbrains-mono-nerd-font" # Nerd Font variant of JetBrains Mono; required by Starship glyphs
+
+# ArtCraft suite of creative apps; installed via the ArtCraft Launcher, which is managed by Homebrew on macOS instead of the native installer
 cask "artcraft-launcher"             # Craft app installer and updater; opens and manages the suite
 cask "artcraft"                      # AI image and video studio; part of the Craft suite
 cask "cadcraft"                      # CAD and drafting tool; part of the Craft suite

@@ -12,6 +12,32 @@ class TestRepositoryPaths:
         assert Path(repo.__file__).resolve() == repo.ROOT / "tests" / "harness" / "repo.py"
 
 
+class TestBrewfileEntries:
+    def test_should_ignore_blank_lines_and_standalone_comments(self, monkeypatch):
+        monkeypatch.setattr(repo, "brewfile_lines", lambda: [
+            "",
+            " \t",
+            "# Creative apps",
+            '  # Includes "Craft" apps',
+            'brew "uv" # Python package manager',
+            'cask "artcraft" # Creative studio',
+        ])
+
+        result = repo.brewfile_entries()
+
+        assert result == [
+            'brew "uv" # Python package manager',
+            'cask "artcraft" # Creative studio',
+        ]
+
+    def test_should_keep_invalid_lines_for_validation(self, monkeypatch):
+        monkeypatch.setattr(repo, "brewfile_lines", lambda: ["unexpected entry"])
+
+        result = repo.brewfile_entries()
+
+        assert result == ["unexpected entry"]
+
+
 class TestRequireChezmoi:
     def test_should_return_the_path_of_chezmoi_on_the_path(self, tmp_path, monkeypatch):
         chezmoi = tmp_path / "chezmoi"

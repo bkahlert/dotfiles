@@ -91,6 +91,11 @@ def templates() -> list[tuple[str, Path]]:
 
 
 def brewfile_lines() -> list[str]:
-    """The Brewfile heredoc of the package install script, one entry per line."""
+    """Return every line in the package installer's Brewfile heredoc."""
     source = dict(chezmoiscripts())["install-packages"].read_text()
     return re.search(r"<<EOF\n(.*?)\nEOF\n", source, re.DOTALL).group(1).splitlines()
+
+
+def brewfile_entries() -> list[str]:
+    """Return the Brewfile's nonempty, non-comment lines for package validation."""
+    return [line for line in brewfile_lines() if line.strip() and not line.lstrip().startswith("#")]

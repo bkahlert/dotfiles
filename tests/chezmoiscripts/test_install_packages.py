@@ -3,7 +3,7 @@ import shlex
 
 import pytest
 
-from repo import brewfile_lines
+from repo import brewfile_entries, brewfile_lines
 
 ENTRY = re.compile(r'(brew|cask) "[a-z0-9@._+-]+" +# \S.*')
 LINUX_INSTALLERS = {
@@ -38,23 +38,23 @@ class TestInstallPackages:
 
     class TestBrewfile:
         def test_should_install_agent_clis_via_casks(self):
-            casks = [line.split('"')[1] for line in brewfile_lines() if line.startswith("cask ")]
+            casks = [line.split('"')[1] for line in brewfile_entries() if line.startswith("cask ")]
             assert {"claude-code", "copilot-cli", "codex"} <= set(casks)
 
         def test_should_install_command_line_tools_for_copilot(self):
-            packages = {line.split('"')[1] for line in brewfile_lines() if line.startswith("brew ")}
+            packages = {line.split('"')[1] for line in brewfile_entries() if line.startswith("brew ")}
             assert {"ripgrep", "gh", "fd", "yq"} <= packages
 
         def test_should_not_install_work_only_packages(self):
-            packages = {line.split('"')[1] for line in brewfile_lines()}
+            packages = {line.split('"')[1] for line in brewfile_entries()}
             assert not {"glab", "1password-cli"} & packages
 
-        @pytest.mark.parametrize("line", brewfile_lines(), ids=lambda line: line.split("#")[0].strip())
+        @pytest.mark.parametrize("line", brewfile_entries(), ids=lambda line: line.split("#")[0].strip())
         def test_should_be_one_entry_with_a_comment_saying_why(self, line):
             assert ENTRY.fullmatch(line), f"not a `brew|cask \"name\"  # why` line: {line!r}"
 
         def test_should_list_every_package_once(self):
-            names = [line.split('"')[1] for line in brewfile_lines()]
+            names = [line.split('"')[1] for line in brewfile_entries()]
             assert sorted(names) == sorted(set(names))
 
     class TestOnLinux:
