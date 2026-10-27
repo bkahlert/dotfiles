@@ -19,6 +19,7 @@ CHOSEN = [
     ["write", "com.apple.dock", "wvous-tl-corner", "-int", "3"],
     ["write", "com.apple.SoftwareUpdate", "AutomaticCheckEnabled", "-bool", "true"],
     ["write", "-g", "com.apple.swipescrolldirection", "-bool", "false"],
+    ["write", "com.apple.AppleMultitouchTrackpad", "TrackpadCornerSecondaryClick", "-int", "0"],
     ["write", "com.apple.dock", "showLaunchpadGestureEnabled", "-bool", "false"],
 ]
 
@@ -35,6 +36,7 @@ class TestOsx:
             assert calls("osascript")[0] == ["-e", 'tell application "System Preferences" to quit']
             assert calls("chflags") == [["nohidden", str(sandbox.home / "Library")]]
             assert calls("killall") == []
+            assert calls("activateSettings") == []
 
         def test_should_write_the_chosen_values(self, script, system_tools, calls):
             script("osx", "--no-restart")
@@ -54,6 +56,10 @@ class TestOsx:
         def test_should_restart_the_affected_apps(self, script, system_tools, calls):
             script("osx")
             assert [call[0] for call in calls("killall")] == RESTARTED
+
+        def test_should_reload_the_trackpad_settings_after_restarting_cfprefsd(self, script, system_tools, calls):
+            script("osx")
+            assert calls("activateSettings") == [["-u"]]
 
         class TestOnAppleTerminal:
             def test_should_not_kill_the_terminal_running_the_apply(self, script, system_tools, calls):
@@ -88,7 +94,7 @@ class TestOsx:
 
 @pytest.fixture
 def system_tools(fake_bin, sandbox):
-    for name in ("osascript", "chflags", "killall"):
+    for name in ("osascript", "chflags", "killall", "activateSettings"):
         fake_bin(name)
     fake_bin("defaults", script='[[ $1 == import ]] && cat > /dev/null\nexit 0\n')
     fake_bin("plutil", stdout="<plist/>")
