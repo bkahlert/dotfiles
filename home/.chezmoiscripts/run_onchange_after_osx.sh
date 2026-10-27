@@ -61,10 +61,10 @@ defaults write -g com.apple.swipescrolldirection -bool false
 defaults write com.apple.AppleMultitouchTrackpad FirstClickThreshold -int 0
 defaults write com.apple.AppleMultitouchTrackpad ActuationStrength -int 0
 
-# Trackpad: map bottom right corner to right-click (requires restart!)
+# Trackpad: two-finger click/tap = right-click; 0 = two fingers, 1/2 = bottom left/right corner (requires restart!)
 defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadRightClick -bool true
 defaults write com.apple.AppleMultitouchTrackpad TrackpadRightClick -bool true
-defaults write com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick -int 2
+defaults write com.apple.AppleMultitouchTrackpad TrackpadCornerSecondaryClick -int 0
 defaults write NSGlobalDomain ContextMenuGesture -int 1
 
 # Enable extra multi-finger gestures (such as three finger swipe down = app expose)
@@ -407,6 +407,9 @@ if [[ ! ($* == *--no-restart*) ]]; then
     fi
     killall "${app}" >/dev/null 2>&1 || printf 'Failed to kill "%s". Is it running?\n' "${app}" >&2 || true
   done
+  # Makes the running system reload trackpad and keyboard settings; without it they apply after the next login.
+  PATH="${PATH}:/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources" activateSettings -u ||
+    printf 'Failed to reload trackpad settings. Please log out and log back in.\n' >&2 || true
 fi
 
 printf "Please log out and log back in to make all settings take effect.\n"
